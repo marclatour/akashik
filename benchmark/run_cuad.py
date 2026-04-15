@@ -107,7 +107,14 @@ def run_cuad(
 
             for blind_id, display_name, system in systems:
                 if display_name == "Akashik":
-                    results = system.search(query.query_text, limit=5, entity_filter=query.entity_filter)
+                    debug_label = query.query_id if query.query_id in {"cuad_02_governing_law", "cuad_06_renewal"} else None
+                    results = system.search(
+                        query.query_text,
+                        limit=5,
+                        entity_filter=query.entity_filter,
+                        clause_type=query.clause_type,
+                        debug_label=debug_label,
+                    )
                 else:
                     results = system.search(query.query_text, limit=5)
                 score = evaluate_cuad_query(query, results)

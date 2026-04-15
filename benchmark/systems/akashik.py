@@ -25,8 +25,18 @@ class AkashikSystem:
         *,
         limit: int = 5,
         entity_filter: list[str] | None = None,
+        clause_type: str | None = None,
+        debug_label: str | None = None,
     ) -> list[RetrievedItem]:
-        response = retrieve(query, self._store, level="fact", limit=limit, entity_filter=entity_filter)
+        response = retrieve(
+            query,
+            self._store,
+            level="fact",
+            limit=limit,
+            entity_filter=entity_filter,
+            clause_type=clause_type,
+            debug_label=debug_label,
+        )
         results: list[RetrievedItem] = []
         for index, result in enumerate(response.results, start=1):
             results.append(
