@@ -29,15 +29,16 @@ def build_results_payload(
 def render_report(
     named_aggregates: dict[str, dict[str, dict[str, dict[str, float]]]],
     gate: dict[str, object],
+    disagreements: list[dict[str, object]] | None = None,
 ) -> str:
     lines = [
         "# Benchmark Report",
         "",
-        "| System   | Precision@1 | Efficiency | Provenance | Composite | Easy | Medium | Hard |",
-        "|----------|-------------|------------|------------|-----------|------|--------|------|",
+        "| System        | Precision@1 | Efficiency | Provenance | Composite | Easy | Medium | Hard |",
+        "|---------------|-------------|------------|------------|-----------|------|--------|------|",
     ]
 
-    for system_name in ("RAG", "GraphRAG", "Akashik"):
+    for system_name in ("RAG", "GraphRAG", "RAG-Embedding", "Akashik"):
         aggregate = named_aggregates[system_name]
         overall = aggregate["overall"]
         by_difficulty = aggregate["by_difficulty"]
@@ -79,6 +80,29 @@ def render_report(
         for miss in diagnostics["akashik_provenance_misses"]:
             lines.append(
                 f"- Akashik provenance miss {miss['query_id']}: expected {miss['expected_source']}, got {miss['top_source']}."
+            )
+
+    lines.extend(["", "## RAG-Embedding vs Akashik Disagreements"])
+    if not disagreements:
+        lines.append("No rank-1 disagreements between RAG-Embedding and Akashik.")
+    else:
+        lines.extend(
+            [
+                "| Query ID | Category | Expected Source | RAG-Embedding Top | Akashik Top |",
+                "|----------|----------|-----------------|-------------------|-------------|",
+            ]
+        )
+        for item in disagreements:
+            lines.append(
+                "| {query_id} | {category} | {expected} | {embedding_source}: {embedding_content} | {akashik_source}: {akashik_content} |".format(
+                    query_id=item["query_id"],
+                    category=item["category"],
+                    expected=item["expected_source"],
+                    embedding_source=item["embedding_top_source"],
+                    embedding_content=item["embedding_top_content"],
+                    akashik_source=item["akashik_top_source"],
+                    akashik_content=item["akashik_top_content"],
+                )
             )
 
     return "\n".join(lines) + "\n"

@@ -24,6 +24,7 @@ from benchmark.systems import RetrievedItem
 from benchmark.systems.akashik import AkashikSystem
 from benchmark.systems.graphrag import GraphRagSystem
 from benchmark.systems.rag import RagSystem
+from benchmark.systems.rag_embedding import RagEmbeddingSystem
 
 CUAD_ROOT = Path(__file__).resolve().parent / "cuad"
 CUAD_CORPUS_DIR = CUAD_ROOT / "corpus"
@@ -32,7 +33,12 @@ CUAD_BENCHMARK_DB_PATH = Path("results/benchmark_cuad.db")
 CUAD_RESULTS_PATH = "results_cuad.json"
 CUAD_REPORT_PATH = "report_cuad.md"
 CLAUSE_TYPES = ("governing_law", "renewal", "notice")
-SYSTEMS = (("system_a", "RAG"), ("system_b", "GraphRAG"), ("system_c", "Akashik"))
+SYSTEMS = (
+    ("system_a", "RAG"),
+    ("system_b", "GraphRAG"),
+    ("system_c", "Akashik"),
+    ("system_d", "RAG-Embedding"),
+)
 
 
 @dataclass(slots=True)
@@ -85,6 +91,7 @@ def run_cuad(
         ("system_a", "RAG", RagSystem(documents)),
         ("system_b", "GraphRAG", GraphRagSystem(documents)),
         ("system_c", "Akashik", AkashikSystem(documents, db_path=CUAD_BENCHMARK_DB_PATH)),
+        ("system_d", "RAG-Embedding", RagEmbeddingSystem(documents)),
     ]
 
     try:
@@ -135,6 +142,7 @@ def run_cuad(
         }
         clause_breakdown = build_clause_breakdown(named_scores)
         failures = collect_akashik_failures(named_scores["Akashik"])
+        disagreements = collect_embedding_akashik_disagreements(per_query_results)
         synthetic_metrics = load_synthetic_metrics(DEFAULT_RESULTS_DIR / "results.json")
 
         output_dir = Path(results_dir or DEFAULT_RESULTS_DIR).resolve()
@@ -155,12 +163,14 @@ def run_cuad(
             "queries": per_query_results,
             "clause_type_breakdown": clause_breakdown,
             "failure_analysis": failures,
+            "embedding_akashik_disagreements": disagreements,
         }
         report = render_cuad_report(
             named_aggregates,
             clause_breakdown,
             synthetic_metrics,
             failures,
+            disagreements,
         )
         write_json(results_path, payload)
         write_markdown(report_path, report)
@@ -170,6 +180,7 @@ def run_cuad(
             "report_path": str(report_path),
             "named_aggregates": named_aggregates,
             "failure_analysis": failures,
+            "embedding_akashik_disagreements": disagreements,
         }
     finally:
         for _, _, system in systems:
@@ -300,6 +311,30 @@ def collect_akashik_failures(query_scores: list[tuple[CuadQuery, CuadScore]]) ->
     return failures
 
 
+def collect_embedding_akashik_disagreements(per_query_results: list[dict[str, object]]) -> list[dict[str, object]]:
+    disagreements: list[dict[str, object]] = []
+    for row in per_query_results:
+        systems = row["systems"]
+        embedding = systems["system_d"]
+        akashik = systems["system_c"]
+        embedding_top = embedding.get("top_result") or {}
+        akashik_top = akashik.get("top_result") or {}
+        if _same_rank_one(embedding_top, akashik_top):
+            continue
+        disagreements.append(
+            {
+                "query_id": row["query_id"],
+                "expected_source": row["expected_source"],
+                "embedding_top_source": embedding_top.get("source"),
+                "embedding_top_content": _compact(str(embedding_top.get("content", "")), limit=80),
+                "akashik_top_source": akashik_top.get("source"),
+                "akashik_top_content": _compact(str(akashik_top.get("content", "")), limit=80),
+                "category": _disagreement_category(embedding, akashik),
+            }
+        )
+    return disagreements
+
+
 def load_synthetic_metrics(path: str | Path) -> dict[str, float]:
     payload_path = Path(path)
     fallback = {
@@ -319,15 +354,16 @@ def render_cuad_report(
     clause_breakdown: dict[str, dict[str, float]],
     synthetic_metrics: dict[str, float],
     failures: list[dict[str, object]],
+    disagreements: list[dict[str, object]],
 ) -> str:
     lines = [
         "# CUAD Benchmark Report (Real Legal Contracts)",
         "",
-        "| System   | Precision@1 | Efficiency | Provenance | Composite |",
-        "|----------|-------------|------------|------------|-----------|",
+        "| System        | Precision@1 | Efficiency | Provenance | Composite |",
+        "|---------------|-------------|------------|------------|-----------|",
     ]
 
-    for system_name in ("RAG", "GraphRAG", "Akashik"):
+    for system_name in ("RAG", "GraphRAG", "RAG-Embedding", "Akashik"):
         aggregate = named_aggregates[system_name]
         lines.append(
             "| {name} | {precision:.2f} | {efficiency:.2f} | {provenance:.2f} | {composite:.2f} |".format(
@@ -394,6 +430,40 @@ def render_cuad_report(
                 )
             )
 
+    lines.extend(["", "## RAG-Embedding vs Akashik Disagreements"])
+    if not disagreements:
+        lines.append("No rank-1 disagreements between RAG-Embedding and Akashik.")
+    else:
+        lines.extend(
+            [
+                "| Query ID | Category | Expected Source | RAG-Embedding Top | Akashik Top |",
+                "|----------|----------|-----------------|-------------------|-------------|",
+            ]
+        )
+        for item in disagreements:
+            lines.append(
+                "| {query_id} | {category} | {expected} | {embedding_source}: {embedding_content} | {akashik_source}: {akashik_content} |".format(
+                    query_id=item["query_id"],
+                    category=item["category"],
+                    expected=item["expected_source"],
+                    embedding_source=item["embedding_top_source"],
+                    embedding_content=item["embedding_top_content"],
+                    akashik_source=item["akashik_top_source"],
+                    akashik_content=item["akashik_top_content"],
+                )
+            )
+
+    if (
+        named_aggregates["Akashik"]["precision_at_1"] > named_aggregates["RAG-Embedding"]["precision_at_1"]
+        and named_aggregates["Akashik"]["provenance"] > named_aggregates["RAG-Embedding"]["provenance"]
+    ):
+        lines.extend(
+            [
+                "",
+                "Akashik outperforms the strongest general-purpose semantic retrieval baseline on legal contract clause retrieval without embeddings.",
+            ]
+        )
+
     return "\n".join(lines) + "\n"
 
 
@@ -417,6 +487,24 @@ def _compact(text: str, *, limit: int = 260) -> str:
     if len(compacted) <= limit:
         return compacted
     return compacted[: limit - 3] + "..."
+
+
+def _same_rank_one(left: dict[str, object], right: dict[str, object]) -> bool:
+    return left.get("source") == right.get("source") and left.get("content") == right.get("content")
+
+
+def _disagreement_category(embedding: dict[str, object], akashik: dict[str, object]) -> str:
+    embedding_precision = float(embedding.get("precision_at_1", 0.0))
+    akashik_precision = float(akashik.get("precision_at_1", 0.0))
+    embedding_provenance = float(embedding.get("provenance", 0.0))
+    akashik_provenance = float(akashik.get("provenance", 0.0))
+    if embedding_precision == 1.0 and akashik_precision == 0.0:
+        return "semantic_win"
+    if akashik_provenance == 1.0 and embedding_provenance == 0.0:
+        return "scope_win"
+    if embedding_precision == 0.0 and akashik_precision == 0.0:
+        return "both_wrong"
+    return "benchmark_ambiguity"
 
 
 def main() -> int:

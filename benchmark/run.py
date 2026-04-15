@@ -10,6 +10,7 @@ if __package__ in (None, ""):
 
 import argparse
 from pathlib import Path
+import re
 
 from benchmark import DEFAULT_CORPUS_DIR, DEFAULT_QUERIES_PATH, DEFAULT_RESULTS_DIR
 from benchmark.corpus import load_corpus
@@ -19,6 +20,7 @@ from benchmark.report import build_results_payload, render_report, write_json, w
 from benchmark.systems.akashik import AkashikSystem
 from benchmark.systems.graphrag import GraphRagSystem
 from benchmark.systems.rag import RagSystem
+from benchmark.systems.rag_embedding import RagEmbeddingSystem
 
 
 def run_benchmark(
@@ -38,6 +40,7 @@ def run_benchmark(
         ("system_a", "RAG", RagSystem(documents)),
         ("system_b", "GraphRAG", GraphRagSystem(documents)),
         ("system_c", "Akashik", AkashikSystem(documents)),
+        ("system_d", "RAG-Embedding", RagEmbeddingSystem(documents)),
     ]
 
     try:
@@ -74,6 +77,7 @@ def run_benchmark(
             for blind_id, display_name, _ in systems
         }
         gate = evaluate_gate(named_scores, named_aggregates)
+        disagreements = collect_embedding_akashik_disagreements(per_query_results)
 
         output_dir = Path(results_dir or DEFAULT_RESULTS_DIR).resolve()
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -85,7 +89,8 @@ def run_benchmark(
             blind_aggregates=blind_aggregates,
             gate=gate,
         )
-        report = render_report(named_aggregates, gate)
+        payload["embedding_akashik_disagreements"] = disagreements
+        report = render_report(named_aggregates, gate, disagreements)
 
         write_json(output_dir / "results.json", payload)
         write_markdown(output_dir / "report.md", report)
@@ -95,6 +100,7 @@ def run_benchmark(
             "report_path": str(output_dir / "report.md"),
             "gate": gate,
             "named_aggregates": named_aggregates,
+            "embedding_akashik_disagreements": disagreements,
         }
     finally:
         for _, _, system in systems:
@@ -105,6 +111,55 @@ def _reset_benchmark_db() -> None:
     benchmark_db = Path("results/benchmark.db")
     if benchmark_db.exists():
         benchmark_db.unlink()
+
+
+def collect_embedding_akashik_disagreements(per_query_results: list[dict[str, object]]) -> list[dict[str, object]]:
+    disagreements: list[dict[str, object]] = []
+    for row in per_query_results:
+        systems = row["systems"]
+        embedding = systems["system_d"]
+        akashik = systems["system_c"]
+        embedding_top = embedding.get("top_result") or {}
+        akashik_top = akashik.get("top_result") or {}
+        if _same_rank_one(embedding_top, akashik_top):
+            continue
+        disagreements.append(
+            {
+                "query_id": row["query_id"],
+                "expected_source": row["expected_source"],
+                "embedding_top_source": embedding_top.get("source"),
+                "embedding_top_content": _compact(str(embedding_top.get("content", "")), limit=80),
+                "akashik_top_source": akashik_top.get("source"),
+                "akashik_top_content": _compact(str(akashik_top.get("content", "")), limit=80),
+                "category": _disagreement_category(embedding, akashik),
+            }
+        )
+    return disagreements
+
+
+def _same_rank_one(left: dict[str, object], right: dict[str, object]) -> bool:
+    return left.get("source") == right.get("source") and left.get("content") == right.get("content")
+
+
+def _disagreement_category(embedding: dict[str, object], akashik: dict[str, object]) -> str:
+    embedding_precision = float(embedding.get("precision_at_1", 0.0))
+    akashik_precision = float(akashik.get("precision_at_1", 0.0))
+    embedding_provenance = float(embedding.get("provenance", 0.0))
+    akashik_provenance = float(akashik.get("provenance", 0.0))
+    if embedding_precision == 1.0 and akashik_precision == 0.0:
+        return "semantic_win"
+    if akashik_provenance == 1.0 and embedding_provenance == 0.0:
+        return "scope_win"
+    if embedding_precision == 0.0 and akashik_precision == 0.0:
+        return "both_wrong"
+    return "benchmark_ambiguity"
+
+
+def _compact(text: str, *, limit: int) -> str:
+    compacted = re.sub(r"\s+", " ", text).strip()
+    if len(compacted) <= limit:
+        return compacted
+    return compacted[: limit - 3] + "..."
 
 
 def main() -> int:

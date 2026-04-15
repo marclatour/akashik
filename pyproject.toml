@@ -12,6 +12,7 @@ dependencies = ["click>=8.1"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
+benchmark = ["sentence-transformers>=5.4"]
 
 [project.scripts]
 akashik = "akashik.cli:cli"
