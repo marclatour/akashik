@@ -10,10 +10,12 @@
     "difficulty_mode_b": "natural",
     "clause_type": "governing_law",
     "entity_filter": [
-      "cobranding"
+      "cobranding",
+      "1999"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "year"
   },
   {
     "query_id": "cuad_02_governing_law_b",
@@ -26,10 +28,12 @@
     "difficulty_mode_b": "natural",
     "clause_type": "governing_law",
     "entity_filter": [
-      "services"
+      "services",
+      "abilityinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_03_governing_law_b",
@@ -42,10 +46,12 @@
     "difficulty_mode_b": "natural",
     "clause_type": "governing_law",
     "entity_filter": [
-      "joint"
+      "joint",
+      "acceleratedtechnologiesholdingcorp"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_04_governing_law_b",
@@ -61,7 +67,8 @@
       "multiple"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": null
   },
   {
     "query_id": "cuad_05_governing_law_b",
@@ -74,10 +81,12 @@
     "difficulty_mode_b": "natural",
     "clause_type": "governing_law",
     "entity_filter": [
-      "endorsement"
+      "endorsement",
+      "adamsgolfinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_06_governing_law_b",
@@ -90,10 +99,12 @@
     "difficulty_mode_b": "natural",
     "clause_type": "governing_law",
     "entity_filter": [
-      "strategic"
+      "strategic",
+      "adaptimmunetherapeuticsplc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_07_governing_law_b",
@@ -106,10 +117,12 @@
     "difficulty_mode_b": "natural",
     "clause_type": "governing_law",
     "entity_filter": [
-      "reseller"
+      "reseller",
+      "adianutritioninc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_18_renewal_b",
@@ -122,10 +135,12 @@
     "difficulty_mode_b": "natural",
     "clause_type": "renewal",
     "entity_filter": [
-      "agency"
+      "agency",
+      "americanphysicianscapitalinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_19_renewal_b",
@@ -141,7 +156,8 @@
       "site"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": null
   },
   {
     "query_id": "cuad_20_renewal_b",
@@ -157,7 +173,8 @@
       "blockchain"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": null
   },
   {
     "query_id": "cuad_21_renewal_b",
@@ -170,10 +187,12 @@
     "difficulty_mode_b": "natural",
     "clause_type": "renewal",
     "entity_filter": [
-      "reseller"
+      "reseller",
+      "asiandragongroupinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_22_renewal_b",
@@ -189,7 +208,8 @@
       "master"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": null
   },
   {
     "query_id": "cuad_23_renewal_b",
@@ -205,7 +225,8 @@
       "celebrity"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": null
   },
   {
     "query_id": "cuad_24_renewal_b",
@@ -218,10 +239,12 @@
     "difficulty_mode_b": "natural",
     "clause_type": "renewal",
     "entity_filter": [
-      "distributor"
+      "distributor",
+      "blackboxstocksinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_35_notice_b",
@@ -234,10 +257,12 @@
     "difficulty_mode_b": "natural",
     "clause_type": "notice",
     "entity_filter": [
-      "strategic"
+      "strategic",
+      "cooltechnologiesinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_36_notice_b",
@@ -250,10 +275,12 @@
     "difficulty_mode_b": "natural",
     "clause_type": "notice",
     "entity_filter": [
-      "hosting"
+      "hosting",
+      "corioinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_37_notice_b",
@@ -269,7 +296,8 @@
       "marketing"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": null
   },
   {
     "query_id": "cuad_38_notice_b",
@@ -285,7 +313,8 @@
       "content"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": null
   },
   {
     "query_id": "cuad_39_notice_b",
@@ -298,10 +327,12 @@
     "difficulty_mode_b": "natural",
     "clause_type": "notice",
     "entity_filter": [
-      "reseller"
+      "reseller",
+      "diversinetcorp"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_40_notice_b",
@@ -314,9 +345,11 @@
     "difficulty_mode_b": "natural",
     "clause_type": "notice",
     "entity_filter": [
-      "strategic"
+      "strategic",
+      "duostechnologiesgroupinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   }
 ]

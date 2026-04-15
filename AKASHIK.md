@@ -38,14 +38,30 @@ Businesses don't replace their tech stack; they insert Akashik into the **Memory
 
 | Metric | Naive RAG / Long Context | Akashik (Deterministic) |
 |--------|---------------------------|--------------------------|
-| Accuracy | 10% - 30% (measured on CUAD) | 90% (measured on CUAD) |
-| Provenance | 0.20 - 0.50 | 1.00 (Verified Source) |
+| Accuracy (10 contracts, controlled) | 0.10 | 0.90 |
+| Accuracy (50 contracts, real scale) | 0.08 | 0.62 |
+| Provenance | 0.08 | 0.68 (50-contract) / 1.00 (10-contract) |
 | Token Cost | High (Stuffs full docs) | Low (Injects minimal facts) |
 | Latency | High (vector lookup + reranking) | Low (local hash + scoped FTS) |
 | Trust | Requires human double-check | Autonomous Auditing enabled |
+
+*Benchmarked on CUAD legal contract dataset.
+10-contract controlled sample: Akashik P@1 0.90,
+Provenance 1.00. 50-contract real scale: Akashik
+P@1 0.62, Provenance 0.68. RAG baseline P@1 0.08
+at both scales. Natural language queries require
+semantic fallback layer (roadmap 0.6.0).*
 
 ## 5. Strategic Conclusion
 
 Businesses utilize Akashik to turn AI from a curiosity into infrastructure. By moving away from "fuzzy similarity" and toward "structured identity," companies can finally deploy agents in high-stakes environments where being "mostly right" is the same as being "entirely wrong."
 
 **Akashik is the difference between an AI that "thinks" it knows the answer and an AI that can "prove" it.**
+
+At 50-contract scale on real legal contracts,
+Akashik outperforms RAG by 7x on precision and
+8x on provenance. Governing law clause retrieval
+reaches 0.82 Precision@1. Renewal and notice
+retrieval degrades when multiple contracts share
+generic document-type anchors -- the next
+architecture gap addressed in 0.5.0.

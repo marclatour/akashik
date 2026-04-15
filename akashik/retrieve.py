@@ -223,7 +223,7 @@ def _document_ids_matching_entities(store, entity_filter: list[str]) -> list[str
     for row in rows:
         metadata = json.loads(row["metadata"]) if row["metadata"] else {}
         entity_values = _metadata_entity_values(metadata.get("entities", []))
-        if filters & entity_values:
+        if filters <= entity_values:
             document_ids.append(row["id"])
     return document_ids
 

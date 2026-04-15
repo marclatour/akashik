@@ -61,6 +61,7 @@ class CuadQuery:
     entity_filter: list[str] | None = None
     entity_filter_source: str | None = None
     entity_filter_reason: str | None = None
+    entity_secondary_source: str | None = None
 
 
 @dataclass(slots=True)
@@ -120,6 +121,7 @@ def run_cuad(
                 "entity_filter": query.entity_filter,
                 "entity_filter_source": query.entity_filter_source,
                 "entity_filter_reason": query.entity_filter_reason,
+                "entity_secondary_source": query.entity_secondary_source,
                 "systems": {},
             }
 
@@ -331,6 +333,7 @@ def collect_akashik_failures(query_scores: list[tuple[CuadQuery, CuadScore]]) ->
                 "entity_filter": query.entity_filter,
                 "entity_filter_source": query.entity_filter_source,
                 "entity_filter_reason": query.entity_filter_reason,
+                "entity_secondary_source": query.entity_secondary_source,
                 "expected_source": query.expected_source,
                 "top_source": top_result.get("source"),
                 "top_content": _compact(str(top_result.get("content", ""))),
@@ -429,6 +432,7 @@ def render_cuad_report(
     selected_by_clause_type = selection_summary.get("selected_by_clause_type", {})
     skipped_by_clause_type = selection_summary.get("skipped_by_clause_type", {})
     shortfalls = selection_summary.get("shortfalls", {})
+    collisions = selection_summary.get("anchor_collision_count_by_primary", {})
     lines.extend(
         [
             "",
@@ -452,6 +456,10 @@ def render_cuad_report(
             )
         )
     lines.append(f"Null entity filters: {selection_summary.get('null_entity_filters')}")
+    lines.append(f"Single entity filters: {selection_summary.get('single_entity_filters')}")
+    lines.append(f"Compound entity filters: {selection_summary.get('compound_entity_filters')}")
+    lines.append("")
+    lines.append("Anchor collisions by primary: " + json.dumps(collisions, sort_keys=True))
 
     cuad_metrics = named_aggregates["Akashik"]
     lines.extend(
@@ -486,12 +494,13 @@ def render_cuad_report(
             category = _failure_category(failure)
             failure_counts[category] += 1
             lines.append(
-                "- `{query_id}` ({clause_type}, {category}): normalized query `{normalized}`; entity filter `{entity_filter}`; expected source `{expected}`, top source `{top}`; top result: {content}".format(
+                "- `{query_id}` ({clause_type}, {category}): normalized query `{normalized}`; entity filter `{entity_filter}`; secondary source `{secondary_source}`; expected source `{expected}`, top source `{top}`; top result: {content}".format(
                     query_id=failure["query_id"],
                     clause_type=failure["clause_type"],
                     category=category,
                     normalized=failure["normalized_query"],
                     entity_filter=failure.get("entity_filter"),
+                    secondary_source=failure.get("entity_secondary_source"),
                     expected=failure["expected_source"],
                     top=failure["top_source"],
                     content=failure["top_content"] or "None",

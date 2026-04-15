@@ -8,10 +8,12 @@
     "difficulty": "medium",
     "clause_type": "governing_law",
     "entity_filter": [
-      "cobranding"
+      "cobranding",
+      "1999"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "year"
   },
   {
     "query_id": "cuad_02_governing_law",
@@ -22,10 +24,12 @@
     "difficulty": "medium",
     "clause_type": "governing_law",
     "entity_filter": [
-      "services"
+      "services",
+      "abilityinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_03_governing_law",
@@ -36,10 +40,12 @@
     "difficulty": "medium",
     "clause_type": "governing_law",
     "entity_filter": [
-      "joint"
+      "joint",
+      "acceleratedtechnologiesholdingcorp"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_04_governing_law",
@@ -53,7 +59,8 @@
       "multiple"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": null
   },
   {
     "query_id": "cuad_05_governing_law",
@@ -64,10 +71,12 @@
     "difficulty": "medium",
     "clause_type": "governing_law",
     "entity_filter": [
-      "endorsement"
+      "endorsement",
+      "adamsgolfinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_06_governing_law",
@@ -78,10 +87,12 @@
     "difficulty": "medium",
     "clause_type": "governing_law",
     "entity_filter": [
-      "strategic"
+      "strategic",
+      "adaptimmunetherapeuticsplc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_07_governing_law",
@@ -92,10 +103,12 @@
     "difficulty": "medium",
     "clause_type": "governing_law",
     "entity_filter": [
-      "reseller"
+      "reseller",
+      "adianutritioninc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_08_governing_law",
@@ -106,10 +119,12 @@
     "difficulty": "medium",
     "clause_type": "governing_law",
     "entity_filter": [
-      "consulting"
+      "consulting",
+      "adurobiotechinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_09_governing_law",
@@ -120,10 +135,12 @@
     "difficulty": "medium",
     "clause_type": "governing_law",
     "entity_filter": [
-      "consulting"
+      "consulting",
+      "adurobiotechinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_10_governing_law",
@@ -134,10 +151,12 @@
     "difficulty": "medium",
     "clause_type": "governing_law",
     "entity_filter": [
-      "agency"
+      "agency",
+      "afsalabancorpinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_11_governing_law",
@@ -151,7 +170,8 @@
       "supply"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": null
   },
   {
     "query_id": "cuad_12_governing_law",
@@ -162,10 +182,12 @@
     "difficulty": "medium",
     "clause_type": "governing_law",
     "entity_filter": [
-      "development"
+      "development",
+      "aimmunetherapeuticsinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_13_governing_law",
@@ -176,10 +198,12 @@
     "difficulty": "medium",
     "clause_type": "governing_law",
     "entity_filter": [
-      "franchise"
+      "franchise",
+      "airtechinternationalgroupinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_14_governing_law",
@@ -190,10 +214,12 @@
     "difficulty": "medium",
     "clause_type": "governing_law",
     "entity_filter": [
-      "agency"
+      "agency",
+      "alamogordofinancialcorp"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_15_governing_law",
@@ -204,10 +230,12 @@
     "difficulty": "medium",
     "clause_type": "governing_law",
     "entity_filter": [
-      "agency"
+      "agency",
+      "alliancebancorpincofpennsylvania"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_16_governing_law",
@@ -218,10 +246,12 @@
     "difficulty": "medium",
     "clause_type": "governing_law",
     "entity_filter": [
-      "joint"
+      "joint",
+      "alliedesportsentertainmentinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_17_governing_law",
@@ -235,7 +265,8 @@
       "event"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": null
   },
   {
     "query_id": "cuad_18_renewal",
@@ -246,10 +277,12 @@
     "difficulty": "medium",
     "clause_type": "renewal",
     "entity_filter": [
-      "agency"
+      "agency",
+      "americanphysicianscapitalinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_19_renewal",
@@ -263,7 +296,8 @@
       "site"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": null
   },
   {
     "query_id": "cuad_20_renewal",
@@ -277,7 +311,8 @@
       "blockchain"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": null
   },
   {
     "query_id": "cuad_21_renewal",
@@ -288,10 +323,12 @@
     "difficulty": "medium",
     "clause_type": "renewal",
     "entity_filter": [
-      "reseller"
+      "reseller",
+      "asiandragongroupinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_22_renewal",
@@ -305,7 +342,8 @@
       "master"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": null
   },
   {
     "query_id": "cuad_23_renewal",
@@ -319,7 +357,8 @@
       "celebrity"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": null
   },
   {
     "query_id": "cuad_24_renewal",
@@ -330,10 +369,12 @@
     "difficulty": "medium",
     "clause_type": "renewal",
     "entity_filter": [
-      "distributor"
+      "distributor",
+      "blackboxstocksinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_25_renewal",
@@ -347,7 +388,8 @@
       "service"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": null
   },
   {
     "query_id": "cuad_26_renewal",
@@ -361,7 +403,8 @@
       "licensing"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": null
   },
   {
     "query_id": "cuad_27_renewal",
@@ -375,7 +418,8 @@
       "outsourcing"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": null
   },
   {
     "query_id": "cuad_28_renewal",
@@ -389,7 +433,8 @@
       "visp"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": null
   },
   {
     "query_id": "cuad_29_renewal",
@@ -400,10 +445,12 @@
     "difficulty": "medium",
     "clause_type": "renewal",
     "entity_filter": [
-      "reseller"
+      "reseller",
+      "bravateksolutionsinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_30_renewal",
@@ -414,10 +461,12 @@
     "difficulty": "medium",
     "clause_type": "renewal",
     "entity_filter": [
-      "franchise"
+      "franchise",
+      "buffalowildwingsinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_31_renewal",
@@ -431,7 +480,8 @@
       "product"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": null
   },
   {
     "query_id": "cuad_32_renewal",
@@ -442,10 +492,12 @@
     "difficulty": "medium",
     "clause_type": "renewal",
     "entity_filter": [
-      "services"
+      "services",
+      "ccaindustriesinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_33_renewal",
@@ -456,10 +508,12 @@
     "difficulty": "medium",
     "clause_type": "renewal",
     "entity_filter": [
-      "hosting"
+      "hosting",
+      "changepointcorp"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_34_renewal",
@@ -470,10 +524,12 @@
     "difficulty": "medium",
     "clause_type": "renewal",
     "entity_filter": [
-      "development"
+      "development",
+      "coherusbiosciencesinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_35_notice",
@@ -484,10 +540,12 @@
     "difficulty": "medium",
     "clause_type": "notice",
     "entity_filter": [
-      "strategic"
+      "strategic",
+      "cooltechnologiesinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_36_notice",
@@ -498,10 +556,12 @@
     "difficulty": "medium",
     "clause_type": "notice",
     "entity_filter": [
-      "hosting"
+      "hosting",
+      "corioinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_37_notice",
@@ -515,7 +575,8 @@
       "marketing"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": null
   },
   {
     "query_id": "cuad_38_notice",
@@ -529,7 +590,8 @@
       "content"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": null
   },
   {
     "query_id": "cuad_39_notice",
@@ -540,10 +602,12 @@
     "difficulty": "medium",
     "clause_type": "notice",
     "entity_filter": [
-      "reseller"
+      "reseller",
+      "diversinetcorp"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_40_notice",
@@ -554,10 +618,12 @@
     "difficulty": "medium",
     "clause_type": "notice",
     "entity_filter": [
-      "strategic"
+      "strategic",
+      "duostechnologiesgroupinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_41_notice",
@@ -568,10 +634,12 @@
     "difficulty": "medium",
     "clause_type": "notice",
     "entity_filter": [
-      "endorsement"
+      "endorsement",
+      "ecosciencesolutionsinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_42_notice",
@@ -582,10 +650,12 @@
     "difficulty": "medium",
     "clause_type": "notice",
     "entity_filter": [
-      "cobranding"
+      "cobranding",
+      "edietscominc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_43_notice",
@@ -596,10 +666,12 @@
     "difficulty": "medium",
     "clause_type": "notice",
     "entity_filter": [
-      "consulting"
+      "consulting",
+      "emeraldhealthbioceuticalsinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_44_notice",
@@ -610,10 +682,12 @@
     "difficulty": "medium",
     "clause_type": "notice",
     "entity_filter": [
-      "strategic"
+      "strategic",
+      "energouscorp"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_45_notice",
@@ -624,10 +698,12 @@
     "difficulty": "medium",
     "clause_type": "notice",
     "entity_filter": [
-      "transportation"
+      "transportation",
+      "energyxxiltd"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_46_notice",
@@ -638,10 +714,12 @@
     "difficulty": "medium",
     "clause_type": "notice",
     "entity_filter": [
-      "transportation"
+      "transportation",
+      "enterpriseproductspartnerslp"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_47_notice",
@@ -652,10 +730,12 @@
     "difficulty": "medium",
     "clause_type": "notice",
     "entity_filter": [
-      "distributor"
+      "distributor",
+      "entertainmentgamingasiainc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_48_notice",
@@ -666,10 +746,12 @@
     "difficulty": "medium",
     "clause_type": "notice",
     "entity_filter": [
-      "distributor"
+      "distributor",
+      "etelosinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   },
   {
     "query_id": "cuad_49_notice",
@@ -683,7 +765,8 @@
       "videoondemand"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": null
   },
   {
     "query_id": "cuad_50_notice",
@@ -694,9 +777,11 @@
     "difficulty": "medium",
     "clause_type": "notice",
     "entity_filter": [
-      "distributor"
+      "distributor",
+      "europeanmicroholdingsinc"
     ],
     "entity_filter_source": "document_name",
-    "entity_filter_reason": null
+    "entity_filter_reason": null,
+    "entity_secondary_source": "company_prefix"
   }
 ]

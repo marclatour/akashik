@@ -38,406 +38,608 @@
     "notice": 0
   },
   "null_entity_filters": 0,
+  "compound_entity_filters": 35,
+  "single_entity_filters": 15,
+  "anchor_collision_count_by_primary": {
+    "agency": 4,
+    "cobranding": 2,
+    "consulting": 3,
+    "development": 2,
+    "distributor": 4,
+    "endorsement": 2,
+    "franchise": 2,
+    "hosting": 2,
+    "joint": 2,
+    "reseller": 4,
+    "services": 2,
+    "strategic": 4,
+    "transportation": 2
+  },
   "anchor_sources": [
     {
       "query_id": "cuad_01_governing_law",
       "filename": "2ThemartComInc_19990826_10-12G_EX-10.10_6700288_EX-10.10_Co-Branding_Agreement__Agency_Agreement.txt",
       "clause_type": "governing_law",
-      "entity_filter": "cobranding",
+      "entity_filter": [
+        "cobranding",
+        "1999"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "year"
     },
     {
       "query_id": "cuad_02_governing_law",
       "filename": "ABILITYINC_06_15_2020-EX-4.25-SERVICES_AGREEMENT.txt",
       "clause_type": "governing_law",
-      "entity_filter": "services",
+      "entity_filter": [
+        "services",
+        "abilityinc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_03_governing_law",
       "filename": "ACCELERATEDTECHNOLOGIESHOLDINGCORP_04_24_2003-EX-10.13-JOINT_VENTURE_AGREEMENT.txt",
       "clause_type": "governing_law",
-      "entity_filter": "joint",
+      "entity_filter": [
+        "joint",
+        "acceleratedtechnologiesholdingcorp"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_04_governing_law",
       "filename": "ACCURAYINC_09_01_2010-EX-10.31-DISTRIBUTOR_AGREEMENT.txt",
       "clause_type": "governing_law",
-      "entity_filter": "multiple",
+      "entity_filter": [
+        "multiple"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": null
     },
     {
       "query_id": "cuad_05_governing_law",
       "filename": "ADAMSGOLFINC_03_21_2005-EX-10.17-ENDORSEMENT_AGREEMENT.txt",
       "clause_type": "governing_law",
-      "entity_filter": "endorsement",
+      "entity_filter": [
+        "endorsement",
+        "adamsgolfinc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_06_governing_law",
       "filename": "ADAPTIMMUNETHERAPEUTICSPLC_04_06_2017-EX-10.11-STRATEGIC_ALLIANCE_AGREEMENT.txt",
       "clause_type": "governing_law",
-      "entity_filter": "strategic",
+      "entity_filter": [
+        "strategic",
+        "adaptimmunetherapeuticsplc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_07_governing_law",
       "filename": "ADIANUTRITION_INC_04_01_2005-EX-10.D2-RESELLER_AGREEMENT.txt",
       "clause_type": "governing_law",
-      "entity_filter": "reseller",
+      "entity_filter": [
+        "reseller",
+        "adianutritioninc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_08_governing_law",
       "filename": "ADUROBIOTECH_INC_06_02_2020-EX-10.7-CONSULTING_AGREEMENT_1.txt",
       "clause_type": "governing_law",
-      "entity_filter": "consulting",
+      "entity_filter": [
+        "consulting",
+        "adurobiotechinc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_09_governing_law",
       "filename": "ADUROBIOTECH_INC_06_02_2020-EX-10.7-CONSULTING_AGREEMENT.txt",
       "clause_type": "governing_law",
-      "entity_filter": "consulting",
+      "entity_filter": [
+        "consulting",
+        "adurobiotechinc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_10_governing_law",
       "filename": "AFSALABANCORPINC_08_01_1996-EX-1.1-AGENCY_AGREEMENT.txt",
       "clause_type": "governing_law",
-      "entity_filter": "agency",
+      "entity_filter": [
+        "agency",
+        "afsalabancorpinc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_11_governing_law",
       "filename": "AgapeAtpCorp_20191202_10-KA_EX-10.1_11911128_EX-10.1_Supply_Agreement.txt",
       "clause_type": "governing_law",
-      "entity_filter": "supply",
+      "entity_filter": [
+        "supply"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": null
     },
     {
       "query_id": "cuad_12_governing_law",
       "filename": "AimmuneTherapeuticsInc_20200205_8-K_EX-10.3_11967170_EX-10.3_Development_Agreement.txt",
       "clause_type": "governing_law",
-      "entity_filter": "development",
+      "entity_filter": [
+        "development",
+        "aimmunetherapeuticsinc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_13_governing_law",
       "filename": "AIRTECHINTERNATIONALGROUPINC_05_08_2000-EX-10.4-FRANCHISE_AGREEMENT.txt",
       "clause_type": "governing_law",
-      "entity_filter": "franchise",
+      "entity_filter": [
+        "franchise",
+        "airtechinternationalgroupinc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_14_governing_law",
       "filename": "ALAMOGORDOFINANCIALCORP_12_16_1999-EX-1-AGENCY_AGREEMENT.txt",
       "clause_type": "governing_law",
-      "entity_filter": "agency",
+      "entity_filter": [
+        "agency",
+        "alamogordofinancialcorp"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_15_governing_law",
       "filename": "ALLIANCEBANCORPINCOFPENNSYLVANIA_10_18_2006-EX-1.2-AGENCY_AGREEMENT.txt",
       "clause_type": "governing_law",
-      "entity_filter": "agency",
+      "entity_filter": [
+        "agency",
+        "alliancebancorpincofpennsylvania"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_16_governing_law",
       "filename": "AlliedEsportsEntertainmentInc_20190815_8-K_EX-10.19_11788293_EX-10.19_Content_License_Agreement.txt",
       "clause_type": "governing_law",
-      "entity_filter": "joint",
+      "entity_filter": [
+        "joint",
+        "alliedesportsentertainmentinc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_17_governing_law",
       "filename": "AlliedEsportsEntertainmentInc_20190815_8-K_EX-10.34_11788308_EX-10.34_Sponsorship_Agreement.txt",
       "clause_type": "governing_law",
-      "entity_filter": "event",
+      "entity_filter": [
+        "event"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": null
     },
     {
       "query_id": "cuad_18_renewal",
       "filename": "AMERICANPHYSICIANSCAPITALINC_03_31_2003-EX-10.26-AGENCY_AGREEMENT.txt",
       "clause_type": "renewal",
-      "entity_filter": "agency",
+      "entity_filter": [
+        "agency",
+        "americanphysicianscapitalinc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_19_renewal",
       "filename": "AMERICASSHOPPINGMALLINC_12_10_1999-EX-10.2-SITE_DEVELOPMENT_AND_HOSTING_AGREEMENT.txt",
       "clause_type": "renewal",
-      "entity_filter": "site",
+      "entity_filter": [
+        "site"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": null
     },
     {
       "query_id": "cuad_20_renewal",
       "filename": "ArcaUsTreasuryFund_20200207_N-2_EX-99.K5_11971930_EX-99.K5_Development_Agreement.txt",
       "clause_type": "renewal",
-      "entity_filter": "blockchain",
+      "entity_filter": [
+        "blockchain"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": null
     },
     {
       "query_id": "cuad_21_renewal",
       "filename": "ASIANDRAGONGROUPINC_08_11_2005-EX-10.5-Reseller_Agreement.txt",
       "clause_type": "renewal",
-      "entity_filter": "reseller",
+      "entity_filter": [
+        "reseller",
+        "asiandragongroupinc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_22_renewal",
       "filename": "BELLRINGBRANDS_INC_02_07_2020-EX-10.18-MASTER_SUPPLY_AGREEMENT.txt",
       "clause_type": "renewal",
-      "entity_filter": "master",
+      "entity_filter": [
+        "master"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": null
     },
     {
       "query_id": "cuad_23_renewal",
       "filename": "BizzingoInc_20120322_8-K_EX-10.17_7504499_EX-10.17_Endorsement_Agreement.txt",
       "clause_type": "renewal",
-      "entity_filter": "celebrity",
+      "entity_filter": [
+        "celebrity"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": null
     },
     {
       "query_id": "cuad_24_renewal",
       "filename": "BLACKBOXSTOCKSINC_08_05_2014-EX-10.1-DISTRIBUTOR_AGREEMENT.txt",
       "clause_type": "renewal",
-      "entity_filter": "distributor",
+      "entity_filter": [
+        "distributor",
+        "blackboxstocksinc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_25_renewal",
       "filename": "BLACKSTONEGSOLONG-SHORTCREDITINCOMEFUND_05_11_2020-EX-99._K_1_-SERVICE_AGREEMENT.txt",
       "clause_type": "renewal",
-      "entity_filter": "service",
+      "entity_filter": [
+        "service"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": null
     },
     {
       "query_id": "cuad_26_renewal",
       "filename": "BNCMORTGAGEINC_05_17_1999-EX-10.4-LICENSING_AND_WEB_SITE_HOSTING_AGREEMENT.txt",
       "clause_type": "renewal",
-      "entity_filter": "licensing",
+      "entity_filter": [
+        "licensing"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": null
     },
     {
       "query_id": "cuad_27_renewal",
       "filename": "BNLFINANCIALCORP_03_30_2007-EX-10.8-OUTSOURCING_AGREEMENT.txt",
       "clause_type": "renewal",
-      "entity_filter": "outsourcing",
+      "entity_filter": [
+        "outsourcing"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": null
     },
     {
       "query_id": "cuad_28_renewal",
       "filename": "BOLIVARMININGCORP_05_23_2003-EX-2.1-VISP_WEB_SITE_BUILDING_AND_HOSTING_AGREEMENT.txt",
       "clause_type": "renewal",
-      "entity_filter": "visp",
+      "entity_filter": [
+        "visp"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": null
     },
     {
       "query_id": "cuad_29_renewal",
       "filename": "BravatekSolutionsInc_20170418_8-K_EX-10.1_10205739_EX-10.1_Reseller_Agreement.txt",
       "clause_type": "renewal",
-      "entity_filter": "reseller",
+      "entity_filter": [
+        "reseller",
+        "bravateksolutionsinc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_30_renewal",
       "filename": "BUFFALOWILDWINGSINC_06_05_1998-EX-10.3-FRANCHISE_AGREEMENT.txt",
       "clause_type": "renewal",
-      "entity_filter": "franchise",
+      "entity_filter": [
+        "franchise",
+        "buffalowildwingsinc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_31_renewal",
       "filename": "CardlyticsInc_20180112_S-1_EX-10.16_11002987_EX-10.16_Maintenance_Agreement4.txt",
       "clause_type": "renewal",
-      "entity_filter": "product",
+      "entity_filter": [
+        "product"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": null
     },
     {
       "query_id": "cuad_32_renewal",
       "filename": "CCAINDUSTRIESINC_04_14_2014-EX-10.1-OUTSOURCING_AGREEMENT.txt",
       "clause_type": "renewal",
-      "entity_filter": "services",
+      "entity_filter": [
+        "services",
+        "ccaindustriesinc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_33_renewal",
       "filename": "CHANGEPOINTCORP_03_08_2000-EX-10.6-LICENSE_AND_HOSTING_AGREEMENT.txt",
       "clause_type": "renewal",
-      "entity_filter": "hosting",
+      "entity_filter": [
+        "hosting",
+        "changepointcorp"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_34_renewal",
       "filename": "CoherusBiosciencesInc_20200227_10-K_EX-10.29_12021376_EX-10.29_Development_Agreement.txt",
       "clause_type": "renewal",
-      "entity_filter": "development",
+      "entity_filter": [
+        "development",
+        "coherusbiosciencesinc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_35_notice",
       "filename": "COOLTECHNOLOGIES_INC_10_25_2017-EX-10.71-Strategic_Alliance_Agreement.txt",
       "clause_type": "notice",
-      "entity_filter": "strategic",
+      "entity_filter": [
+        "strategic",
+        "cooltechnologiesinc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_36_notice",
       "filename": "CORIOINC_07_20_2000-EX-10.5-LICENSE_AND_HOSTING_AGREEMENT.txt",
       "clause_type": "notice",
-      "entity_filter": "hosting",
+      "entity_filter": [
+        "hosting",
+        "corioinc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_37_notice",
       "filename": "CybergyHoldingsInc_20140520_10-Q_EX-10.27_8605784_EX-10.27_Affiliate_Agreement.txt",
       "clause_type": "notice",
-      "entity_filter": "marketing",
+      "entity_filter": [
+        "marketing"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": null
     },
     {
       "query_id": "cuad_38_notice",
       "filename": "DataCallTechnologies_20060918_SB-2A_EX-10.9_944510_EX-10.9_Content_License_Agreement.txt",
       "clause_type": "notice",
-      "entity_filter": "content",
+      "entity_filter": [
+        "content"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": null
     },
     {
       "query_id": "cuad_39_notice",
       "filename": "DIVERSINETCORP_03_01_2012-EX-4-RESELLER_AGREEMENT.txt",
       "clause_type": "notice",
-      "entity_filter": "reseller",
+      "entity_filter": [
+        "reseller",
+        "diversinetcorp"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_40_notice",
       "filename": "DUOSTECHNOLOGIESGROUP_INC_04_21_2009-EX-10.1-STRATEGIC_ALLIANCE_AGREEMENT.txt",
       "clause_type": "notice",
-      "entity_filter": "strategic",
+      "entity_filter": [
+        "strategic",
+        "duostechnologiesgroupinc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_41_notice",
       "filename": "EcoScienceSolutionsInc_20171117_8-K_EX-10.1_10956472_EX-10.1_Endorsement_Agreement.txt",
       "clause_type": "notice",
-      "entity_filter": "endorsement",
+      "entity_filter": [
+        "endorsement",
+        "ecosciencesolutionsinc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_42_notice",
       "filename": "EdietsComInc_20001030_10QSB_EX-10.4_2606646_EX-10.4_Co-Branding_Agreement.txt",
       "clause_type": "notice",
-      "entity_filter": "cobranding",
+      "entity_filter": [
+        "cobranding",
+        "edietscominc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_43_notice",
       "filename": "EmeraldHealthBioceuticalsInc_20200218_1-A_EX1A-6_MAT_CTRCT_11987205_EX1A-6_MAT_CTRCT_Development_Agreement.txt",
       "clause_type": "notice",
-      "entity_filter": "consulting",
+      "entity_filter": [
+        "consulting",
+        "emeraldhealthbioceuticalsinc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_44_notice",
       "filename": "ENERGOUSCORP_03_16_2017-EX-10.24-STRATEGIC_ALLIANCE_AGREEMENT.txt",
       "clause_type": "notice",
-      "entity_filter": "strategic",
+      "entity_filter": [
+        "strategic",
+        "energouscorp"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_45_notice",
       "filename": "ENERGYXXILTD_05_08_2015-EX-10.13-Transportation_AGREEMENT.txt",
       "clause_type": "notice",
-      "entity_filter": "transportation",
+      "entity_filter": [
+        "transportation",
+        "energyxxiltd"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_46_notice",
       "filename": "ENTERPRISEPRODUCTSPARTNERSLP_07_08_1998-EX-10.3-TRANSPORTATION_CONTRACT.txt",
       "clause_type": "notice",
-      "entity_filter": "transportation",
+      "entity_filter": [
+        "transportation",
+        "enterpriseproductspartnerslp"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_47_notice",
       "filename": "ENTERTAINMENTGAMINGASIAINC_02_15_2005-EX-10.5-DISTRIBUTOR_AGREEMENT.txt",
       "clause_type": "notice",
-      "entity_filter": "distributor",
+      "entity_filter": [
+        "distributor",
+        "entertainmentgamingasiainc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_48_notice",
       "filename": "ETELOS_INC_03_09_2004-EX-10.8-DISTRIBUTOR_AGREEMENT.txt",
       "clause_type": "notice",
-      "entity_filter": "distributor",
+      "entity_filter": [
+        "distributor",
+        "etelosinc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     },
     {
       "query_id": "cuad_49_notice",
       "filename": "EuromediaHoldingsCorp_20070215_10SB12G_EX-10.B_01__525118_EX-10.B_01__Content_License_Agreement.txt",
       "clause_type": "notice",
-      "entity_filter": "videoondemand",
+      "entity_filter": [
+        "videoondemand"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": null
     },
     {
       "query_id": "cuad_50_notice",
       "filename": "EUROPEANMICROHOLDINGSINC_03_06_1998-EX-10.6-DISTRIBUTOR_AGREEMENT.txt",
       "clause_type": "notice",
-      "entity_filter": "distributor",
+      "entity_filter": [
+        "distributor",
+        "europeanmicroholdingsinc"
+      ],
       "entity_filter_source": "document_name",
-      "entity_filter_reason": null
+      "entity_filter_reason": null,
+      "entity_secondary_source": "company_prefix"
     }
   ]
 }

@@ -98,7 +98,16 @@ def extract_entities(text: str, *, filename: str | None = None) -> list[str]:
     seen: set[str] = set()
     entities: list[str] = []
     if filename:
-        _append_entity_values(entities, seen, [_first_anchor_token(filename)])
+        _append_entity_values(
+            entities,
+            seen,
+            [
+                _company_prefix_from_filename(filename),
+                _year_from_filename(filename),
+                _exhibit_number_from_filename(filename),
+                _first_anchor_token(filename),
+            ],
+        )
     _append_entity_values(entities, seen, _anchor_tokens(text[:500]))
     for match in _ENTITY_RE.findall(text[:500]):
         entity = _clean_entity(match)
@@ -141,6 +150,33 @@ def _anchor_tokens(text: str) -> list[str]:
 def _first_anchor_token(text: str) -> str | None:
     tokens = _anchor_tokens(text)
     return tokens[0] if tokens else None
+
+
+def _company_prefix_from_filename(filename: str) -> str | None:
+    parts = re.split(r"[_\s.-]+", filename or "")
+    prefix_parts: list[str] = []
+    for part in parts:
+        if not part:
+            continue
+        if re.search(r"\d", part):
+            break
+        cleaned = re.sub(r"[^a-z]", "", part.lower())
+        if cleaned:
+            prefix_parts.append(cleaned)
+    prefix = "".join(prefix_parts)
+    return prefix if len(prefix) >= 4 else None
+
+
+def _year_from_filename(filename: str) -> str | None:
+    match = re.search(r"(?:19|20)\d{2}", filename or "")
+    return match.group(0) if match else None
+
+
+def _exhibit_number_from_filename(filename: str) -> str | None:
+    match = re.search(r"\bex[-_ .]*([0-9]+(?:\.[0-9]+)*)", filename or "", flags=re.IGNORECASE)
+    if not match:
+        return None
+    return re.sub(r"[^a-z0-9]", "", f"ex{match.group(1)}".lower())
 
 
 def _clean_anchor_token(token: str) -> str:

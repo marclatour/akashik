@@ -76,9 +76,10 @@ _ANCHOR_SKIP_TOKENS = {
 class PreparedContract:
     filename: str
     source_filename: str
-    entity_anchor: str | None
-    entity_anchor_source: str | None
+    entity_filter: list[str] | None
+    entity_filter_source: str | None
     entity_anchor_null_reason: str | None
+    entity_secondary_source: str | None
     text: str
     clauses: dict[str, str]
     answers: dict[str, str]
@@ -177,25 +178,30 @@ def _select_contracts(contexts: dict[str, str]) -> tuple[list[tuple[PreparedCont
             contract = PreparedContract(
                 filename=_safe_filename(row["Filename"]),
                 source_filename=row["Filename"],
-                entity_anchor=entity_anchor,
-                entity_anchor_source=entity_anchor_source,
+                entity_filter=[entity_anchor] if entity_anchor else None,
+                entity_filter_source=entity_anchor_source,
                 entity_anchor_null_reason=null_reason,
+                entity_secondary_source=None,
                 text=text,
                 clauses={clause_type: clause},
                 answers={clause_type: answer},
             )
             selected.append((contract, clause_type))
             selected_filenames.add(row["Filename"])
-            anchor_sources.append(
-                {
-                    "query_id": f"cuad_{len(selected):02d}_{clause_type}",
-                    "filename": contract.filename,
-                    "clause_type": clause_type,
-                    "entity_filter": entity_anchor,
-                    "entity_filter_source": entity_anchor_source,
-                    "entity_filter_reason": null_reason,
-                }
-            )
+
+    anchor_collision_count_by_primary = _apply_compound_anchors(selected)
+    for index, (contract, clause_type) in enumerate(selected, start=1):
+        anchor_sources.append(
+            {
+                "query_id": f"cuad_{index:02d}_{clause_type}",
+                "filename": contract.filename,
+                "clause_type": clause_type,
+                "entity_filter": contract.entity_filter,
+                "entity_filter_source": contract.entity_filter_source,
+                "entity_filter_reason": contract.entity_anchor_null_reason,
+                "entity_secondary_source": contract.entity_secondary_source,
+            }
+        )
 
     selected_by_clause_type = {
         clause_type: len([1 for _, selected_clause_type in selected if selected_clause_type == clause_type])
@@ -211,6 +217,13 @@ def _select_contracts(contexts: dict[str, str]) -> tuple[list[tuple[PreparedCont
         "skipped_by_clause_type": skipped_by_clause_type,
         "shortfalls": shortfalls,
         "null_entity_filters": sum(1 for item in anchor_sources if item["entity_filter"] is None),
+        "compound_entity_filters": sum(
+            1 for item in anchor_sources if isinstance(item["entity_filter"], list) and len(item["entity_filter"]) > 1
+        ),
+        "single_entity_filters": sum(
+            1 for item in anchor_sources if isinstance(item["entity_filter"], list) and len(item["entity_filter"]) == 1
+        ),
+        "anchor_collision_count_by_primary": anchor_collision_count_by_primary,
         "anchor_sources": anchor_sources,
     }
     return selected, summary
@@ -234,9 +247,10 @@ def _build_mode_a_queries(selected: list[tuple[PreparedContract, str]]) -> list[
                 "expected_level": "fact",
                 "difficulty": "medium",
                 "clause_type": clause_type,
-                "entity_filter": [contract.entity_anchor] if contract.entity_anchor else None,
-                "entity_filter_source": contract.entity_anchor_source,
+                "entity_filter": contract.entity_filter,
+                "entity_filter_source": contract.entity_filter_source,
                 "entity_filter_reason": contract.entity_anchor_null_reason,
+                "entity_secondary_source": contract.entity_secondary_source,
             }
         )
     return queries
@@ -304,6 +318,7 @@ def _build_mode_b_queries(mode_a_queries: list[dict[str, Any]]) -> list[dict[str
                     "entity_filter": source.get("entity_filter"),
                     "entity_filter_source": source.get("entity_filter_source"),
                     "entity_filter_reason": source.get("entity_filter_reason"),
+                    "entity_secondary_source": source.get("entity_secondary_source"),
                 }
             )
     return mode_b
@@ -380,6 +395,78 @@ def _select_entity_anchor(row: dict[str, str]) -> tuple[str | None, str | None, 
         if anchor:
             return anchor, source_name, None
     return None, None, "no meaningful anchor token"
+
+
+def _apply_compound_anchors(selected: list[tuple[PreparedContract, str]]) -> dict[str, int]:
+    primary_counts: dict[str, int] = {}
+    for contract, _ in selected:
+        primary = _primary_entity_filter(contract)
+        if primary:
+            primary_counts[primary] = primary_counts.get(primary, 0) + 1
+
+    collisions = {
+        primary: count
+        for primary, count in sorted(primary_counts.items())
+        if count > 1
+    }
+    for contract, _ in selected:
+        primary = _primary_entity_filter(contract)
+        if not primary or primary_counts.get(primary, 0) <= 1:
+            continue
+        secondary, secondary_source = _secondary_anchor_token(contract.source_filename)
+        if not secondary or secondary == primary:
+            contract.entity_anchor_null_reason = "compound anchor collision but no secondary token"
+            continue
+        contract.entity_filter = [primary, secondary]
+        contract.entity_secondary_source = secondary_source
+    return collisions
+
+
+def _primary_entity_filter(contract: PreparedContract) -> str | None:
+    if not contract.entity_filter:
+        return None
+    return contract.entity_filter[0]
+
+
+def _secondary_anchor_token(filename: str) -> tuple[str | None, str | None]:
+    company_prefix = _company_prefix_from_filename(filename)
+    if company_prefix:
+        return company_prefix, "company_prefix"
+    year = _year_from_filename(filename)
+    if year:
+        return year, "year"
+    exhibit = _exhibit_number_from_filename(filename)
+    if exhibit:
+        return exhibit, "exhibit_number"
+    return None, None
+
+
+def _company_prefix_from_filename(filename: str) -> str | None:
+    stem = _json_title_for_filename(filename)
+    parts = re.split(r"[_\s.-]+", stem)
+    prefix_parts: list[str] = []
+    for part in parts:
+        if not part:
+            continue
+        if re.search(r"\d", part):
+            break
+        cleaned = re.sub(r"[^a-z]", "", part.lower())
+        if cleaned:
+            prefix_parts.append(cleaned)
+    prefix = "".join(prefix_parts)
+    return prefix if len(prefix) >= 4 else None
+
+
+def _year_from_filename(filename: str) -> str | None:
+    match = re.search(r"(?:19|20)\d{2}", filename)
+    return match.group(0) if match else None
+
+
+def _exhibit_number_from_filename(filename: str) -> str | None:
+    match = re.search(r"\bex[-_ .]*([0-9]+(?:\.[0-9]+)*)", filename, flags=re.IGNORECASE)
+    if not match:
+        return None
+    return re.sub(r"[^a-z0-9]", "", f"ex{match.group(1)}".lower())
 
 
 def _first_anchor_token(text: str) -> str | None:
