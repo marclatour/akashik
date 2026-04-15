@@ -1,6 +1,3 @@
-Here you go — everything consolidated cleanly into a single markdown block, incorporating your latest CUAD insights and the clause ambiguity finding:
-
-```markdown
 # Akashik: Deterministic Memory Architecture & Benchmark Reality
 
 ## The Inflection Point
@@ -260,4 +257,3 @@ It is:
 
 *Akashik doesn’t guess the answer.*  
 *It proves it.*
-```
