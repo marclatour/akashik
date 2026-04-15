@@ -1,0 +1,1102 @@
+{
+  "benchmark": {
+    "mode": "B",
+    "description": "Natural language query variants",
+    "query_count": 10,
+    "uses_existing_benchmark_db": "results/benchmark.db"
+  },
+  "systems": {
+    "RAG": {
+      "precision_at_1": 0.4,
+      "context_efficiency": 0.0118,
+      "provenance": 0.5,
+      "composite": 0.3036
+    },
+    "GraphRAG": {
+      "precision_at_1": 0.0,
+      "context_efficiency": 0.0,
+      "provenance": 0.0,
+      "composite": 0.0
+    },
+    "Akashik": {
+      "precision_at_1": 0.0,
+      "context_efficiency": 0.0,
+      "provenance": 0.0,
+      "composite": 0.0
+    }
+  },
+  "queries": [
+    {
+      "query_id": "medium_01",
+      "query_text": "When are harbor crews supposed to do the morning check now?",
+      "difficulty_mode_b": "natural",
+      "original_difficulty": "medium",
+      "expected_source": "meridian_harbor_notice_two.txt",
+      "expected_level": "fact",
+      "systems": {
+        "system_a": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0119,
+          "provenance": 0.0,
+          "composite": 0.0036,
+          "top_result": {
+            "content": "Meridian Harbor Notice One is a synthetic operations memo for the benchmark corpus. It describes dawn inspections, badge routing, crate movement, and Atlas Terminal handoffs used before the later amendment. Supervisors at Meridian Harbor repeat the notice during drills so the names Meridian Harbor, Lantern crates, Atlas Terminal, and badge gates appear often enough to create realistic retrieval pressure. The document is intentionally verbose because the benchmark needs several long paragraphs and multiple overlapping entities. Every paragraph keeps the same nouns in view while preserving exact fact sentences for objective scoring. Meridian Harbor Notice One sets the dawn inspection window at 06:10. Meridian Harbor Notice One assigns blue badges to Gate 4. Meridian Harbor Notice One routes Lantern crates through Atlas Terminal West. Clerks record the window, gate, and terminal on every dawn manifest so crews can compare later amendments against the older routine. Shift leaders repeat the legacy values during training because the benchmark depends on older facts remaining visible beside the current replacements. The second operations block explains how crate seals, escort logs, and hand stamps are processed before sunrise. Lantern crate clerks walk from Meridian Harbor to the west loading lane, count seals twice, and copy the",
+            "source": "meridian_harbor_notice_one.txt",
+            "rank": 1,
+            "metadata": {
+              "chunk_start_word": 0,
+              "chunk_end_word": 200
+            },
+            "confidence": null,
+            "parent_chain": []
+          },
+          "results": [
+            {
+              "content": "Meridian Harbor Notice One is a synthetic operations memo for the benchmark corpus. It describes dawn inspections, badge routing, crate movement, and Atlas Terminal handoffs used before the later amendment. Supervisors at Meridian Harbor repeat the notice during drills so the names Meridian Harbor, Lantern crates, Atlas Terminal, and badge gates appear often enough to create realistic retrieval pressure. The document is intentionally verbose because the benchmark needs several long paragraphs and multiple overlapping entities. Every paragraph keeps the same nouns in view while preserving exact fact sentences for objective scoring. Meridian Harbor Notice One sets the dawn inspection window at 06:10. Meridian Harbor Notice One assigns blue badges to Gate 4. Meridian Harbor Notice One routes Lantern crates through Atlas Terminal West. Clerks record the window, gate, and terminal on every dawn manifest so crews can compare later amendments against the older routine. Shift leaders repeat the legacy values during training because the benchmark depends on older facts remaining visible beside the current replacements. The second operations block explains how crate seals, escort logs, and hand stamps are processed before sunrise. Lantern crate clerks walk from Meridian Harbor to the west loading lane, count seals twice, and copy the",
+              "source": "meridian_harbor_notice_one.txt",
+              "rank": 1,
+              "metadata": {
+                "chunk_start_word": 0,
+                "chunk_end_word": 200
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "during training because the benchmark depends on older facts remaining visible beside the current replacements. The second operations block explains how crate seals, escort logs, and hand stamps are processed before sunrise. Lantern crate clerks walk from Meridian Harbor to the west loading lane, count seals twice, and copy the totals into the Atlas Terminal ledger. Blue badge runners wait beside Gate 4 until the inspection lead initials the chalk board and clears the first trolley. The memo also notes that harbor radios should mention Meridian Harbor and Atlas Terminal by name in every spoken update. That repeated phrasing creates the same kind of keyword overlap that real operational documents often contain. A review appendix says green badges remained in training storage during Notice One drills. Another appendix says Gate 6 appeared only in a draft margin and never became the active entrance. A current policy review mentioned Atlas Terminal East during planning meetings without adopting the change. Staff discussing later revisions also wrote that a dawn inspection adjustment might arrive in a future notice after more cargo testing. None of those draft references altered the active rule set in Notice One, but they do place later terms inside the",
+              "source": "meridian_harbor_notice_one.txt",
+              "rank": 2,
+              "metadata": {
+                "chunk_start_word": 150,
+                "chunk_end_word": 350
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "Meridian Harbor Notice Two is the formal amendment that replaced the earlier harbor memo in this synthetic corpus. It keeps the same named locations, repeats many of the same operational nouns, and states that the current rule set has changed. Readers still see Meridian Harbor, Lantern crates, Atlas Terminal, dawn inspection, and badge gates throughout the document because overlapping language is part of the benchmark design. The new memo is long enough to produce several retrieval units for both chunk systems and Akashik facts. It also makes every current value explicit so the ground truth can be scored by exact string match. Meridian Harbor Notice Two expressly supersedes Meridian Harbor Notice One. Current Meridian Harbor policy sets the dawn inspection window at 05:40. Current Meridian Harbor policy assigns green badges to Gate 6. Current Meridian Harbor policy routes Lantern crates through Atlas Terminal East. The amendment lists those three changes together because the benchmark needs a clean, current answer that can be compared against older wording. The policy explanation says dawn crews now stage earlier because eastbound cargo reaches the checkpoint before the first lantern cart arrives. Green badge runners wait beside Gate 6 while the new inspection clerk checks",
+              "source": "meridian_harbor_notice_two.txt",
+              "rank": 3,
+              "metadata": {
+                "chunk_start_word": 0,
+                "chunk_end_word": 200
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "together because the benchmark needs a clean, current answer that can be compared against older wording. The policy explanation says dawn crews now stage earlier because eastbound cargo reaches the checkpoint before the first lantern cart arrives. Green badge runners wait beside Gate 6 while the new inspection clerk checks seals, scans chalk codes, and clears the trolley release board. Atlas Terminal East receives Lantern crates under the active route, and the manifest template now prints the eastern lane by default. Supervisors repeatedly quote the current policy sentence during practice so that the updated fact remains easy to verify. The extra narration also gives the chunk systems enough surrounding text to compare against older paragraphs. A transition paragraph summarizes the older values without restoring them. It says the 06:10 window belonged to Notice One, blue badges belonged to Gate 4, and Atlas Terminal West belonged to the retired route. Another sentence warns that readers may still encounter those older values in archived binders and training copies. The memo therefore tells teams to prefer the superseding notice whenever Meridian Harbor documents conflict. That combination of historical context and explicit current facts is designed to create fair but detectable amendment challenges. Auditors",
+              "source": "meridian_harbor_notice_two.txt",
+              "rank": 4,
+              "metadata": {
+                "chunk_start_word": 150,
+                "chunk_end_word": 350
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "Meridian Rail Schedule B is the formal amendment that replaces the earlier station schedule in the benchmark corpus. It reuses the names Train Atlas, Lantern shuttle, archive trunks, and Meridian Rail so the competing systems search the same surface vocabulary across old and new documents. The revised schedule is deliberately wordy because the benchmark compares chunk retrieval, graph-style retrieval, and Akashik fact retrieval under identical text conditions. Each active value is expressed in a clean sentence so exact scoring remains objective. Historical explanations appear nearby but never override the new rule set. Meridian Rail Schedule B expressly supersedes Meridian Rail Schedule A. Current Meridian Rail schedule sends Train Atlas from Platform 5 at 20:05. Current Meridian Rail schedule keeps the Lantern shuttle at Bay 4. Current Meridian Rail schedule loads archive trunks at Dock Letter E. Those three current schedule sentences are the ground truth for amendment queries and are written to be quoted exactly. The explanatory block says the later departure gives Platform 5 enough clearance for inspection crews and lets the Lantern shuttle queue beside Bay 4 without crossing the old passenger lane. Archive trunks now roll to Dock Letter E because the newer platform pattern changed the",
+              "source": "meridian_rail_schedule_b.txt",
+              "rank": 5,
+              "metadata": {
+                "chunk_start_word": 0,
+                "chunk_end_word": 200
+              },
+              "confidence": null,
+              "parent_chain": []
+            }
+          ]
+        },
+        "system_b": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0,
+          "provenance": 0.0,
+          "composite": 0.0,
+          "top_result": null,
+          "results": []
+        },
+        "system_c": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0,
+          "provenance": 0.0,
+          "composite": 0.0,
+          "top_result": null,
+          "results": []
+        }
+      }
+    },
+    {
+      "query_id": "medium_02",
+      "query_text": "Where should station staff send the old document boxes under the latest rail instructions?",
+      "difficulty_mode_b": "natural",
+      "original_difficulty": "medium",
+      "expected_source": "meridian_rail_schedule_b.txt",
+      "expected_level": "fact",
+      "systems": {
+        "system_a": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0109,
+          "provenance": 0.0,
+          "composite": 0.0033,
+          "top_result": {
+            "content": "Meridian Rail Schedule A is a synthetic station notice included to test retrieval under overlapping names and revised facts. The document talks about Train Atlas, the Lantern shuttle, archive trunks, and several bay and platform references that later schedules reuse. Dispatchers at Meridian Rail repeat those names often because the benchmark needs realistic keyword overlap across old and current versions. The prose is intentionally long so chunk retrieval has multiple windows to inspect and mis-rank. Exact answer sentences remain intact so scoring never depends on interpretation. Meridian Rail Schedule A sends Train Atlas from Platform 3 at 19:20. Meridian Rail Schedule A keeps the Lantern shuttle at Bay 2. Meridian Rail Schedule A loads archive trunks at Dock Letter C. Station clerks read those three facts at the top of every evening briefing so workers can compare later revisions against the archived baseline. The rest of the memo repeats the same entities in narrative form to make wrong retrieval obvious. The second block describes ticket checks, lantern loading, and archive trunk sealing for the old arrangement. Train Atlas waits at Platform 3 while stewards mark seat tags, clear the aisle ropes, and post the departure slate beside the Meridian clock.",
+            "source": "meridian_rail_schedule_a.txt",
+            "rank": 1,
+            "metadata": {
+              "chunk_start_word": 0,
+              "chunk_end_word": 200
+            },
+            "confidence": null,
+            "parent_chain": []
+          },
+          "results": [
+            {
+              "content": "Meridian Rail Schedule A is a synthetic station notice included to test retrieval under overlapping names and revised facts. The document talks about Train Atlas, the Lantern shuttle, archive trunks, and several bay and platform references that later schedules reuse. Dispatchers at Meridian Rail repeat those names often because the benchmark needs realistic keyword overlap across old and current versions. The prose is intentionally long so chunk retrieval has multiple windows to inspect and mis-rank. Exact answer sentences remain intact so scoring never depends on interpretation. Meridian Rail Schedule A sends Train Atlas from Platform 3 at 19:20. Meridian Rail Schedule A keeps the Lantern shuttle at Bay 2. Meridian Rail Schedule A loads archive trunks at Dock Letter C. Station clerks read those three facts at the top of every evening briefing so workers can compare later revisions against the archived baseline. The rest of the memo repeats the same entities in narrative form to make wrong retrieval obvious. The second block describes ticket checks, lantern loading, and archive trunk sealing for the old arrangement. Train Atlas waits at Platform 3 while stewards mark seat tags, clear the aisle ropes, and post the departure slate beside the Meridian clock.",
+              "source": "meridian_rail_schedule_a.txt",
+              "rank": 1,
+              "metadata": {
+                "chunk_start_word": 0,
+                "chunk_end_word": 200
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "queries. An explanatory paragraph says the later opening gives conservators more time to warm the glass cases before visitors arrive. Atlas Room attendants moved the blue copper compass to Shelf 14 after the carpentry repair finished and the north case reopened. Curator Leda North retained the Aurora guide card because the signature itself did not change, but the surrounding placard text did. The paragraph repeats Meridian Lantern Gallery, River Glass exhibit, and Atlas Room so the update remains rich in surface cues. None of the explanation alters the active values already stated above. A comparison section summarizes the retired catalog values from the earlier document. It says the 09:30 opening and Shelf 12 placement belonged to the old catalog and should no longer be cited as active. Another sentence warns that tour binders may still include copied pages from the previous layout. That explicit contrast makes the supersession test objective without requiring any model judgment. The update therefore acts like a plain office bulletin rather than a semantic reasoning task. The longer appendix describes current visitor routing, current shelf labels, and current docent scripts in repetitive detail. Staff mention the 11:15 opening during every rehearsal, repeat Shelf 14 during every",
+              "source": "lantern_gallery_update.txt",
+              "rank": 2,
+              "metadata": {
+                "chunk_start_word": 150,
+                "chunk_end_word": 350
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "E while discussing future trunk flow. Those later terms were spread across separate sentences so the archived memo preserved old facts while still containing tempting newer words. The benchmark uses that distribution to make currentness resolution measurable. Auditors then add a long narrative about Meridian Rail agents rereading Platform 3, Bay 2, and Dock Letter C during boarding drills. They explain how stewards copied the platform number, how shuttle handlers checked the bay lantern, and how trunk crews painted the dock letter on every strap. The same paragraph also mentions draft charts, current reviews, Platform 5, and Bay 4 in separate sentences because archived notices often contain speculative material. None of that speculative material changes the active Schedule A facts. Its purpose is to keep the older document noisy without erasing the exact baseline answers. The closing section says Schedule A remained posted until a formal superseding schedule arrived from the synthetic dispatch office. It repeats Platform 3, Bay 2, Dock Letter C, and the 19:20 departure time in one final checklist for station captains. Dispatcher Mira Sol signs the archived sheet and notes that later schedules may reuse the same train and shuttle names with different values. That ending",
+              "source": "meridian_rail_schedule_a.txt",
+              "rank": 3,
+              "metadata": {
+                "chunk_start_word": 300,
+                "chunk_end_word": 500
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "Meridian Rail Schedule B is the formal amendment that replaces the earlier station schedule in the benchmark corpus. It reuses the names Train Atlas, Lantern shuttle, archive trunks, and Meridian Rail so the competing systems search the same surface vocabulary across old and new documents. The revised schedule is deliberately wordy because the benchmark compares chunk retrieval, graph-style retrieval, and Akashik fact retrieval under identical text conditions. Each active value is expressed in a clean sentence so exact scoring remains objective. Historical explanations appear nearby but never override the new rule set. Meridian Rail Schedule B expressly supersedes Meridian Rail Schedule A. Current Meridian Rail schedule sends Train Atlas from Platform 5 at 20:05. Current Meridian Rail schedule keeps the Lantern shuttle at Bay 4. Current Meridian Rail schedule loads archive trunks at Dock Letter E. Those three current schedule sentences are the ground truth for amendment queries and are written to be quoted exactly. The explanatory block says the later departure gives Platform 5 enough clearance for inspection crews and lets the Lantern shuttle queue beside Bay 4 without crossing the old passenger lane. Archive trunks now roll to Dock Letter E because the newer platform pattern changed the",
+              "source": "meridian_rail_schedule_b.txt",
+              "rank": 4,
+              "metadata": {
+                "chunk_start_word": 0,
+                "chunk_end_word": 200
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "written to be quoted exactly. The explanatory block says the later departure gives Platform 5 enough clearance for inspection crews and lets the Lantern shuttle queue beside Bay 4 without crossing the old passenger lane. Archive trunks now roll to Dock Letter E because the newer platform pattern changed the freight path through Meridian Rail. Dispatchers are instructed to repeat the current schedule wording during evening calls so the updated facts remain prominent in live speech and written notes. The paragraph also preserves Train Atlas, Lantern shuttle, and Dock Letter E as dense keywords for every retrieval system. Nothing in this explanation changes the active values already stated above. A comparison paragraph summarizes the retired values from Schedule A. It says Platform 3, Bay 2, Dock Letter C, and the 19:20 departure belonged to the archived notice and should no longer be treated as active. Another sentence warns that station binders still contain copied pages from the older schedule. That explicit contrast gives the benchmark a fair currentness challenge while keeping the current facts objective. The synthetic station chief signs the comparison paragraph to make the amendment pair feel like ordinary office paperwork. Auditors add a narrative about current platform",
+              "source": "meridian_rail_schedule_b.txt",
+              "rank": 5,
+              "metadata": {
+                "chunk_start_word": 150,
+                "chunk_end_word": 350
+              },
+              "confidence": null,
+              "parent_chain": []
+            }
+          ]
+        },
+        "system_b": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0,
+          "provenance": 0.0,
+          "composite": 0.0,
+          "top_result": null,
+          "results": []
+        },
+        "system_c": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0,
+          "provenance": 0.0,
+          "composite": 0.0,
+          "top_result": null,
+          "results": []
+        }
+      }
+    },
+    {
+      "query_id": "medium_04",
+      "query_text": "Which case holds the blue navigation instrument in the original gallery catalog?",
+      "difficulty_mode_b": "natural",
+      "original_difficulty": "medium",
+      "expected_source": "lantern_gallery_catalog.txt",
+      "expected_level": "fact",
+      "systems": {
+        "system_a": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0109,
+          "provenance": 1.0,
+          "composite": 0.2033,
+          "top_result": {
+            "content": "which makes this catalog a useful baseline for amendment queries. A second gallery block describes the entry hall, the winter label rail, and the visitor pacing route used before the update. Atlas Room attendants point to Shelf 12 during every morning walk and explain how the blue copper compass aligns with the northern lamp arch. Curator Leda North also initials the Aurora guide card again in a binder copy that sits beside the front desk. The paragraph repeats Meridian Lantern Gallery and River Glass exhibit several times to mimic a real catalog with redundant wording. That deliberate repetition gives both chunk and graph systems enough surface overlap to work with. A winter planning note says an 11:15 rehearsal opening was tested during a closed walkthrough. Another planning note says Shelf 14 received temporary labels while carpenters repaired the north case. Staff also wrote that an updated gallery bulletin might replace the original placement note after the repair. Those newer values are split across separate sentences because the old catalog preserved its active facts while still containing the vocabulary of later revisions. The benchmark uses that split to test whether current facts can be isolated cleanly. The catalog then adds a",
+            "source": "lantern_gallery_catalog.txt",
+            "rank": 1,
+            "metadata": {
+              "chunk_start_word": 150,
+              "chunk_end_word": 350
+            },
+            "confidence": null,
+            "parent_chain": []
+          },
+          "results": [
+            {
+              "content": "which makes this catalog a useful baseline for amendment queries. A second gallery block describes the entry hall, the winter label rail, and the visitor pacing route used before the update. Atlas Room attendants point to Shelf 12 during every morning walk and explain how the blue copper compass aligns with the northern lamp arch. Curator Leda North also initials the Aurora guide card again in a binder copy that sits beside the front desk. The paragraph repeats Meridian Lantern Gallery and River Glass exhibit several times to mimic a real catalog with redundant wording. That deliberate repetition gives both chunk and graph systems enough surface overlap to work with. A winter planning note says an 11:15 rehearsal opening was tested during a closed walkthrough. Another planning note says Shelf 14 received temporary labels while carpenters repaired the north case. Staff also wrote that an updated gallery bulletin might replace the original placement note after the repair. Those newer values are split across separate sentences because the old catalog preserved its active facts while still containing the vocabulary of later revisions. The benchmark uses that split to test whether current facts can be isolated cleanly. The catalog then adds a",
+              "source": "lantern_gallery_catalog.txt",
+              "rank": 1,
+              "metadata": {
+                "chunk_start_word": 150,
+                "chunk_end_word": 350
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "The Lantern Gallery catalog is a synthetic museum document designed for retrieval benchmarking rather than public exhibition. It describes the Meridian Lantern Gallery, Atlas Room, River Glass exhibit, and several labeled objects whose names overlap with other benchmark documents. Curators repeat Meridian, Atlas, Lantern, exhibit, room, and shelf language throughout the catalog so wrong retrieval is easy to detect. The document is intentionally long so chunk systems must choose among several windows instead of one short paragraph. Each answer sentence remains exact and stable so scoring can rely on string matching. The River Glass exhibit opens at 09:30 in the Meridian Lantern Gallery. The blue copper compass sits on Shelf 12 in Atlas Room. Curator Leda North signs the Aurora guide card. Those catalog facts appear together because visitors, guards, and catalogers all needed one compact summary of the original layout. Later updates reused the same exhibit and object names, which makes this catalog a useful baseline for amendment queries. A second gallery block describes the entry hall, the winter label rail, and the visitor pacing route used before the update. Atlas Room attendants point to Shelf 12 during every morning walk and explain how the blue copper compass aligns",
+              "source": "lantern_gallery_catalog.txt",
+              "rank": 2,
+              "metadata": {
+                "chunk_start_word": 0,
+                "chunk_end_word": 200
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "The Lantern Gallery update is the formal amendment that revises the earlier catalog entries in this synthetic corpus. It keeps the same gallery names, room names, and object names so the benchmark compares retrieval systems under overlapping language instead of unrelated wording. The update is intentionally detailed because the evaluation includes precision, context efficiency, and provenance across several systems. Every current value appears in a clean sentence that can be matched exactly. Historical references remain nearby so the amendment challenge stays visible and fair. The Lantern Gallery update expressly supersedes the earlier catalog placement note. The River Glass exhibit now opens at 11:15 in the Meridian Lantern Gallery. The blue copper compass now sits on Shelf 14 in Atlas Room. Curator Leda North keeps the Aurora guide card, and the current placard adds a winter note beneath her signature. Those update sentences supply the benchmark ground truth for current gallery queries. An explanatory paragraph says the later opening gives conservators more time to warm the glass cases before visitors arrive. Atlas Room attendants moved the blue copper compass to Shelf 14 after the carpentry repair finished and the north case reopened. Curator Leda North retained the Aurora guide card because",
+              "source": "lantern_gallery_update.txt",
+              "rank": 3,
+              "metadata": {
+                "chunk_start_word": 0,
+                "chunk_end_word": 200
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "queries. An explanatory paragraph says the later opening gives conservators more time to warm the glass cases before visitors arrive. Atlas Room attendants moved the blue copper compass to Shelf 14 after the carpentry repair finished and the north case reopened. Curator Leda North retained the Aurora guide card because the signature itself did not change, but the surrounding placard text did. The paragraph repeats Meridian Lantern Gallery, River Glass exhibit, and Atlas Room so the update remains rich in surface cues. None of the explanation alters the active values already stated above. A comparison section summarizes the retired catalog values from the earlier document. It says the 09:30 opening and Shelf 12 placement belonged to the old catalog and should no longer be cited as active. Another sentence warns that tour binders may still include copied pages from the previous layout. That explicit contrast makes the supersession test objective without requiring any model judgment. The update therefore acts like a plain office bulletin rather than a semantic reasoning task. The longer appendix describes current visitor routing, current shelf labels, and current docent scripts in repetitive detail. Staff mention the 11:15 opening during every rehearsal, repeat Shelf 14 during every",
+              "source": "lantern_gallery_update.txt",
+              "rank": 4,
+              "metadata": {
+                "chunk_start_word": 150,
+                "chunk_end_word": 350
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "the original placement note after the repair. Those newer values are split across separate sentences because the old catalog preserved its active facts while still containing the vocabulary of later revisions. The benchmark uses that split to test whether current facts can be isolated cleanly. The catalog then adds a long narrative about attendants discussing Meridian Lantern Gallery traffic, Atlas Room shelf spacing, and guide card signatures during weekend tours. They explain how the River Glass exhibit drew early visitors at 09:30, how Shelf 12 remained the stable compass location, and how Curator Leda North kept the Aurora guide card near the docent desk. The same narrative also references the future bulletin, 11:15 rehearsal notes, and Shelf 14 trial labels in separate sentences. None of those later mentions change the active catalog facts. They simply make the older document dense enough to challenge chunk retrieval. The closing section says the catalog remained authoritative until a signed update expressly replaced the placement note. It repeats the 09:30 opening, Shelf 12 location, and Aurora guide card signature before the final registrar line. Registrar Sena Vale signs the page and reminds staff that later documents may keep the same exhibit names while changing",
+              "source": "lantern_gallery_catalog.txt",
+              "rank": 5,
+              "metadata": {
+                "chunk_start_word": 300,
+                "chunk_end_word": 500
+              },
+              "confidence": null,
+              "parent_chain": []
+            }
+          ]
+        },
+        "system_b": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0,
+          "provenance": 0.0,
+          "composite": 0.0,
+          "top_result": null,
+          "results": []
+        },
+        "system_c": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0,
+          "provenance": 0.0,
+          "composite": 0.0,
+          "top_result": null,
+          "results": []
+        }
+      }
+    },
+    {
+      "query_id": "medium_05",
+      "query_text": "Where is the red team's pine sample tray stored?",
+      "difficulty_mode_b": "natural",
+      "original_difficulty": "medium",
+      "expected_source": "atlas_field_manual_red.txt",
+      "expected_level": "fact",
+      "systems": {
+        "system_a": {
+          "precision_at_1": 1.0,
+          "context_efficiency": 0.0139,
+          "provenance": 1.0,
+          "composite": 0.7042,
+          "top_result": {
+            "content": "Atlas Field Manual Red is a synthetic survey guide included to create near-identical phrasing with different factual values. It focuses on Atlas Pine plots, Meridian moss jars, survey packets, ribbon colors, sample codes, and storage racks. The manual repeats Atlas Pine and Meridian moss vocabulary throughout the text so retrieval systems see multiple plausible matches inside a single topic family. The wording intentionally resembles another manual in the corpus while changing a few decisive facts. That design makes wrong retrieval detectable without needing any semantic judge. The Atlas Pine survey packet uses amber ribbon and sample code R17. The Atlas Pine moisture tray rests on Rack C4 beside the Meridian moss jars. Team Red records the dawn transect at Marker Circle 8 before filing the tray card. Those three sentences are the exact ground truth facts for the red manual. Every later paragraph keeps the same nouns in motion so baseline chunk retrieval cannot rely on unrelated topic separation. The operations section explains how Atlas Pine crews tie amber ribbon to the packet flap, copy sample code R17 to the tray card, and carry the moisture tray toward Rack C4 after sunrise. Meridian moss jars are counted beside the same",
+            "source": "atlas_field_manual_red.txt",
+            "rank": 1,
+            "metadata": {
+              "chunk_start_word": 0,
+              "chunk_end_word": 200
+            },
+            "confidence": null,
+            "parent_chain": []
+          },
+          "results": [
+            {
+              "content": "Atlas Field Manual Red is a synthetic survey guide included to create near-identical phrasing with different factual values. It focuses on Atlas Pine plots, Meridian moss jars, survey packets, ribbon colors, sample codes, and storage racks. The manual repeats Atlas Pine and Meridian moss vocabulary throughout the text so retrieval systems see multiple plausible matches inside a single topic family. The wording intentionally resembles another manual in the corpus while changing a few decisive facts. That design makes wrong retrieval detectable without needing any semantic judge. The Atlas Pine survey packet uses amber ribbon and sample code R17. The Atlas Pine moisture tray rests on Rack C4 beside the Meridian moss jars. Team Red records the dawn transect at Marker Circle 8 before filing the tray card. Those three sentences are the exact ground truth facts for the red manual. Every later paragraph keeps the same nouns in motion so baseline chunk retrieval cannot rely on unrelated topic separation. The operations section explains how Atlas Pine crews tie amber ribbon to the packet flap, copy sample code R17 to the tray card, and carry the moisture tray toward Rack C4 after sunrise. Meridian moss jars are counted beside the same",
+              "source": "atlas_field_manual_red.txt",
+              "rank": 1,
+              "metadata": {
+                "chunk_start_word": 0,
+                "chunk_end_word": 200
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "Atlas Field Manual Silver is the paired synthetic guide that mirrors the red survey manual while changing a small set of decisive values. It covers Atlas Pine plots, Meridian moss jars, survey packets, ribbon colors, sample codes, and storage racks with nearly identical phrasing. The benchmark uses this document family to test whether systems can separate closely related text without embeddings. Most of the nouns remain the same from one manual to the next. Only the active values for ribbon, code, rack, and marker circle change. The Atlas Pine survey packet uses silver ribbon and sample code S19. The Atlas Pine moisture tray rests on Rack C6 beside the Meridian moss jars. Team Silver records the dawn transect at Marker Circle 11 before filing the tray card. Those sentences define the silver manual ground truth and are written to be scored by exact string match. All later paragraphs intentionally echo the structure of the red manual. The operations section explains how Atlas Pine crews tie silver ribbon to the packet flap, copy sample code S19 to the tray card, and carry the moisture tray toward Rack C6 after sunrise. Meridian moss jars are counted beside the same rack so the",
+              "source": "atlas_field_manual_silver.txt",
+              "rank": 2,
+              "metadata": {
+                "chunk_start_word": 0,
+                "chunk_end_word": 200
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "baseline chunk retrieval cannot rely on unrelated topic separation. The operations section explains how Atlas Pine crews tie amber ribbon to the packet flap, copy sample code R17 to the tray card, and carry the moisture tray toward Rack C4 after sunrise. Meridian moss jars are counted beside the same rack so the red manual repeats the rack name several times in one paragraph. Supervisors also mention Marker Circle 8 during radio checks and field rehearsals. The paragraph uses nearly the same structure as the silver manual on purpose. The benchmark depends on one or two changed values making the difference. A training note says silver ribbon was discussed during a comparative workshop and then set aside for the red team. Another line says code S19 belongs to a different packet even though both manuals talk about Atlas Pine and Meridian moss jars. A third line says Rack C6 appears in the comparison chart but not in the red procedure. Those neighboring sentences place the rival values inside the document without turning them into the active facts. Chunk retrieval can therefore see both versions in one window while fact retrieval still has a precise answer. The appendix adds a long",
+              "source": "atlas_field_manual_red.txt",
+              "rank": 3,
+              "metadata": {
+                "chunk_start_word": 150,
+                "chunk_end_word": 350
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "the structure of the red manual. The operations section explains how Atlas Pine crews tie silver ribbon to the packet flap, copy sample code S19 to the tray card, and carry the moisture tray toward Rack C6 after sunrise. Meridian moss jars are counted beside the same rack so the silver manual repeats the rack name several times in one paragraph. Supervisors also mention Marker Circle 11 during radio checks and field rehearsals. The wording closely parallels the red manual because the benchmark wants near-identical phrasing with different answers. That structure makes source attribution especially important. A training note says amber ribbon was discussed during a comparison workshop and then set aside for the silver team. Another line says code R17 belongs to the neighboring red packet even though both manuals talk about Atlas Pine and Meridian moss jars. A third line says Rack C4 appears in the comparison chart but not in the silver procedure. Those rival values are kept in separate sentences so chunk retrieval can over-match while fact retrieval stays exact. The active silver values remain unchanged. The appendix adds a long narrative about field stewards repeating silver ribbon, sample code S19, Rack C6, and Marker Circle",
+              "source": "atlas_field_manual_silver.txt",
+              "rank": 4,
+              "metadata": {
+                "chunk_start_word": 150,
+                "chunk_end_word": 350
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "in the comparison chart but not in the red procedure. Those neighboring sentences place the rival values inside the document without turning them into the active facts. Chunk retrieval can therefore see both versions in one window while fact retrieval still has a precise answer. The appendix adds a long narrative about field stewards repeating amber ribbon, sample code R17, Rack C4, and Marker Circle 8 during practice loops. They describe how the survey packet is sealed, how Meridian moss jars are counted, and how the tray rests beside the rack after the dawn transect ends. The same appendix also references silver ribbon, S19, and Rack C6 in separate comparison sentences because the red and silver manuals were distributed together. That deliberate overlap makes near-match errors easy to inspect. It does not change the active red manual facts. The closing section says Atlas Field Manual Red should be cited whenever crews ask about the amber packet, code R17, or the C4 tray rack. It repeats the exact ribbon color, sample code, rack, and marker circle before the signature block. Survey lead Mara Finn signs the red guide and notes that a similar silver guide exists with different values. The long",
+              "source": "atlas_field_manual_red.txt",
+              "rank": 5,
+              "metadata": {
+                "chunk_start_word": 300,
+                "chunk_end_word": 500
+              },
+              "confidence": null,
+              "parent_chain": []
+            }
+          ]
+        },
+        "system_b": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0,
+          "provenance": 0.0,
+          "composite": 0.0,
+          "top_result": null,
+          "results": []
+        },
+        "system_c": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0,
+          "provenance": 0.0,
+          "composite": 0.0,
+          "top_result": null,
+          "results": []
+        }
+      }
+    },
+    {
+      "query_id": "medium_06",
+      "query_text": "Where is the silver team's pine sample tray stored?",
+      "difficulty_mode_b": "natural",
+      "original_difficulty": "medium",
+      "expected_source": "atlas_field_manual_silver.txt",
+      "expected_level": "fact",
+      "systems": {
+        "system_a": {
+          "precision_at_1": 1.0,
+          "context_efficiency": 0.0139,
+          "provenance": 1.0,
+          "composite": 0.7042,
+          "top_result": {
+            "content": "Atlas Field Manual Silver is the paired synthetic guide that mirrors the red survey manual while changing a small set of decisive values. It covers Atlas Pine plots, Meridian moss jars, survey packets, ribbon colors, sample codes, and storage racks with nearly identical phrasing. The benchmark uses this document family to test whether systems can separate closely related text without embeddings. Most of the nouns remain the same from one manual to the next. Only the active values for ribbon, code, rack, and marker circle change. The Atlas Pine survey packet uses silver ribbon and sample code S19. The Atlas Pine moisture tray rests on Rack C6 beside the Meridian moss jars. Team Silver records the dawn transect at Marker Circle 11 before filing the tray card. Those sentences define the silver manual ground truth and are written to be scored by exact string match. All later paragraphs intentionally echo the structure of the red manual. The operations section explains how Atlas Pine crews tie silver ribbon to the packet flap, copy sample code S19 to the tray card, and carry the moisture tray toward Rack C6 after sunrise. Meridian moss jars are counted beside the same rack so the",
+            "source": "atlas_field_manual_silver.txt",
+            "rank": 1,
+            "metadata": {
+              "chunk_start_word": 0,
+              "chunk_end_word": 200
+            },
+            "confidence": null,
+            "parent_chain": []
+          },
+          "results": [
+            {
+              "content": "Atlas Field Manual Silver is the paired synthetic guide that mirrors the red survey manual while changing a small set of decisive values. It covers Atlas Pine plots, Meridian moss jars, survey packets, ribbon colors, sample codes, and storage racks with nearly identical phrasing. The benchmark uses this document family to test whether systems can separate closely related text without embeddings. Most of the nouns remain the same from one manual to the next. Only the active values for ribbon, code, rack, and marker circle change. The Atlas Pine survey packet uses silver ribbon and sample code S19. The Atlas Pine moisture tray rests on Rack C6 beside the Meridian moss jars. Team Silver records the dawn transect at Marker Circle 11 before filing the tray card. Those sentences define the silver manual ground truth and are written to be scored by exact string match. All later paragraphs intentionally echo the structure of the red manual. The operations section explains how Atlas Pine crews tie silver ribbon to the packet flap, copy sample code S19 to the tray card, and carry the moisture tray toward Rack C6 after sunrise. Meridian moss jars are counted beside the same rack so the",
+              "source": "atlas_field_manual_silver.txt",
+              "rank": 1,
+              "metadata": {
+                "chunk_start_word": 0,
+                "chunk_end_word": 200
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "Atlas Field Manual Red is a synthetic survey guide included to create near-identical phrasing with different factual values. It focuses on Atlas Pine plots, Meridian moss jars, survey packets, ribbon colors, sample codes, and storage racks. The manual repeats Atlas Pine and Meridian moss vocabulary throughout the text so retrieval systems see multiple plausible matches inside a single topic family. The wording intentionally resembles another manual in the corpus while changing a few decisive facts. That design makes wrong retrieval detectable without needing any semantic judge. The Atlas Pine survey packet uses amber ribbon and sample code R17. The Atlas Pine moisture tray rests on Rack C4 beside the Meridian moss jars. Team Red records the dawn transect at Marker Circle 8 before filing the tray card. Those three sentences are the exact ground truth facts for the red manual. Every later paragraph keeps the same nouns in motion so baseline chunk retrieval cannot rely on unrelated topic separation. The operations section explains how Atlas Pine crews tie amber ribbon to the packet flap, copy sample code R17 to the tray card, and carry the moisture tray toward Rack C4 after sunrise. Meridian moss jars are counted beside the same",
+              "source": "atlas_field_manual_red.txt",
+              "rank": 2,
+              "metadata": {
+                "chunk_start_word": 0,
+                "chunk_end_word": 200
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "baseline chunk retrieval cannot rely on unrelated topic separation. The operations section explains how Atlas Pine crews tie amber ribbon to the packet flap, copy sample code R17 to the tray card, and carry the moisture tray toward Rack C4 after sunrise. Meridian moss jars are counted beside the same rack so the red manual repeats the rack name several times in one paragraph. Supervisors also mention Marker Circle 8 during radio checks and field rehearsals. The paragraph uses nearly the same structure as the silver manual on purpose. The benchmark depends on one or two changed values making the difference. A training note says silver ribbon was discussed during a comparative workshop and then set aside for the red team. Another line says code S19 belongs to a different packet even though both manuals talk about Atlas Pine and Meridian moss jars. A third line says Rack C6 appears in the comparison chart but not in the red procedure. Those neighboring sentences place the rival values inside the document without turning them into the active facts. Chunk retrieval can therefore see both versions in one window while fact retrieval still has a precise answer. The appendix adds a long",
+              "source": "atlas_field_manual_red.txt",
+              "rank": 3,
+              "metadata": {
+                "chunk_start_word": 150,
+                "chunk_end_word": 350
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "the structure of the red manual. The operations section explains how Atlas Pine crews tie silver ribbon to the packet flap, copy sample code S19 to the tray card, and carry the moisture tray toward Rack C6 after sunrise. Meridian moss jars are counted beside the same rack so the silver manual repeats the rack name several times in one paragraph. Supervisors also mention Marker Circle 11 during radio checks and field rehearsals. The wording closely parallels the red manual because the benchmark wants near-identical phrasing with different answers. That structure makes source attribution especially important. A training note says amber ribbon was discussed during a comparison workshop and then set aside for the silver team. Another line says code R17 belongs to the neighboring red packet even though both manuals talk about Atlas Pine and Meridian moss jars. A third line says Rack C4 appears in the comparison chart but not in the silver procedure. Those rival values are kept in separate sentences so chunk retrieval can over-match while fact retrieval stays exact. The active silver values remain unchanged. The appendix adds a long narrative about field stewards repeating silver ribbon, sample code S19, Rack C6, and Marker Circle",
+              "source": "atlas_field_manual_silver.txt",
+              "rank": 4,
+              "metadata": {
+                "chunk_start_word": 150,
+                "chunk_end_word": 350
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "in the comparison chart but not in the red procedure. Those neighboring sentences place the rival values inside the document without turning them into the active facts. Chunk retrieval can therefore see both versions in one window while fact retrieval still has a precise answer. The appendix adds a long narrative about field stewards repeating amber ribbon, sample code R17, Rack C4, and Marker Circle 8 during practice loops. They describe how the survey packet is sealed, how Meridian moss jars are counted, and how the tray rests beside the rack after the dawn transect ends. The same appendix also references silver ribbon, S19, and Rack C6 in separate comparison sentences because the red and silver manuals were distributed together. That deliberate overlap makes near-match errors easy to inspect. It does not change the active red manual facts. The closing section says Atlas Field Manual Red should be cited whenever crews ask about the amber packet, code R17, or the C4 tray rack. It repeats the exact ribbon color, sample code, rack, and marker circle before the signature block. Survey lead Mara Finn signs the red guide and notes that a similar silver guide exists with different values. The long",
+              "source": "atlas_field_manual_red.txt",
+              "rank": 5,
+              "metadata": {
+                "chunk_start_word": 300,
+                "chunk_end_word": 500
+              },
+              "confidence": null,
+              "parent_chain": []
+            }
+          ]
+        },
+        "system_b": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0,
+          "provenance": 0.0,
+          "composite": 0.0,
+          "top_result": null,
+          "results": []
+        },
+        "system_c": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0,
+          "provenance": 0.0,
+          "composite": 0.0,
+          "top_result": null,
+          "results": []
+        }
+      }
+    },
+    {
+      "query_id": "medium_08",
+      "query_text": "What access number is used for the reserve turbine line?",
+      "difficulty_mode_b": "natural",
+      "original_difficulty": "medium",
+      "expected_source": "copper_reserve_digest.txt",
+      "expected_level": "fact",
+      "systems": {
+        "system_a": {
+          "precision_at_1": 1.0,
+          "context_efficiency": 0.0089,
+          "provenance": 1.0,
+          "composite": 0.7027,
+          "top_result": {
+            "content": "Copper Reserve Digest is a synthetic infrastructure report included to widen the benchmark beyond transport, galleries, and field manuals. It talks about Atlas Basin pumps, Lantern turbine lines, Meridian storage vaults, aisle markers, and reserve key codes. The digest repeats those names across several paragraphs so the system outputs can be inspected for provenance and precision under another topic family. The prose is intentionally long because the corpus specification calls for medium length plain text documents. Exact metric sentences still appear clearly enough for deterministic scoring. Copper Reserve Digest records Pump Seven at Atlas Basin with pressure 41. Lantern turbine line Beta holds reserve key code 8841. Meridian storage vault uses aisle marker H8. Those three sentences form the digest summary that operators cite during morning reserve checks. The rest of the report repeats the same pumps, lines, keys, and aisles in narrative form so every retrieval system sees dense, realistic overlap. The operations section explains how Atlas Basin technicians read Pump Seven, log pressure 41 on the slate, and confirm that turbine line Beta still carries reserve key code 8841. Vault runners then walk to aisle marker H8 in the Meridian storage room and count the copper seals before",
+            "source": "copper_reserve_digest.txt",
+            "rank": 1,
+            "metadata": {
+              "chunk_start_word": 0,
+              "chunk_end_word": 200
+            },
+            "confidence": null,
+            "parent_chain": []
+          },
+          "results": [
+            {
+              "content": "Copper Reserve Digest is a synthetic infrastructure report included to widen the benchmark beyond transport, galleries, and field manuals. It talks about Atlas Basin pumps, Lantern turbine lines, Meridian storage vaults, aisle markers, and reserve key codes. The digest repeats those names across several paragraphs so the system outputs can be inspected for provenance and precision under another topic family. The prose is intentionally long because the corpus specification calls for medium length plain text documents. Exact metric sentences still appear clearly enough for deterministic scoring. Copper Reserve Digest records Pump Seven at Atlas Basin with pressure 41. Lantern turbine line Beta holds reserve key code 8841. Meridian storage vault uses aisle marker H8. Those three sentences form the digest summary that operators cite during morning reserve checks. The rest of the report repeats the same pumps, lines, keys, and aisles in narrative form so every retrieval system sees dense, realistic overlap. The operations section explains how Atlas Basin technicians read Pump Seven, log pressure 41 on the slate, and confirm that turbine line Beta still carries reserve key code 8841. Vault runners then walk to aisle marker H8 in the Meridian storage room and count the copper seals before",
+              "source": "copper_reserve_digest.txt",
+              "rank": 1,
+              "metadata": {
+                "chunk_start_word": 0,
+                "chunk_end_word": 200
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "realistic overlap. The operations section explains how Atlas Basin technicians read Pump Seven, log pressure 41 on the slate, and confirm that turbine line Beta still carries reserve key code 8841. Vault runners then walk to aisle marker H8 in the Meridian storage room and count the copper seals before noon. The paragraph repeats Atlas Basin, line Beta, and H8 several times because reserve reports are usually redundant. That redundancy also helps the benchmark compare context efficiency across systems. Nothing in the section changes the active digest facts. A comparison note says Pump Five appeared in an earlier worksheet and should not be confused with Pump Seven. Another note says line Delta kept temporary key code 8814 during a rehearsal audit. A third note says aisle marker H6 remains printed on an outdated floor map. Those neighboring values create distractors that resemble the active ones without sharing the exact answer sentence. The benchmark uses this report to test whether systems preserve provenance under noisy detail. The appendix adds a long narrative about Atlas Basin operators repeating Pump Seven, pressure 41, line Beta, key code 8841, and aisle marker H8 during shift handoffs. It describes how the reserve slate is copied,",
+              "source": "copper_reserve_digest.txt",
+              "rank": 2,
+              "metadata": {
+                "chunk_start_word": 150,
+                "chunk_end_word": 350
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "The benchmark uses that pattern to test source and precision rather than medical reasoning. The appendix then adds a long narrative about nurses checking the Lantern desk stack, repeating Indigo 3, and confirming Atlas Ward access before opening the recovery room. It describes how Cedar pharmacy closes at 18:20, how the recovery room lights are tested, and how the triage bands are counted at shift end. The same appendix references Indigo 2 and Birch pharmacy in separate comparison sentences to make chunk retrieval slightly noisier. That overlap is deliberate and fully synthetic. The clinic file remains a string-match benchmark document. The closing block tells staff to cite the brief whenever anyone asks about the Lantern desk card, the Meridian recovery room opening, or Cedar pharmacy closing time. It repeats Indigo 3, 07:45, and 18:20 in one final checklist. Clinic manager Rowan Hale signs the page and notes that no amendment has superseded this brief inside the corpus. The ending keeps the document above the length threshold for the benchmark. No line in the closing block alters the active clinic facts, and one last routing sentence ensures the file clears the corpus minimum length requirement. The final staffing reminder says the",
+              "source": "northwind_clinic_brief.txt",
+              "rank": 3,
+              "metadata": {
+                "chunk_start_word": 300,
+                "chunk_end_word": 500
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "sentence. The benchmark uses this report to test whether systems preserve provenance under noisy detail. The appendix adds a long narrative about Atlas Basin operators repeating Pump Seven, pressure 41, line Beta, key code 8841, and aisle marker H8 during shift handoffs. It describes how the reserve slate is copied, how the vault key is checked, and how the copper seals are recounted before the evening siren. The same appendix references Pump Five, line Delta, and aisle marker H6 in separate comparison sentences to make chunk retrieval slightly less certain. That overlap is deliberate and entirely synthetic. The digest remains a pure string-match benchmark file. The closing block says the digest should be cited whenever anyone asks about current pump pressure, reserve key code, or vault aisle location. It repeats Pump Seven, pressure 41, code 8841, and H8 in one final checklist before the signature line. Analyst Tera Moss signs the report and notes that no superseding amendment appears elsewhere in the corpus. The ending keeps the report above the target length. No later sentence changes the active reserve facts, and the final operational reminder lifts the digest above the corpus minimum with no effect on scoring. A closing audit",
+              "source": "copper_reserve_digest.txt",
+              "rank": 4,
+              "metadata": {
+                "chunk_start_word": 300,
+                "chunk_end_word": 500
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "The Lantern Gallery catalog is a synthetic museum document designed for retrieval benchmarking rather than public exhibition. It describes the Meridian Lantern Gallery, Atlas Room, River Glass exhibit, and several labeled objects whose names overlap with other benchmark documents. Curators repeat Meridian, Atlas, Lantern, exhibit, room, and shelf language throughout the catalog so wrong retrieval is easy to detect. The document is intentionally long so chunk systems must choose among several windows instead of one short paragraph. Each answer sentence remains exact and stable so scoring can rely on string matching. The River Glass exhibit opens at 09:30 in the Meridian Lantern Gallery. The blue copper compass sits on Shelf 12 in Atlas Room. Curator Leda North signs the Aurora guide card. Those catalog facts appear together because visitors, guards, and catalogers all needed one compact summary of the original layout. Later updates reused the same exhibit and object names, which makes this catalog a useful baseline for amendment queries. A second gallery block describes the entry hall, the winter label rail, and the visitor pacing route used before the update. Atlas Room attendants point to Shelf 12 during every morning walk and explain how the blue copper compass aligns",
+              "source": "lantern_gallery_catalog.txt",
+              "rank": 5,
+              "metadata": {
+                "chunk_start_word": 0,
+                "chunk_end_word": 200
+              },
+              "confidence": null,
+              "parent_chain": []
+            }
+          ]
+        },
+        "system_b": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0,
+          "provenance": 0.0,
+          "composite": 0.0,
+          "top_result": null,
+          "results": []
+        },
+        "system_c": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0,
+          "provenance": 0.0,
+          "composite": 0.0,
+          "top_result": null,
+          "results": []
+        }
+      }
+    },
+    {
+      "query_id": "hard_01",
+      "query_text": "Which entrance do green-card harbor workers use under the latest rule?",
+      "difficulty_mode_b": "natural",
+      "original_difficulty": "hard",
+      "expected_source": "meridian_harbor_notice_two.txt",
+      "expected_level": "fact",
+      "systems": {
+        "system_a": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.01,
+          "provenance": 0.0,
+          "composite": 0.003,
+          "top_result": {
+            "content": "during training because the benchmark depends on older facts remaining visible beside the current replacements. The second operations block explains how crate seals, escort logs, and hand stamps are processed before sunrise. Lantern crate clerks walk from Meridian Harbor to the west loading lane, count seals twice, and copy the totals into the Atlas Terminal ledger. Blue badge runners wait beside Gate 4 until the inspection lead initials the chalk board and clears the first trolley. The memo also notes that harbor radios should mention Meridian Harbor and Atlas Terminal by name in every spoken update. That repeated phrasing creates the same kind of keyword overlap that real operational documents often contain. A review appendix says green badges remained in training storage during Notice One drills. Another appendix says Gate 6 appeared only in a draft margin and never became the active entrance. A current policy review mentioned Atlas Terminal East during planning meetings without adopting the change. Staff discussing later revisions also wrote that a dawn inspection adjustment might arrive in a future notice after more cargo testing. None of those draft references altered the active rule set in Notice One, but they do place later terms inside the",
+            "source": "meridian_harbor_notice_one.txt",
+            "rank": 1,
+            "metadata": {
+              "chunk_start_word": 150,
+              "chunk_end_word": 350
+            },
+            "confidence": null,
+            "parent_chain": []
+          },
+          "results": [
+            {
+              "content": "during training because the benchmark depends on older facts remaining visible beside the current replacements. The second operations block explains how crate seals, escort logs, and hand stamps are processed before sunrise. Lantern crate clerks walk from Meridian Harbor to the west loading lane, count seals twice, and copy the totals into the Atlas Terminal ledger. Blue badge runners wait beside Gate 4 until the inspection lead initials the chalk board and clears the first trolley. The memo also notes that harbor radios should mention Meridian Harbor and Atlas Terminal by name in every spoken update. That repeated phrasing creates the same kind of keyword overlap that real operational documents often contain. A review appendix says green badges remained in training storage during Notice One drills. Another appendix says Gate 6 appeared only in a draft margin and never became the active entrance. A current policy review mentioned Atlas Terminal East during planning meetings without adopting the change. Staff discussing later revisions also wrote that a dawn inspection adjustment might arrive in a future notice after more cargo testing. None of those draft references altered the active rule set in Notice One, but they do place later terms inside the",
+              "source": "meridian_harbor_notice_one.txt",
+              "rank": 1,
+              "metadata": {
+                "chunk_start_word": 150,
+                "chunk_end_word": 350
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "East during planning meetings without adopting the change. Staff discussing later revisions also wrote that a dawn inspection adjustment might arrive in a future notice after more cargo testing. None of those draft references altered the active rule set in Notice One, but they do place later terms inside the older document. Auditors added a long narrative about Lantern supervisors, Meridian Harbor clerks, and Atlas Terminal checkers repeating the older workflow for consistency checks. They described how blue badge holders lined up by the paint stripe, how westbound crate carts cleared the scale, and how the 06:10 window remained the only approved dawn inspection time. The narrative repeats the old route because readers were expected to compare it line by line against possible amendments. It also mentions current reviews, green badge proposals, and Gate 6 rumors in separate sentences so the older notice remains noisy. The benchmark uses that noise to make wrong chunk retrieval detectable. The closing section says Notice One stayed on the wall until a formal superseding memo appeared. It reminds readers that Meridian Harbor names, Lantern crate routes, and Atlas Terminal references may recur in later notices with different facts. The final checklist repeats blue badges,",
+              "source": "meridian_harbor_notice_one.txt",
+              "rank": 2,
+              "metadata": {
+                "chunk_start_word": 300,
+                "chunk_end_word": 500
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "Meridian Harbor Notice Two is the formal amendment that replaced the earlier harbor memo in this synthetic corpus. It keeps the same named locations, repeats many of the same operational nouns, and states that the current rule set has changed. Readers still see Meridian Harbor, Lantern crates, Atlas Terminal, dawn inspection, and badge gates throughout the document because overlapping language is part of the benchmark design. The new memo is long enough to produce several retrieval units for both chunk systems and Akashik facts. It also makes every current value explicit so the ground truth can be scored by exact string match. Meridian Harbor Notice Two expressly supersedes Meridian Harbor Notice One. Current Meridian Harbor policy sets the dawn inspection window at 05:40. Current Meridian Harbor policy assigns green badges to Gate 6. Current Meridian Harbor policy routes Lantern crates through Atlas Terminal East. The amendment lists those three changes together because the benchmark needs a clean, current answer that can be compared against older wording. The policy explanation says dawn crews now stage earlier because eastbound cargo reaches the checkpoint before the first lantern cart arrives. Green badge runners wait beside Gate 6 while the new inspection clerk checks",
+              "source": "meridian_harbor_notice_two.txt",
+              "rank": 3,
+              "metadata": {
+                "chunk_start_word": 0,
+                "chunk_end_word": 200
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "together because the benchmark needs a clean, current answer that can be compared against older wording. The policy explanation says dawn crews now stage earlier because eastbound cargo reaches the checkpoint before the first lantern cart arrives. Green badge runners wait beside Gate 6 while the new inspection clerk checks seals, scans chalk codes, and clears the trolley release board. Atlas Terminal East receives Lantern crates under the active route, and the manifest template now prints the eastern lane by default. Supervisors repeatedly quote the current policy sentence during practice so that the updated fact remains easy to verify. The extra narration also gives the chunk systems enough surrounding text to compare against older paragraphs. A transition paragraph summarizes the older values without restoring them. It says the 06:10 window belonged to Notice One, blue badges belonged to Gate 4, and Atlas Terminal West belonged to the retired route. Another sentence warns that readers may still encounter those older values in archived binders and training copies. The memo therefore tells teams to prefer the superseding notice whenever Meridian Harbor documents conflict. That combination of historical context and explicit current facts is designed to create fair but detectable amendment challenges. Auditors",
+              "source": "meridian_harbor_notice_two.txt",
+              "rank": 4,
+              "metadata": {
+                "chunk_start_word": 150,
+                "chunk_end_word": 350
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "sentence warns that readers may still encounter those older values in archived binders and training copies. The memo therefore tells teams to prefer the superseding notice whenever Meridian Harbor documents conflict. That combination of historical context and explicit current facts is designed to create fair but detectable amendment challenges. Auditors in the synthetic harbor office add a long explanation about current labels, current gates, and current route stamps being swapped across the site. They describe green badge checks, eastbound crate carts, and the 05:40 inspection window in separate examples so the new document has rich context instead of a single bare list. The appendix also repeats Meridian Harbor and Atlas Terminal East several times to mimic the redundancy of real operations writing. Every repeated phrase is deliberate because the benchmark measures precision, efficiency, and provenance under overlapping terminology. The passage closes by stating that the second notice is the only current harbor authority in the corpus. The closing block says Notice Two should be filed above the older harbor memo and cited whenever clerks answer questions about active access. It repeats green badges, Gate 6, Atlas Terminal East, and the 05:40 dawn inspection window before the final signature line. Steward",
+              "source": "meridian_harbor_notice_two.txt",
+              "rank": 5,
+              "metadata": {
+                "chunk_start_word": 300,
+                "chunk_end_word": 500
+              },
+              "confidence": null,
+              "parent_chain": []
+            }
+          ]
+        },
+        "system_b": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0,
+          "provenance": 0.0,
+          "composite": 0.0,
+          "top_result": null,
+          "results": []
+        },
+        "system_c": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0,
+          "provenance": 0.0,
+          "composite": 0.0,
+          "top_result": null,
+          "results": []
+        }
+      }
+    },
+    {
+      "query_id": "hard_03",
+      "query_text": "When does the harbor morning inspection happen under the latest rule?",
+      "difficulty_mode_b": "natural",
+      "original_difficulty": "hard",
+      "expected_source": "meridian_harbor_notice_two.txt",
+      "expected_level": "fact",
+      "systems": {
+        "system_a": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0119,
+          "provenance": 0.0,
+          "composite": 0.0036,
+          "top_result": {
+            "content": "during training because the benchmark depends on older facts remaining visible beside the current replacements. The second operations block explains how crate seals, escort logs, and hand stamps are processed before sunrise. Lantern crate clerks walk from Meridian Harbor to the west loading lane, count seals twice, and copy the totals into the Atlas Terminal ledger. Blue badge runners wait beside Gate 4 until the inspection lead initials the chalk board and clears the first trolley. The memo also notes that harbor radios should mention Meridian Harbor and Atlas Terminal by name in every spoken update. That repeated phrasing creates the same kind of keyword overlap that real operational documents often contain. A review appendix says green badges remained in training storage during Notice One drills. Another appendix says Gate 6 appeared only in a draft margin and never became the active entrance. A current policy review mentioned Atlas Terminal East during planning meetings without adopting the change. Staff discussing later revisions also wrote that a dawn inspection adjustment might arrive in a future notice after more cargo testing. None of those draft references altered the active rule set in Notice One, but they do place later terms inside the",
+            "source": "meridian_harbor_notice_one.txt",
+            "rank": 1,
+            "metadata": {
+              "chunk_start_word": 150,
+              "chunk_end_word": 350
+            },
+            "confidence": null,
+            "parent_chain": []
+          },
+          "results": [
+            {
+              "content": "during training because the benchmark depends on older facts remaining visible beside the current replacements. The second operations block explains how crate seals, escort logs, and hand stamps are processed before sunrise. Lantern crate clerks walk from Meridian Harbor to the west loading lane, count seals twice, and copy the totals into the Atlas Terminal ledger. Blue badge runners wait beside Gate 4 until the inspection lead initials the chalk board and clears the first trolley. The memo also notes that harbor radios should mention Meridian Harbor and Atlas Terminal by name in every spoken update. That repeated phrasing creates the same kind of keyword overlap that real operational documents often contain. A review appendix says green badges remained in training storage during Notice One drills. Another appendix says Gate 6 appeared only in a draft margin and never became the active entrance. A current policy review mentioned Atlas Terminal East during planning meetings without adopting the change. Staff discussing later revisions also wrote that a dawn inspection adjustment might arrive in a future notice after more cargo testing. None of those draft references altered the active rule set in Notice One, but they do place later terms inside the",
+              "source": "meridian_harbor_notice_one.txt",
+              "rank": 1,
+              "metadata": {
+                "chunk_start_word": 150,
+                "chunk_end_word": 350
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "East during planning meetings without adopting the change. Staff discussing later revisions also wrote that a dawn inspection adjustment might arrive in a future notice after more cargo testing. None of those draft references altered the active rule set in Notice One, but they do place later terms inside the older document. Auditors added a long narrative about Lantern supervisors, Meridian Harbor clerks, and Atlas Terminal checkers repeating the older workflow for consistency checks. They described how blue badge holders lined up by the paint stripe, how westbound crate carts cleared the scale, and how the 06:10 window remained the only approved dawn inspection time. The narrative repeats the old route because readers were expected to compare it line by line against possible amendments. It also mentions current reviews, green badge proposals, and Gate 6 rumors in separate sentences so the older notice remains noisy. The benchmark uses that noise to make wrong chunk retrieval detectable. The closing section says Notice One stayed on the wall until a formal superseding memo appeared. It reminds readers that Meridian Harbor names, Lantern crate routes, and Atlas Terminal references may recur in later notices with different facts. The final checklist repeats blue badges,",
+              "source": "meridian_harbor_notice_one.txt",
+              "rank": 2,
+              "metadata": {
+                "chunk_start_word": 300,
+                "chunk_end_word": 500
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "Meridian Harbor Notice Two is the formal amendment that replaced the earlier harbor memo in this synthetic corpus. It keeps the same named locations, repeats many of the same operational nouns, and states that the current rule set has changed. Readers still see Meridian Harbor, Lantern crates, Atlas Terminal, dawn inspection, and badge gates throughout the document because overlapping language is part of the benchmark design. The new memo is long enough to produce several retrieval units for both chunk systems and Akashik facts. It also makes every current value explicit so the ground truth can be scored by exact string match. Meridian Harbor Notice Two expressly supersedes Meridian Harbor Notice One. Current Meridian Harbor policy sets the dawn inspection window at 05:40. Current Meridian Harbor policy assigns green badges to Gate 6. Current Meridian Harbor policy routes Lantern crates through Atlas Terminal East. The amendment lists those three changes together because the benchmark needs a clean, current answer that can be compared against older wording. The policy explanation says dawn crews now stage earlier because eastbound cargo reaches the checkpoint before the first lantern cart arrives. Green badge runners wait beside Gate 6 while the new inspection clerk checks",
+              "source": "meridian_harbor_notice_two.txt",
+              "rank": 3,
+              "metadata": {
+                "chunk_start_word": 0,
+                "chunk_end_word": 200
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "together because the benchmark needs a clean, current answer that can be compared against older wording. The policy explanation says dawn crews now stage earlier because eastbound cargo reaches the checkpoint before the first lantern cart arrives. Green badge runners wait beside Gate 6 while the new inspection clerk checks seals, scans chalk codes, and clears the trolley release board. Atlas Terminal East receives Lantern crates under the active route, and the manifest template now prints the eastern lane by default. Supervisors repeatedly quote the current policy sentence during practice so that the updated fact remains easy to verify. The extra narration also gives the chunk systems enough surrounding text to compare against older paragraphs. A transition paragraph summarizes the older values without restoring them. It says the 06:10 window belonged to Notice One, blue badges belonged to Gate 4, and Atlas Terminal West belonged to the retired route. Another sentence warns that readers may still encounter those older values in archived binders and training copies. The memo therefore tells teams to prefer the superseding notice whenever Meridian Harbor documents conflict. That combination of historical context and explicit current facts is designed to create fair but detectable amendment challenges. Auditors",
+              "source": "meridian_harbor_notice_two.txt",
+              "rank": 4,
+              "metadata": {
+                "chunk_start_word": 150,
+                "chunk_end_word": 350
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "sentence warns that readers may still encounter those older values in archived binders and training copies. The memo therefore tells teams to prefer the superseding notice whenever Meridian Harbor documents conflict. That combination of historical context and explicit current facts is designed to create fair but detectable amendment challenges. Auditors in the synthetic harbor office add a long explanation about current labels, current gates, and current route stamps being swapped across the site. They describe green badge checks, eastbound crate carts, and the 05:40 inspection window in separate examples so the new document has rich context instead of a single bare list. The appendix also repeats Meridian Harbor and Atlas Terminal East several times to mimic the redundancy of real operations writing. Every repeated phrase is deliberate because the benchmark measures precision, efficiency, and provenance under overlapping terminology. The passage closes by stating that the second notice is the only current harbor authority in the corpus. The closing block says Notice Two should be filed above the older harbor memo and cited whenever clerks answer questions about active access. It repeats green badges, Gate 6, Atlas Terminal East, and the 05:40 dawn inspection window before the final signature line. Steward",
+              "source": "meridian_harbor_notice_two.txt",
+              "rank": 5,
+              "metadata": {
+                "chunk_start_word": 300,
+                "chunk_end_word": 500
+              },
+              "confidence": null,
+              "parent_chain": []
+            }
+          ]
+        },
+        "system_b": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0,
+          "provenance": 0.0,
+          "composite": 0.0,
+          "top_result": null,
+          "results": []
+        },
+        "system_c": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0,
+          "provenance": 0.0,
+          "composite": 0.0,
+          "top_result": null,
+          "results": []
+        }
+      }
+    },
+    {
+      "query_id": "hard_06",
+      "query_text": "What time does the River Glass exhibit start these days?",
+      "difficulty_mode_b": "natural",
+      "original_difficulty": "hard",
+      "expected_source": "lantern_gallery_update.txt",
+      "expected_level": "fact",
+      "systems": {
+        "system_a": {
+          "precision_at_1": 1.0,
+          "context_efficiency": 0.0139,
+          "provenance": 1.0,
+          "composite": 0.7042,
+          "top_result": {
+            "content": "The Lantern Gallery update is the formal amendment that revises the earlier catalog entries in this synthetic corpus. It keeps the same gallery names, room names, and object names so the benchmark compares retrieval systems under overlapping language instead of unrelated wording. The update is intentionally detailed because the evaluation includes precision, context efficiency, and provenance across several systems. Every current value appears in a clean sentence that can be matched exactly. Historical references remain nearby so the amendment challenge stays visible and fair. The Lantern Gallery update expressly supersedes the earlier catalog placement note. The River Glass exhibit now opens at 11:15 in the Meridian Lantern Gallery. The blue copper compass now sits on Shelf 14 in Atlas Room. Curator Leda North keeps the Aurora guide card, and the current placard adds a winter note beneath her signature. Those update sentences supply the benchmark ground truth for current gallery queries. An explanatory paragraph says the later opening gives conservators more time to warm the glass cases before visitors arrive. Atlas Room attendants moved the blue copper compass to Shelf 14 after the carpentry repair finished and the north case reopened. Curator Leda North retained the Aurora guide card because",
+            "source": "lantern_gallery_update.txt",
+            "rank": 1,
+            "metadata": {
+              "chunk_start_word": 0,
+              "chunk_end_word": 200
+            },
+            "confidence": null,
+            "parent_chain": []
+          },
+          "results": [
+            {
+              "content": "The Lantern Gallery update is the formal amendment that revises the earlier catalog entries in this synthetic corpus. It keeps the same gallery names, room names, and object names so the benchmark compares retrieval systems under overlapping language instead of unrelated wording. The update is intentionally detailed because the evaluation includes precision, context efficiency, and provenance across several systems. Every current value appears in a clean sentence that can be matched exactly. Historical references remain nearby so the amendment challenge stays visible and fair. The Lantern Gallery update expressly supersedes the earlier catalog placement note. The River Glass exhibit now opens at 11:15 in the Meridian Lantern Gallery. The blue copper compass now sits on Shelf 14 in Atlas Room. Curator Leda North keeps the Aurora guide card, and the current placard adds a winter note beneath her signature. Those update sentences supply the benchmark ground truth for current gallery queries. An explanatory paragraph says the later opening gives conservators more time to warm the glass cases before visitors arrive. Atlas Room attendants moved the blue copper compass to Shelf 14 after the carpentry repair finished and the north case reopened. Curator Leda North retained the Aurora guide card because",
+              "source": "lantern_gallery_update.txt",
+              "rank": 1,
+              "metadata": {
+                "chunk_start_word": 0,
+                "chunk_end_word": 200
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "queries. An explanatory paragraph says the later opening gives conservators more time to warm the glass cases before visitors arrive. Atlas Room attendants moved the blue copper compass to Shelf 14 after the carpentry repair finished and the north case reopened. Curator Leda North retained the Aurora guide card because the signature itself did not change, but the surrounding placard text did. The paragraph repeats Meridian Lantern Gallery, River Glass exhibit, and Atlas Room so the update remains rich in surface cues. None of the explanation alters the active values already stated above. A comparison section summarizes the retired catalog values from the earlier document. It says the 09:30 opening and Shelf 12 placement belonged to the old catalog and should no longer be cited as active. Another sentence warns that tour binders may still include copied pages from the previous layout. That explicit contrast makes the supersession test objective without requiring any model judgment. The update therefore acts like a plain office bulletin rather than a semantic reasoning task. The longer appendix describes current visitor routing, current shelf labels, and current docent scripts in repetitive detail. Staff mention the 11:15 opening during every rehearsal, repeat Shelf 14 during every",
+              "source": "lantern_gallery_update.txt",
+              "rank": 2,
+              "metadata": {
+                "chunk_start_word": 150,
+                "chunk_end_word": 350
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "The Lantern Gallery catalog is a synthetic museum document designed for retrieval benchmarking rather than public exhibition. It describes the Meridian Lantern Gallery, Atlas Room, River Glass exhibit, and several labeled objects whose names overlap with other benchmark documents. Curators repeat Meridian, Atlas, Lantern, exhibit, room, and shelf language throughout the catalog so wrong retrieval is easy to detect. The document is intentionally long so chunk systems must choose among several windows instead of one short paragraph. Each answer sentence remains exact and stable so scoring can rely on string matching. The River Glass exhibit opens at 09:30 in the Meridian Lantern Gallery. The blue copper compass sits on Shelf 12 in Atlas Room. Curator Leda North signs the Aurora guide card. Those catalog facts appear together because visitors, guards, and catalogers all needed one compact summary of the original layout. Later updates reused the same exhibit and object names, which makes this catalog a useful baseline for amendment queries. A second gallery block describes the entry hall, the winter label rail, and the visitor pacing route used before the update. Atlas Room attendants point to Shelf 12 during every morning walk and explain how the blue copper compass aligns",
+              "source": "lantern_gallery_catalog.txt",
+              "rank": 3,
+              "metadata": {
+                "chunk_start_word": 0,
+                "chunk_end_word": 200
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "which makes this catalog a useful baseline for amendment queries. A second gallery block describes the entry hall, the winter label rail, and the visitor pacing route used before the update. Atlas Room attendants point to Shelf 12 during every morning walk and explain how the blue copper compass aligns with the northern lamp arch. Curator Leda North also initials the Aurora guide card again in a binder copy that sits beside the front desk. The paragraph repeats Meridian Lantern Gallery and River Glass exhibit several times to mimic a real catalog with redundant wording. That deliberate repetition gives both chunk and graph systems enough surface overlap to work with. A winter planning note says an 11:15 rehearsal opening was tested during a closed walkthrough. Another planning note says Shelf 14 received temporary labels while carpenters repaired the north case. Staff also wrote that an updated gallery bulletin might replace the original placement note after the repair. Those newer values are split across separate sentences because the old catalog preserved its active facts while still containing the vocabulary of later revisions. The benchmark uses that split to test whether current facts can be isolated cleanly. The catalog then adds a",
+              "source": "lantern_gallery_catalog.txt",
+              "rank": 4,
+              "metadata": {
+                "chunk_start_word": 150,
+                "chunk_end_word": 350
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "the original placement note after the repair. Those newer values are split across separate sentences because the old catalog preserved its active facts while still containing the vocabulary of later revisions. The benchmark uses that split to test whether current facts can be isolated cleanly. The catalog then adds a long narrative about attendants discussing Meridian Lantern Gallery traffic, Atlas Room shelf spacing, and guide card signatures during weekend tours. They explain how the River Glass exhibit drew early visitors at 09:30, how Shelf 12 remained the stable compass location, and how Curator Leda North kept the Aurora guide card near the docent desk. The same narrative also references the future bulletin, 11:15 rehearsal notes, and Shelf 14 trial labels in separate sentences. None of those later mentions change the active catalog facts. They simply make the older document dense enough to challenge chunk retrieval. The closing section says the catalog remained authoritative until a signed update expressly replaced the placement note. It repeats the 09:30 opening, Shelf 12 location, and Aurora guide card signature before the final registrar line. Registrar Sena Vale signs the page and reminds staff that later documents may keep the same exhibit names while changing",
+              "source": "lantern_gallery_catalog.txt",
+              "rank": 5,
+              "metadata": {
+                "chunk_start_word": 300,
+                "chunk_end_word": 500
+              },
+              "confidence": null,
+              "parent_chain": []
+            }
+          ]
+        },
+        "system_b": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0,
+          "provenance": 0.0,
+          "composite": 0.0,
+          "top_result": null,
+          "results": []
+        },
+        "system_c": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0,
+          "provenance": 0.0,
+          "composite": 0.0,
+          "top_result": null,
+          "results": []
+        }
+      }
+    },
+    {
+      "query_id": "hard_07",
+      "query_text": "Where is the blue compass currently located?",
+      "difficulty_mode_b": "natural",
+      "original_difficulty": "hard",
+      "expected_source": "lantern_gallery_update.txt",
+      "expected_level": "fact",
+      "systems": {
+        "system_a": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0119,
+          "provenance": 0.0,
+          "composite": 0.0036,
+          "top_result": {
+            "content": "The Lantern Gallery catalog is a synthetic museum document designed for retrieval benchmarking rather than public exhibition. It describes the Meridian Lantern Gallery, Atlas Room, River Glass exhibit, and several labeled objects whose names overlap with other benchmark documents. Curators repeat Meridian, Atlas, Lantern, exhibit, room, and shelf language throughout the catalog so wrong retrieval is easy to detect. The document is intentionally long so chunk systems must choose among several windows instead of one short paragraph. Each answer sentence remains exact and stable so scoring can rely on string matching. The River Glass exhibit opens at 09:30 in the Meridian Lantern Gallery. The blue copper compass sits on Shelf 12 in Atlas Room. Curator Leda North signs the Aurora guide card. Those catalog facts appear together because visitors, guards, and catalogers all needed one compact summary of the original layout. Later updates reused the same exhibit and object names, which makes this catalog a useful baseline for amendment queries. A second gallery block describes the entry hall, the winter label rail, and the visitor pacing route used before the update. Atlas Room attendants point to Shelf 12 during every morning walk and explain how the blue copper compass aligns",
+            "source": "lantern_gallery_catalog.txt",
+            "rank": 1,
+            "metadata": {
+              "chunk_start_word": 0,
+              "chunk_end_word": 200
+            },
+            "confidence": null,
+            "parent_chain": []
+          },
+          "results": [
+            {
+              "content": "The Lantern Gallery catalog is a synthetic museum document designed for retrieval benchmarking rather than public exhibition. It describes the Meridian Lantern Gallery, Atlas Room, River Glass exhibit, and several labeled objects whose names overlap with other benchmark documents. Curators repeat Meridian, Atlas, Lantern, exhibit, room, and shelf language throughout the catalog so wrong retrieval is easy to detect. The document is intentionally long so chunk systems must choose among several windows instead of one short paragraph. Each answer sentence remains exact and stable so scoring can rely on string matching. The River Glass exhibit opens at 09:30 in the Meridian Lantern Gallery. The blue copper compass sits on Shelf 12 in Atlas Room. Curator Leda North signs the Aurora guide card. Those catalog facts appear together because visitors, guards, and catalogers all needed one compact summary of the original layout. Later updates reused the same exhibit and object names, which makes this catalog a useful baseline for amendment queries. A second gallery block describes the entry hall, the winter label rail, and the visitor pacing route used before the update. Atlas Room attendants point to Shelf 12 during every morning walk and explain how the blue copper compass aligns",
+              "source": "lantern_gallery_catalog.txt",
+              "rank": 1,
+              "metadata": {
+                "chunk_start_word": 0,
+                "chunk_end_word": 200
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "The Lantern Gallery update is the formal amendment that revises the earlier catalog entries in this synthetic corpus. It keeps the same gallery names, room names, and object names so the benchmark compares retrieval systems under overlapping language instead of unrelated wording. The update is intentionally detailed because the evaluation includes precision, context efficiency, and provenance across several systems. Every current value appears in a clean sentence that can be matched exactly. Historical references remain nearby so the amendment challenge stays visible and fair. The Lantern Gallery update expressly supersedes the earlier catalog placement note. The River Glass exhibit now opens at 11:15 in the Meridian Lantern Gallery. The blue copper compass now sits on Shelf 14 in Atlas Room. Curator Leda North keeps the Aurora guide card, and the current placard adds a winter note beneath her signature. Those update sentences supply the benchmark ground truth for current gallery queries. An explanatory paragraph says the later opening gives conservators more time to warm the glass cases before visitors arrive. Atlas Room attendants moved the blue copper compass to Shelf 14 after the carpentry repair finished and the north case reopened. Curator Leda North retained the Aurora guide card because",
+              "source": "lantern_gallery_update.txt",
+              "rank": 2,
+              "metadata": {
+                "chunk_start_word": 0,
+                "chunk_end_word": 200
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "which makes this catalog a useful baseline for amendment queries. A second gallery block describes the entry hall, the winter label rail, and the visitor pacing route used before the update. Atlas Room attendants point to Shelf 12 during every morning walk and explain how the blue copper compass aligns with the northern lamp arch. Curator Leda North also initials the Aurora guide card again in a binder copy that sits beside the front desk. The paragraph repeats Meridian Lantern Gallery and River Glass exhibit several times to mimic a real catalog with redundant wording. That deliberate repetition gives both chunk and graph systems enough surface overlap to work with. A winter planning note says an 11:15 rehearsal opening was tested during a closed walkthrough. Another planning note says Shelf 14 received temporary labels while carpenters repaired the north case. Staff also wrote that an updated gallery bulletin might replace the original placement note after the repair. Those newer values are split across separate sentences because the old catalog preserved its active facts while still containing the vocabulary of later revisions. The benchmark uses that split to test whether current facts can be isolated cleanly. The catalog then adds a",
+              "source": "lantern_gallery_catalog.txt",
+              "rank": 3,
+              "metadata": {
+                "chunk_start_word": 150,
+                "chunk_end_word": 350
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "queries. An explanatory paragraph says the later opening gives conservators more time to warm the glass cases before visitors arrive. Atlas Room attendants moved the blue copper compass to Shelf 14 after the carpentry repair finished and the north case reopened. Curator Leda North retained the Aurora guide card because the signature itself did not change, but the surrounding placard text did. The paragraph repeats Meridian Lantern Gallery, River Glass exhibit, and Atlas Room so the update remains rich in surface cues. None of the explanation alters the active values already stated above. A comparison section summarizes the retired catalog values from the earlier document. It says the 09:30 opening and Shelf 12 placement belonged to the old catalog and should no longer be cited as active. Another sentence warns that tour binders may still include copied pages from the previous layout. That explicit contrast makes the supersession test objective without requiring any model judgment. The update therefore acts like a plain office bulletin rather than a semantic reasoning task. The longer appendix describes current visitor routing, current shelf labels, and current docent scripts in repetitive detail. Staff mention the 11:15 opening during every rehearsal, repeat Shelf 14 during every",
+              "source": "lantern_gallery_update.txt",
+              "rank": 4,
+              "metadata": {
+                "chunk_start_word": 150,
+                "chunk_end_word": 350
+              },
+              "confidence": null,
+              "parent_chain": []
+            },
+            {
+              "content": "Meridian Harbor Notice One is a synthetic operations memo for the benchmark corpus. It describes dawn inspections, badge routing, crate movement, and Atlas Terminal handoffs used before the later amendment. Supervisors at Meridian Harbor repeat the notice during drills so the names Meridian Harbor, Lantern crates, Atlas Terminal, and badge gates appear often enough to create realistic retrieval pressure. The document is intentionally verbose because the benchmark needs several long paragraphs and multiple overlapping entities. Every paragraph keeps the same nouns in view while preserving exact fact sentences for objective scoring. Meridian Harbor Notice One sets the dawn inspection window at 06:10. Meridian Harbor Notice One assigns blue badges to Gate 4. Meridian Harbor Notice One routes Lantern crates through Atlas Terminal West. Clerks record the window, gate, and terminal on every dawn manifest so crews can compare later amendments against the older routine. Shift leaders repeat the legacy values during training because the benchmark depends on older facts remaining visible beside the current replacements. The second operations block explains how crate seals, escort logs, and hand stamps are processed before sunrise. Lantern crate clerks walk from Meridian Harbor to the west loading lane, count seals twice, and copy the",
+              "source": "meridian_harbor_notice_one.txt",
+              "rank": 5,
+              "metadata": {
+                "chunk_start_word": 0,
+                "chunk_end_word": 200
+              },
+              "confidence": null,
+              "parent_chain": []
+            }
+          ]
+        },
+        "system_b": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0,
+          "provenance": 0.0,
+          "composite": 0.0,
+          "top_result": null,
+          "results": []
+        },
+        "system_c": {
+          "precision_at_1": 0.0,
+          "context_efficiency": 0.0,
+          "provenance": 0.0,
+          "composite": 0.0,
+          "top_result": null,
+          "results": []
+        }
+      }
+    }
+  ],
+  "gap_analysis": [
+    {
+      "query_id": "medium_01",
+      "mode_a_akashik": 1.0,
+      "mode_b_akashik": 0.0,
+      "gap": 1.0,
+      "rag_mode_b": 0.0036
+    },
+    {
+      "query_id": "medium_02",
+      "mode_a_akashik": 1.0,
+      "mode_b_akashik": 0.0,
+      "gap": 1.0,
+      "rag_mode_b": 0.0033
+    },
+    {
+      "query_id": "medium_04",
+      "mode_a_akashik": 0.7943,
+      "mode_b_akashik": 0.0,
+      "gap": 0.7943,
+      "rag_mode_b": 0.2033
+    },
+    {
+      "query_id": "medium_05",
+      "mode_a_akashik": 1.0,
+      "mode_b_akashik": 0.0,
+      "gap": 1.0,
+      "rag_mode_b": 0.7042
+    },
+    {
+      "query_id": "medium_06",
+      "mode_a_akashik": 1.0,
+      "mode_b_akashik": 0.0,
+      "gap": 1.0,
+      "rag_mode_b": 0.7042
+    },
+    {
+      "query_id": "medium_08",
+      "mode_a_akashik": 1.0,
+      "mode_b_akashik": 0.0,
+      "gap": 1.0,
+      "rag_mode_b": 0.7027
+    },
+    {
+      "query_id": "hard_01",
+      "mode_a_akashik": 1.0,
+      "mode_b_akashik": 0.0,
+      "gap": 1.0,
+      "rag_mode_b": 0.003
+    },
+    {
+      "query_id": "hard_03",
+      "mode_a_akashik": 1.0,
+      "mode_b_akashik": 0.0,
+      "gap": 1.0,
+      "rag_mode_b": 0.0036
+    },
+    {
+      "query_id": "hard_06",
+      "mode_a_akashik": 1.0,
+      "mode_b_akashik": 0.0,
+      "gap": 1.0,
+      "rag_mode_b": 0.7042
+    },
+    {
+      "query_id": "hard_07",
+      "mode_a_akashik": 1.0,
+      "mode_b_akashik": 0.0,
+      "gap": 1.0,
+      "rag_mode_b": 0.0036
+    }
+  ]
+}

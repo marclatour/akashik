@@ -87,3 +87,14 @@ After running `benchmark/run.py`, inspect the benchmark store with:
 ```bash
 akashik --db results/benchmark.db query --text "..." --level fact
 ```
+
+Run the natural-language diagnostic benchmark after Mode A with:
+
+```bash
+python benchmark/run_mode_b.py
+```
+
+Mode B does not re-ingest the corpus. It reuses `results/benchmark.db` and writes:
+
+- `results/results_mode_b.json`
+- `results/report_mode_b.md`
