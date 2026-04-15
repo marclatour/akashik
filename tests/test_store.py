@@ -1,0 +1,89 @@
+from __future__ import annotations
+
+import pytest
+
+from akashik.identity import content_hash, normalized_hash
+from akashik.schema import MemoryUnit
+from akashik.store import Store
+
+
+def _metadata(source: str = "tests") -> dict:
+    return {"source": source, "timestamp": "2026-04-14T00:00:00+00:00", "tags": []}
+
+
+def _unit(level: str, content: str, parent_id: str | None = None) -> MemoryUnit:
+    return MemoryUnit(
+        level=level,
+        content=content,
+        content_hash=content_hash(content),
+        normalized_hash=normalized_hash(content),
+        parent_id=parent_id,
+        metadata=_metadata(),
+    )
+
+
+def test_store_initializes_tables_and_indexes(tmp_path) -> None:
+    db_path = tmp_path / "store.db"
+    with Store(db_path) as store:
+        tables = {
+            row[0]
+            for row in store._conn.execute(
+                "SELECT name FROM sqlite_master WHERE type IN ('table', 'view')"
+            ).fetchall()
+        }
+        assert "memory_units" in tables
+        assert "memory_units_fts" in tables
+
+
+def test_insert_fetch_and_parent_chain(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        document = store.insert(_unit("document", "Akashik stores local documents."))
+        section = store.insert(_unit("section", "Storage rules live here.", parent_id=document.id))
+        fact_one = store.insert(_unit("fact", "SQLite keeps data local.", parent_id=section.id))
+        fact_two = store.insert(_unit("fact", "Hash lookups run first.", parent_id=section.id))
+
+        assert store.fetch_by_id(document.id) == document
+        assert [child.id for child in store.fetch_children(section.id)] == [fact_one.id, fact_two.id]
+        chain = store.fetch_parent_chain(fact_one.id)
+        assert [unit.level for unit in chain] == ["section", "document"]
+        assert store.fetch_by_content_hash(content_hash(document.content))[0].id == document.id
+        normalized = store.fetch_by_normalized_hash(normalized_hash("sqlite keeps data local."))
+        assert normalized[0].id == fact_one.id
+
+
+def test_search_fts_and_stats(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        document = store.insert(_unit("document", "Akashik persists memory locally."))
+        store.insert(_unit("section", "SQLite powers keyword search.", parent_id=document.id))
+        stats = store.stats()
+
+        matches = store.search_fts("keyword search")
+        assert matches
+        assert matches[0].level == "section"
+        assert stats.total == 2
+        assert stats.by_level["document"] == 1
+        assert stats.by_level["section"] == 1
+        assert stats.by_level["fact"] == 0
+
+
+def test_insert_rolls_back_when_fts_write_fails(tmp_path, monkeypatch) -> None:
+    with Store(tmp_path / "store.db") as store:
+        unit = _unit("document", "This insert must stay atomic.")
+
+        def broken_insert_fts_row(*_args) -> None:
+            raise RuntimeError("fts write failed")
+
+        monkeypatch.setattr(store, "_insert_fts_row", broken_insert_fts_row)
+
+        with pytest.raises(RuntimeError, match="fts write failed"):
+            store.insert(unit)
+
+        assert store.fetch_by_id(unit.id) is None
+        assert store._conn.execute("SELECT COUNT(*) FROM memory_units").fetchone()[0] == 0
+        assert store._conn.execute("SELECT COUNT(*) FROM memory_units_fts").fetchone()[0] == 0
+
+
+def test_invalid_parent_is_rejected(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        with pytest.raises(ValueError, match="Parent"):
+            store.insert(_unit("fact", "Orphan fact.", parent_id="missing-parent"))
