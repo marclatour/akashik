@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from akashik.identity import content_hash, normalized_hash
+from akashik.query_normalize import normalize_query
 from akashik.schema import LEVEL_INDEX, MemoryUnit, RetrievalResponse, RetrievalResult, validate_level
 
 
@@ -30,7 +31,8 @@ def retrieve(query: str, store, *, level: str | None = None, limit: int = 10) ->
     if response.results:
         return response
 
-    fts_matches = _rerank_fts_matches(store.search_fts(text, limit=max(limit * 5, 20)))
+    fts_query = normalize_query(text)
+    fts_matches = _rerank_fts_matches(store.search_fts(fts_query, limit=max(limit * 5, 20)))
     response = _build_response(
         fts_matches,
         store,

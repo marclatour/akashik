@@ -209,3 +209,7 @@ __marimo__/
 # Local SQLite databases
 akashik.db
 results/benchmark.db
+
+# CUAD
+benchmark/cuad/master_clauses.csv
+benchmark/cuad/CUAD_v1.json
