@@ -183,13 +183,17 @@ class Store:
         return descendants
 
     def search_fts(self, query: str, limit: int = 20) -> list[MemoryUnit]:
-        fts_query = self._build_fts_query(query)
+        query_tokens = self._fts_tokens(query)
+        fts_query = self._build_fts_query(query_tokens)
         if not fts_query:
             return []
+        fetch_limit = max(limit * 50, 1000)
         rows = self._conn.execute(
             """
             SELECT m.id, m.level, m.content, m.content_hash, m.normalized_hash,
-                   m.parent_id, m.metadata, m.embedding
+                   m.parent_id, m.metadata, m.embedding,
+                   m.fts_rowid,
+                   bm25(memory_units_fts) AS rank
             FROM memory_units_fts AS f
             JOIN memory_units AS m ON m.fts_rowid = f.rowid
             WHERE memory_units_fts MATCH ?
@@ -204,9 +208,28 @@ class Store:
                      m.fts_rowid
             LIMIT ?
             """,
-            (fts_query, limit),
+            (fts_query, fetch_limit),
         ).fetchall()
-        return [self._row_to_unit(row) for row in rows]
+
+        scored_rows = []
+        for row in rows:
+            coverage = _token_coverage(query_tokens, row["content"])
+            rank = float(row["rank"])
+            rank_score = -rank if rank < 0 else 1.0 / (1.0 + rank)
+            score = rank_score * coverage * _level_weight(row["level"])
+            scored_rows.append(
+                (
+                    score,
+                    coverage,
+                    rank,
+                    _level_priority(row["level"]),
+                    int(row["fts_rowid"]),
+                    row,
+                )
+            )
+
+        scored_rows.sort(key=lambda item: (-item[0], -item[1], item[2], item[3], item[4]))
+        return [self._row_to_unit(item[-1]) for item in scored_rows[:limit]]
 
     def stats(self) -> StoreStats:
         total = int(self._conn.execute("SELECT COUNT(*) FROM memory_units").fetchone()[0])
@@ -217,11 +240,18 @@ class Store:
             counts[row["level"]] = int(row["count"])
         return StoreStats(total=total, by_level=counts, db_path=self.db_path)
 
-    def _build_fts_query(self, query: str) -> str:
+    def _fts_tokens(self, query: str) -> list[str]:
         tokens = _FTS_TOKEN_RE.findall(query.lower())
+        deduped: list[str] = []
+        for token in tokens:
+            if token not in deduped:
+                deduped.append(token)
+        return deduped
+
+    def _build_fts_query(self, tokens: list[str]) -> str:
         if not tokens:
             return ""
-        return " AND ".join(f'"{token}"' for token in tokens)
+        return " OR ".join(f'"{token}"' for token in tokens)
 
     def _row_to_unit(self, row: sqlite3.Row) -> MemoryUnit:
         return MemoryUnit(
@@ -234,3 +264,35 @@ class Store:
             metadata=json.loads(row["metadata"]) if row["metadata"] else {},
             embedding=row["embedding"],
         )
+
+
+def _token_coverage(query_tokens: list[str], content: str) -> float:
+    if not query_tokens:
+        return 0.0
+    content_tokens = set(_FTS_TOKEN_RE.findall(content.lower()))
+    matching_tokens = sum(1 for token in query_tokens if token in content_tokens)
+    return matching_tokens / len(query_tokens)
+
+
+def _level_priority(level: str) -> int:
+    if level == "fact":
+        return 0
+    if level == "section":
+        return 1
+    if level == "document":
+        return 2
+    if level == "corpus":
+        return 3
+    return 4
+
+
+def _level_weight(level: str) -> float:
+    if level == "fact":
+        return 1.0
+    if level == "section":
+        return 0.8
+    if level == "document":
+        return 0.45
+    if level == "corpus":
+        return 0.25
+    return 0.1

@@ -27,7 +27,7 @@ STOPWORDS = {
     "under",
     "latest",
     "rule",
-    # Deterministic filler terms that otherwise break FTS5 AND matching.
+    # Deterministic filler terms that otherwise dilute keyword matching.
     "at",
     "be",
     "by",
@@ -95,6 +95,53 @@ DOMAIN_SYNONYMS = {
     "team": [],
 }
 
+LEGAL_VARIANTS = {
+    "terminate": ["terminate", "terminated", "termination"],
+    "terminated": ["terminate", "terminated", "termination"],
+    "termination": ["terminate", "terminated", "termination"],
+    "renew": ["renew", "renewal", "renewed", "renewing", "additional", "period", "periods"],
+    "renewal": ["renew", "renewal", "renewed", "renewing", "additional", "period", "periods"],
+    "renewed": ["renew", "renewal", "renewed", "renewing", "additional", "period", "periods"],
+    "renewing": ["renew", "renewal", "renewed", "renewing", "additional", "period", "periods"],
+    "govern": ["govern", "governed", "governing"],
+    "governed": ["govern", "governed", "governing"],
+    "governing": ["govern", "governed", "governing"],
+}
+
+NUMBER_VARIANTS = {
+    "1": ["1", "one"],
+    "2": ["2", "two"],
+    "3": ["3", "three"],
+    "4": ["4", "four"],
+    "5": ["5", "five"],
+    "6": ["6", "six"],
+    "7": ["7", "seven"],
+    "8": ["8", "eight"],
+    "9": ["9", "nine"],
+    "10": ["10", "ten"],
+    "11": ["11", "eleven"],
+    "12": ["12", "twelve"],
+    "13": ["13", "thirteen"],
+    "14": ["14", "fourteen"],
+    "15": ["15", "fifteen"],
+    "16": ["16", "sixteen"],
+    "17": ["17", "seventeen"],
+    "18": ["18", "eighteen"],
+    "19": ["19", "nineteen"],
+    "20": ["20", "twenty"],
+    "21": ["21", "twenty", "one"],
+    "22": ["22", "twenty", "two"],
+    "23": ["23", "twenty", "three"],
+    "24": ["24", "twenty", "four"],
+    "25": ["25", "twenty", "five"],
+    "26": ["26", "twenty", "six"],
+    "27": ["27", "twenty", "seven"],
+    "28": ["28", "twenty", "eight"],
+    "29": ["29", "twenty", "nine"],
+    "30": ["30", "thirty"],
+    "31": ["31", "thirty", "one"],
+}
+
 _TOKEN_RE = re.compile(r"\w+", re.UNICODE)
 
 
@@ -107,7 +154,7 @@ def normalize_query(text: str) -> str:
     for token in tokens:
         if token in STOPWORDS:
             continue
-        expanded = SYNONYMS.get(token, DOMAIN_SYNONYMS.get(token, [token]))
+        expanded = _expand_token(token)
         for value in expanded:
             if value and value not in normalized:
                 normalized.append(value)
@@ -135,6 +182,16 @@ def _replace_phrases(tokens: list[str]) -> list[str]:
         rewritten.extend(replacement)
         index += replacement_size
     return rewritten
+
+
+def _expand_token(token: str) -> list[str]:
+    expanded = SYNONYMS.get(token, DOMAIN_SYNONYMS.get(token, [token]))
+    values: list[str] = []
+    for value in expanded:
+        for variant in NUMBER_VARIANTS.get(value, LEGAL_VARIANTS.get(value, [value])):
+            if variant not in values:
+                values.append(variant)
+    return values
 
 
 def _has_current_signal(tokens: list[str]) -> bool:

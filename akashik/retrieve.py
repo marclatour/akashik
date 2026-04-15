@@ -72,15 +72,29 @@ def _build_response(
 
 
 def _rerank_fts_matches(candidates: list[MemoryUnit]) -> list[MemoryUnit]:
-    scored_candidates: list[tuple[float, int, MemoryUnit]] = []
+    by_source: dict[str, list[tuple[float, int, MemoryUnit]]] = {}
+    document_scores: dict[str, float] = {}
+    source_order: dict[str, int] = {}
+
     for index, candidate in enumerate(candidates):
-        score = 1.0 - (index * 0.001)
+        score = 1.0 / (1.0 + (index * 0.1))
         if candidate.level == "fact":
             score += _fact_brevity_bonus(candidate)
-        scored_candidates.append((score, index, candidate))
 
-    scored_candidates.sort(key=lambda item: (-item[0], item[1]))
-    return [candidate for _, _, candidate in scored_candidates]
+        source = candidate.source
+        by_source.setdefault(source, []).append((score, index, candidate))
+        document_scores[source] = document_scores.get(source, 0.0) + score
+        source_order.setdefault(source, index)
+
+    if not by_source:
+        return []
+
+    best_source = max(
+        document_scores,
+        key=lambda source: (document_scores[source], -source_order[source]),
+    )
+    best_candidates = sorted(by_source[best_source], key=lambda item: (-item[0], item[1]))
+    return [candidate for _, _, candidate in best_candidates]
 
 
 def _fact_brevity_bonus(candidate: MemoryUnit) -> float:

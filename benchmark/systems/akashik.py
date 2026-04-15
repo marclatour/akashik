@@ -12,8 +12,8 @@ from benchmark.systems import RetrievedItem
 class AkashikSystem:
     display_name = "Akashik"
 
-    def __init__(self, documents: list[CorpusDocument]) -> None:
-        db_path = Path("results/benchmark.db")
+    def __init__(self, documents: list[CorpusDocument], *, db_path: str | Path | None = None) -> None:
+        db_path = Path(db_path or "results/benchmark.db")
         db_path.parent.mkdir(exist_ok=True)
         self._store = Store(db_path)
         for document in documents:
