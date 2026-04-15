@@ -28,6 +28,7 @@ def run_benchmark(
     corpus_dir: str | Path | None = None,
     queries_path: str | Path | None = None,
     results_dir: str | Path | None = None,
+    with_embeddings: bool = False,
 ) -> dict[str, object]:
     _reset_benchmark_db()
     documents = load_corpus(corpus_dir or DEFAULT_CORPUS_DIR)
@@ -40,8 +41,9 @@ def run_benchmark(
         ("system_a", "RAG", RagSystem(documents)),
         ("system_b", "GraphRAG", GraphRagSystem(documents)),
         ("system_c", "Akashik", AkashikSystem(documents)),
-        ("system_d", "RAG-Embedding", RagEmbeddingSystem(documents)),
     ]
+    if with_embeddings:
+        systems.append(("system_d", "RAG-Embedding", RagEmbeddingSystem(documents)))
 
     try:
         named_scores: dict[str, list[tuple[object, object]]] = {name: [] for _, name, _ in systems}
@@ -77,7 +79,7 @@ def run_benchmark(
             for blind_id, display_name, _ in systems
         }
         gate = evaluate_gate(named_scores, named_aggregates)
-        disagreements = collect_embedding_akashik_disagreements(per_query_results)
+        disagreements = collect_embedding_akashik_disagreements(per_query_results) if with_embeddings else []
 
         output_dir = Path(results_dir or DEFAULT_RESULTS_DIR).resolve()
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -89,7 +91,9 @@ def run_benchmark(
             blind_aggregates=blind_aggregates,
             gate=gate,
         )
-        payload["embedding_akashik_disagreements"] = disagreements
+        payload["embedding_enabled"] = with_embeddings
+        if with_embeddings:
+            payload["embedding_akashik_disagreements"] = disagreements
         report = render_report(named_aggregates, gate, disagreements)
 
         write_json(output_dir / "results.json", payload)
@@ -167,12 +171,18 @@ def main() -> int:
     parser.add_argument("--corpus-dir", default=str(DEFAULT_CORPUS_DIR))
     parser.add_argument("--queries-path", default=str(DEFAULT_QUERIES_PATH))
     parser.add_argument("--results-dir", default=str(DEFAULT_RESULTS_DIR))
+    parser.add_argument(
+        "--with-embeddings",
+        action="store_true",
+        help="Include the sentence-transformers RAG-Embedding baseline. Disabled by default.",
+    )
     args = parser.parse_args()
 
     summary = run_benchmark(
         corpus_dir=args.corpus_dir,
         queries_path=args.queries_path,
         results_dir=args.results_dir,
+        with_embeddings=args.with_embeddings,
     )
 
     gate = summary["gate"]

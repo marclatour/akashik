@@ -1,12 +1,516 @@
 [
   {
     "query_id": "cuad_01_governing_law",
-    "query_text": "governed laws nevada",
-    "expected_fact": "This Agreement is accepted by Company in the State of Nevada and shall be governed by and construed in accordance with the laws thereof, which laws shall prevail in the event of any conflict.",
-    "expected_source": "CybergyHoldingsInc_20140520_10-Q_EX-10.27_8605784_EX-10.27_Affiliate_Agreement.txt",
+    "query_text": "governed laws california",
+    "expected_fact": "This Agreement will be governed and construed in accordance with the laws of the State of California without giving effect to conflict of laws principles.",
+    "expected_source": "2ThemartComInc_19990826_10-12G_EX-10.10_6700288_EX-10.10_Co-Branding_Agreement__Agency_Agreement.txt",
     "expected_level": "fact",
     "difficulty": "medium",
     "clause_type": "governing_law",
+    "entity_filter": [
+      "cobranding"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_02_governing_law",
+    "query_text": "governed laws jurisdiction israel",
+    "expected_fact": "This Agreement and any claim, controversy or dispute arising out of or related to this Agreement, any of the transactions contemplated hereby and/or the interpretation and enforcement of the rights an",
+    "expected_source": "ABILITYINC_06_15_2020-EX-4.25-SERVICES_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "governing_law",
+    "entity_filter": [
+      "services"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_03_governing_law",
+    "query_text": "governed laws jurisdiction pennsylvania",
+    "expected_fact": "The Joint Venturers declare that in entering into this Agreement, they have contracted with reference to the laws of the Commonwealth of Pennsylvania, and the construction and interpretation of the te",
+    "expected_source": "ACCELERATEDTECHNOLOGIESHOLDINGCORP_04_24_2003-EX-10.13-JOINT_VENTURE_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "governing_law",
+    "entity_filter": [
+      "joint"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_04_governing_law",
+    "query_text": "governed laws germany",
+    "expected_fact": "This Agreement shall be governed by, and construed in accordance with, the laws of the Federal Republic of Germany excluding the United Nations Convention on Contracts of International Sale of Goods (",
+    "expected_source": "ACCURAYINC_09_01_2010-EX-10.31-DISTRIBUTOR_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "governing_law",
+    "entity_filter": [
+      "multiple"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_05_governing_law",
+    "query_text": "governed laws kansas",
+    "expected_fact": "This Agreement shall be governed and construed according to the laws of the State of Kansas.",
+    "expected_source": "ADAMSGOLFINC_03_21_2005-EX-10.17-ENDORSEMENT_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "governing_law",
+    "entity_filter": [
+      "endorsement"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_06_governing_law",
+    "query_text": "governed laws texas",
+    "expected_fact": "Any disputes or claims arising under this Agreement shall be governed by the laws of the State of Texas.",
+    "expected_source": "ADAPTIMMUNETHERAPEUTICSPLC_04_06_2017-EX-10.11-STRATEGIC_ALLIANCE_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "governing_law",
+    "entity_filter": [
+      "strategic"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_07_governing_law",
+    "query_text": "governed laws california",
+    "expected_fact": "This Agreement shall be governed by and construed under the laws of the State of California, excluding conflict of laws provisions and excluding the 1980 United Nations Convention on Contracts for the",
+    "expected_source": "ADIANUTRITION_INC_04_01_2005-EX-10.D2-RESELLER_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "governing_law",
+    "entity_filter": [
+      "reseller"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_08_governing_law",
+    "query_text": "governed laws jurisdiction california",
+    "expected_fact": "This Agreement shall be construed and enforced in accordance with the laws of the State of California, without regard to the conflict of law principles of California or any other jurisdiction.",
+    "expected_source": "ADUROBIOTECH_INC_06_02_2020-EX-10.7-CONSULTING_AGREEMENT_1.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "governing_law",
+    "entity_filter": [
+      "consulting"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_09_governing_law",
+    "query_text": "governed laws jurisdiction california",
+    "expected_fact": "This Agreement shall be construed and enforced in accordance with the laws of the State of California, without regard to the conflict of law principles of California or any other jurisdiction.",
+    "expected_source": "ADUROBIOTECH_INC_06_02_2020-EX-10.7-CONSULTING_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "governing_law",
+    "entity_filter": [
+      "consulting"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_10_governing_law",
+    "query_text": "governed laws district of columbia",
+    "expected_fact": "This Agreement shall be construed in accordance with the laws of the District of Columbia.",
+    "expected_source": "AFSALABANCORPINC_08_01_1996-EX-1.1-AGENCY_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "governing_law",
+    "entity_filter": [
+      "agency"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_11_governing_law",
+    "query_text": "governed laws england",
+    "expected_fact": "This agreement shall be governed by the Laws of England (English common and statutory Law).",
+    "expected_source": "AgapeAtpCorp_20191202_10-KA_EX-10.1_11911128_EX-10.1_Supply_Agreement.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "governing_law",
+    "entity_filter": [
+      "supply"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_12_governing_law",
+    "query_text": "governed laws jurisdiction california",
+    "expected_fact": "This Agreement shall be governed by and construed in accordance with the internal laws of the State of California applicable to agreements made and to be performed entirely within such state, without ",
+    "expected_source": "AimmuneTherapeuticsInc_20200205_8-K_EX-10.3_11967170_EX-10.3_Development_Agreement.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "governing_law",
+    "entity_filter": [
+      "development"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_13_governing_law",
+    "query_text": "governed laws texas",
+    "expected_fact": "This Agreement takes effect upon its acceptance and execution by AIRSOPURE in the State of Texas, and shall be interpreted and construed under the laws of the State of Texas.",
+    "expected_source": "AIRTECHINTERNATIONALGROUPINC_05_08_2000-EX-10.4-FRANCHISE_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "governing_law",
+    "entity_filter": [
+      "franchise"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_14_governing_law",
+    "query_text": "governed laws kansas",
+    "expected_fact": "This Agreement shall be construed in accordance with the laws of the State of Kansas.",
+    "expected_source": "ALAMOGORDOFINANCIALCORP_12_16_1999-EX-1-AGENCY_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "governing_law",
+    "entity_filter": [
+      "agency"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_15_governing_law",
+    "query_text": "governed laws new york",
+    "expected_fact": "This Agreement shall be governed by and construed in accordance with the laws of the State of New York applicable to agreements made and to be performed in said State without regard to the conflicts o",
+    "expected_source": "ALLIANCEBANCORPINCOFPENNSYLVANIA_10_18_2006-EX-1.2-AGENCY_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "governing_law",
+    "entity_filter": [
+      "agency"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_16_governing_law",
+    "query_text": "governed laws california",
+    "expected_fact": "This Agreement will for all purposes be governed by and interpreted in accordance with the laws of the State of California without giving effect to any conflict of laws principles that require the app",
+    "expected_source": "AlliedEsportsEntertainmentInc_20190815_8-K_EX-10.19_11788293_EX-10.19_Content_License_Agreement.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "governing_law",
+    "entity_filter": [
+      "joint"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_17_governing_law",
+    "query_text": "governed laws california",
+    "expected_fact": "Without reference to choice or conflict of law principles, this Agreement shall be governed by and construed in accordance with the laws of the State of California, USA.",
+    "expected_source": "AlliedEsportsEntertainmentInc_20190815_8-K_EX-10.34_11788308_EX-10.34_Sponsorship_Agreement.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "governing_law",
+    "entity_filter": [
+      "event"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_18_renewal",
+    "query_text": "renewal term 1 year",
+    "expected_fact": "This Agreement shall terminate, subject to any automatic renewal or extension for one year as required by law, upon either party giving at least one hundred twenty (120) days advance written notice to",
+    "expected_source": "AMERICANPHYSICIANSCAPITALINC_03_31_2003-EX-10.26-AGENCY_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "renewal",
+    "entity_filter": [
+      "agency"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_19_renewal",
+    "query_text": "renewal term successive 1 year",
+    "expected_fact": "This Agreement shall be automatically renewed for an additional one year period on each anniversary of the Effective Date, unless terminated by either Party hereto upon ninety (90) days written notice",
+    "expected_source": "AMERICASSHOPPINGMALLINC_12_10_1999-EX-10.2-SITE_DEVELOPMENT_AND_HOSTING_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "renewal",
+    "entity_filter": [
+      "site"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_20_renewal",
+    "query_text": "successive renewal term 1 year",
+    "expected_fact": "This Agreement shall continue in effect for two years from the date hereof, and thereafter shall continue automatically for successive annual periods, provided that such continuance is specifically ap",
+    "expected_source": "ArcaUsTreasuryFund_20200207_N-2_EX-99.K5_11971930_EX-99.K5_Development_Agreement.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "renewal",
+    "entity_filter": [
+      "blockchain"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_21_renewal",
+    "query_text": "renewal term successive 1 year",
+    "expected_fact": "Thereafter, this agreement will renew automatically from year to year unless cancelled in writing by either Party giving the other written notice of such cancellation a minimum of 60 days before the e",
+    "expected_source": "ASIANDRAGONGROUPINC_08_11_2005-EX-10.5-Reseller_Agreement.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "renewal",
+    "entity_filter": [
+      "reseller"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_22_renewal",
+    "query_text": "renewal term 5 years",
+    "expected_fact": "This Agreement will commence on the Effective Date and continue for an Initial Term of five (5) years, and will automatically renew for additional periods of five (5) years unless one Party notifies t",
+    "expected_source": "BELLRINGBRANDS_INC_02_07_2020-EX-10.18-MASTER_SUPPLY_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "renewal",
+    "entity_filter": [
+      "master"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_23_renewal",
+    "query_text": "renewal term 1 year",
+    "expected_fact": "Unless sooner terminated under the provisions hereof, this Agreement shall commence on the Effective Date and continue for a period of one (1) year (\"Term\"). provided however, that the Parties may ext",
+    "expected_source": "BizzingoInc_20120322_8-K_EX-10.17_7504499_EX-10.17_Endorsement_Agreement.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "renewal",
+    "entity_filter": [
+      "celebrity"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_24_renewal",
+    "query_text": "renewal term 2 years",
+    "expected_fact": "The term of this Agreement may be extended for an additional two year period with the written consent of both parties.",
+    "expected_source": "BLACKBOXSTOCKSINC_08_05_2014-EX-10.1-DISTRIBUTOR_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "renewal",
+    "entity_filter": [
+      "distributor"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_25_renewal",
+    "query_text": "successive renewal term 3 years",
+    "expected_fact": "Unless either party gives written notice of termination of this Agreement at least 60 days prior to the end of the Initial Term, or any successive three-year term, this Agreement shall automatically r",
+    "expected_source": "BLACKSTONEGSOLONG-SHORTCREDITINCOMEFUND_05_11_2020-EX-99._K_1_-SERVICE_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "renewal",
+    "entity_filter": [
+      "service"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_26_renewal",
+    "query_text": "successive renewal term 1 year",
+    "expected_fact": "This Agreement shall renew automatically thereafter for successive one year periods until terminated pursuant to Section 12 herein or unless either Client or TrueLink deliver to the other written noti",
+    "expected_source": "BNCMORTGAGEINC_05_17_1999-EX-10.4-LICENSING_AND_WEB_SITE_HOSTING_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "renewal",
+    "entity_filter": [
+      "licensing"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_27_renewal",
+    "query_text": "renewal term successive 1 year",
+    "expected_fact": "Unless either party gives written notice to terminate this Agreement at least six (6) months prior to the end of said Initial Term, this Agreement shall continue on a year to year basis (\"Extended Ter",
+    "expected_source": "BNLFINANCIALCORP_03_30_2007-EX-10.8-OUTSOURCING_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "renewal",
+    "entity_filter": [
+      "outsourcing"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_28_renewal",
+    "query_text": "renewal term successive 1 year",
+    "expected_fact": "This agreement shall renew automatically each year thereafter, unless either party serves written notice of its intention not to renew, on the other at least 90 days prior to the expiration of the the",
+    "expected_source": "BOLIVARMININGCORP_05_23_2003-EX-2.1-VISP_WEB_SITE_BUILDING_AND_HOSTING_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "renewal",
+    "entity_filter": [
+      "visp"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_29_renewal",
+    "query_text": "renewal term 1 year",
+    "expected_fact": "Contract is renewable for 1 year extension by amendment to this agreement.",
+    "expected_source": "BravatekSolutionsInc_20170418_8-K_EX-10.1_10205739_EX-10.1_Reseller_Agreement.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "renewal",
+    "entity_filter": [
+      "reseller"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_30_renewal",
+    "query_text": "renewal term 2 successive 5 years",
+    "expected_fact": "Within ninety (90) days of our receipt of your notice to renew, we will furnish you with written notice of: (i) reasons which could cause us not to grant a renewal to you including but not limited to ",
+    "expected_source": "BUFFALOWILDWINGSINC_06_05_1998-EX-10.3-FRANCHISE_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "renewal",
+    "entity_filter": [
+      "franchise"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_31_renewal",
+    "query_text": "successive renewal term 12 months",
+    "expected_fact": "Thereafter, the Maintenance Term shall automatically renew for successive period, 12 months, on the terms and conditions of this Agreement unless Bank of America terminates Maintenance Services pursua",
+    "expected_source": "CardlyticsInc_20180112_S-1_EX-10.16_11002987_EX-10.16_Maintenance_Agreement4.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "renewal",
+    "entity_filter": [
+      "product"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_32_renewal",
+    "query_text": "successive renewal term 6 months",
+    "expected_fact": "This agreement shall automatically renew for successive six (6) month periods unless written notice is provided of either party's intent not to renew at least six (6) months before the end of the then",
+    "expected_source": "CCAINDUSTRIESINC_04_14_2014-EX-10.1-OUTSOURCING_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "renewal",
+    "entity_filter": [
+      "services"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_33_renewal",
+    "query_text": "renewal term successive 1 year",
+    "expected_fact": "Thereafter, this Agreement shall automatically renew for subsequent one (1) year periods unless either party provides the other party with written notification at least thirty (30) days prior to the e",
+    "expected_source": "CHANGEPOINTCORP_03_08_2000-EX-10.6-LICENSE_AND_HOSTING_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "renewal",
+    "entity_filter": [
+      "hosting"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_34_renewal",
+    "query_text": "renewal term perpetual",
+    "expected_fact": "Except as otherwise specified in this Agreement, the Parties' respective rights and obligations under this Agreement shall commence on the Effective Date and shall remain in full force for ten (10) ye",
+    "expected_source": "CoherusBiosciencesInc_20200227_10-K_EX-10.29_12021376_EX-10.29_Development_Agreement.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "renewal",
+    "entity_filter": [
+      "development"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_35_notice",
+    "query_text": "terminate renewal 30 days written notice",
+    "expected_fact": "This Agreement shall be automatically renewed for successive one year periods unless either party gives written notice of termination to the other party at least thirty (30) days prior to the date of ",
+    "expected_source": "COOLTECHNOLOGIES_INC_10_25_2017-EX-10.71-Strategic_Alliance_Agreement.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "notice",
+    "entity_filter": [
+      "strategic"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_36_notice",
+    "query_text": "terminate renewal 30 days written notice",
+    "expected_fact": "Thereafter, this Agreement shall automatically renew for subsequent one (1) year periods unless either party provides the other party with written notification at least thirty (30) days prior to the e",
+    "expected_source": "CORIOINC_07_20_2000-EX-10.5-LICENSE_AND_HOSTING_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "notice",
+    "entity_filter": [
+      "hosting"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_37_notice",
+    "query_text": "terminate renewal 30 days written notice",
+    "expected_fact": "This Agreement may be terminated by either party at the expiration of its term or any renewal term upon thirty (30) days written notice to the other party.",
+    "expected_source": "CybergyHoldingsInc_20140520_10-Q_EX-10.27_8605784_EX-10.27_Affiliate_Agreement.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "notice",
     "entity_filter": [
       "marketing"
     ],
@@ -14,91 +518,49 @@
     "entity_filter_reason": null
   },
   {
-    "query_id": "cuad_02_governing_law",
-    "query_text": "governed laws ontario canada",
-    "expected_fact": "This Agreement is subject to all laws, regulations, license conditions and decisions of the Canadian Radio-television and Telecommunications Commission (\"CRTC\") municipal, provincial and federal gover",
-    "expected_source": "EuromediaHoldingsCorp_20070215_10SB12G_EX-10.B_01__525118_EX-10.B_01__Content_License_Agreement.txt",
+    "query_id": "cuad_38_notice",
+    "query_text": "terminate renewal 60 days written notice",
+    "expected_fact": "The Initial Term shall automatically be extended for an additional period of half a year unless either party provides the other party with written notification of termination of the letter Agreement a",
+    "expected_source": "DataCallTechnologies_20060918_SB-2A_EX-10.9_944510_EX-10.9_Content_License_Agreement.txt",
     "expected_level": "fact",
     "difficulty": "medium",
-    "clause_type": "governing_law",
+    "clause_type": "notice",
     "entity_filter": [
-      "videoondemand"
+      "content"
     ],
     "entity_filter_source": "document_name",
     "entity_filter_reason": null
   },
   {
-    "query_id": "cuad_03_governing_law",
-    "query_text": "governed laws nevada",
-    "expected_fact": "This Agreement shall be governed by and construed in accordance with the internal laws of the State of Nevada without giving effect to any choice or conflict of law provision or rule.",
-    "expected_source": "GopageCorp_20140221_10-K_EX-10.1_8432966_EX-10.1_Content_License_Agreement.txt",
+    "query_id": "cuad_39_notice",
+    "query_text": "terminate renewal 60 days written notice",
+    "expected_fact": "Upon expiration of the Initial Term, this Agreement shall automatically renew for consecutive one (1) year periods, unless terminated by Reseller within sixty (60) days prior to the expiration of the ",
+    "expected_source": "DIVERSINETCORP_03_01_2012-EX-4-RESELLER_AGREEMENT.txt",
     "expected_level": "fact",
     "difficulty": "medium",
-    "clause_type": "governing_law",
+    "clause_type": "notice",
     "entity_filter": [
-      "website"
+      "reseller"
     ],
     "entity_filter_source": "document_name",
     "entity_filter_reason": null
   },
   {
-    "query_id": "cuad_04_governing_law",
-    "query_text": "governed laws california",
-    "expected_fact": "This Agreement shall be interpreted and enforced in accordance with the laws of the State of California as applied to agreements made, entered into and performed entirely in California by California r",
-    "expected_source": "EdietsComInc_20001030_10QSB_EX-10.4_2606646_EX-10.4_Co-Branding_Agreement.txt",
+    "query_id": "cuad_40_notice",
+    "query_text": "terminate renewal 90 days written notice",
+    "expected_fact": "Unless terminated sooner, the term of this Agreement shall begin on the Effective Date and continue for three (3) years thereafter (the \"Initial Term\") and shall automatically renew for additional one",
+    "expected_source": "DUOSTECHNOLOGIESGROUP_INC_04_21_2009-EX-10.1-STRATEGIC_ALLIANCE_AGREEMENT.txt",
     "expected_level": "fact",
     "difficulty": "medium",
-    "clause_type": "governing_law",
+    "clause_type": "notice",
     "entity_filter": [
-      "cobranding"
+      "strategic"
     ],
     "entity_filter_source": "document_name",
     "entity_filter_reason": null
   },
   {
-    "query_id": "cuad_05_renewal",
-    "query_text": "renewal term 3 years",
-    "expected_fact": "This Agreement shall automatically continue following the Initial Term, for an additional period of three (3) years, unless a party to this Agreement provides written notice of termination to the othe",
-    "expected_source": "TomOnlineInc_20060501_20-F_EX-4.46_749700_EX-4.46_Co-Branding_Agreement.txt",
-    "expected_level": "fact",
-    "difficulty": "medium",
-    "clause_type": "renewal",
-    "entity_filter": [
-      "cobranding"
-    ],
-    "entity_filter_source": "document_name",
-    "entity_filter_reason": null
-  },
-  {
-    "query_id": "cuad_06_renewal",
-    "query_text": "renewal term perpetual",
-    "expected_fact": "This agreement begins on the Commencement Date and, subject to clause 11.2, shall continue for an initial term of one (1) years (Initial Term) and indefinitely after that until terminated by either pa",
-    "expected_source": "FuseMedicalInc_20190321_10-K_EX-10.43_11575454_EX-10.43_Distributor_Agreement.txt",
-    "expected_level": "fact",
-    "difficulty": "medium",
-    "clause_type": "renewal",
-    "entity_filter": [
-      "distributorship"
-    ],
-    "entity_filter_source": "document_name",
-    "entity_filter_reason": null
-  },
-  {
-    "query_id": "cuad_07_renewal",
-    "query_text": "successive renewal term 5 year",
-    "expected_fact": "Upon expiration of the Initial Term of this Agreement, this Agreement will automatically renew for additional, successive five (5) year periods unless either Party provides the other Party written not",
-    "expected_source": "WaterNowInc_20191120_10-Q_EX-10.12_11900227_EX-10.12_Distributor_Agreement.txt",
-    "expected_level": "fact",
-    "difficulty": "medium",
-    "clause_type": "renewal",
-    "entity_filter": [
-      "exclusive"
-    ],
-    "entity_filter_source": "document_name",
-    "entity_filter_reason": null
-  },
-  {
-    "query_id": "cuad_08_notice",
+    "query_id": "cuad_41_notice",
     "query_text": "terminate renewal 30 days written notice",
     "expected_fact": "The term of this Agreement shall be for one (1) year commencing on the Effective Date and automatically renewing annually thereafter, unless either party provides a thirty-day notice of written termin",
     "expected_source": "EcoScienceSolutionsInc_20171117_8-K_EX-10.1_10956472_EX-10.1_Endorsement_Agreement.txt",
@@ -112,29 +574,127 @@
     "entity_filter_reason": null
   },
   {
-    "query_id": "cuad_09_notice",
-    "query_text": "terminate renewal 180 days written notice",
-    "expected_fact": "This Agreement shall automatically renew beyond the Initial Term for successive one (I) year terms (each, a \"Renewal Term\"), unless a Party provides the other with written notice of termination at lea",
-    "expected_source": "VitalibisInc_20180316_8-K_EX-10.2_11100168_EX-10.2_Hosting_Agreement.txt",
+    "query_id": "cuad_42_notice",
+    "query_text": "terminate renewal 60 days written notice",
+    "expected_fact": "This agreement shall automatically renew for additional successive terms of twelve (12) months each at the end of the Initial Term (\"Renewal Terms\"), unless either party notifies the other in writing ",
+    "expected_source": "EdietsComInc_20001030_10QSB_EX-10.4_2606646_EX-10.4_Co-Branding_Agreement.txt",
     "expected_level": "fact",
     "difficulty": "medium",
     "clause_type": "notice",
     "entity_filter": [
-      "services"
+      "cobranding"
     ],
     "entity_filter_source": "document_name",
     "entity_filter_reason": null
   },
   {
-    "query_id": "cuad_10_notice",
-    "query_text": "terminate renewal 180 days 6 months written notice",
-    "expected_fact": "Thereafter, the agreement shall automatically renew for successive five (5)-year terms, unless either Party gives written notice to the other Party of intent not to renew at least six (6) months prior",
-    "expected_source": "GpaqAcquisitionHoldingsInc_20200123_S-4A_EX-10.6_11951677_EX-10.6_License_Agreement.txt",
+    "query_id": "cuad_43_notice",
+    "query_text": "terminate renewal 90 days written notice",
+    "expected_fact": "The Services Term of this Agreement shall be automatically renewed for successive two-year terms thereafter unless written notice is given by either party to the other, indicating that party's intenti",
+    "expected_source": "EmeraldHealthBioceuticalsInc_20200218_1-A_EX1A-6_MAT_CTRCT_11987205_EX1A-6_MAT_CTRCT_Development_Agreement.txt",
     "expected_level": "fact",
     "difficulty": "medium",
     "clause_type": "notice",
     "entity_filter": [
-      "media"
+      "consulting"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_44_notice",
+    "query_text": "terminate renewal 180 days written notice",
+    "expected_fact": "Unless earlier terminated as provided herein, this Agreement continues in effect for an initial term of seven (7) years (\"Initial Term\") and will automatically renew for one or more annual periods aft",
+    "expected_source": "ENERGOUSCORP_03_16_2017-EX-10.24-STRATEGIC_ALLIANCE_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "notice",
+    "entity_filter": [
+      "strategic"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_45_notice",
+    "query_text": "terminate renewal 30 days written notice",
+    "expected_fact": "Subject to the other provisions of this Agreement, the term of this Agreement shall commence on the Effective Date and shall remain in effect until terminated by either Party upon thirty (30) days' pr",
+    "expected_source": "ENERGYXXILTD_05_08_2015-EX-10.13-Transportation_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "notice",
+    "entity_filter": [
+      "transportation"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_46_notice",
+    "query_text": "terminate renewal 30 days written notice",
+    "expected_fact": "This contract shall be for a term of one year commencing on the date first above written; thereafter, it shall automatically continue until terminated by either party upon not less than thirty (30) da",
+    "expected_source": "ENTERPRISEPRODUCTSPARTNERSLP_07_08_1998-EX-10.3-TRANSPORTATION_CONTRACT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "notice",
+    "entity_filter": [
+      "transportation"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_47_notice",
+    "query_text": "terminate renewal 90 days written notice",
+    "expected_fact": "By either Vendor or Distributor, upon written notice of termination of this Agreement no later than ninety (90) calendar days prior to the expiration of the relevant Term, then in effect;",
+    "expected_source": "ENTERTAINMENTGAMINGASIAINC_02_15_2005-EX-10.5-DISTRIBUTOR_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "notice",
+    "entity_filter": [
+      "distributor"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_48_notice",
+    "query_text": "terminate renewal 1 month written notice",
+    "expected_fact": "The terms of this Agreement shall be one year from the effective date and will be automatically renewed on each anniversary of the effective date, for a renewal term of one year unless either party pr",
+    "expected_source": "ETELOS_INC_03_09_2004-EX-10.8-DISTRIBUTOR_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "notice",
+    "entity_filter": [
+      "distributor"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_49_notice",
+    "query_text": "terminate renewal 60 days written notice",
+    "expected_fact": "Notwithstanding the foregoing, if, at the expiry of this Agreement following the Initial Term or the Renewal Term (if any), as applicable, Licensor and Rogers have not executed a new agreement governi",
+    "expected_source": "EuromediaHoldingsCorp_20070215_10SB12G_EX-10.B_01__525118_EX-10.B_01__Content_License_Agreement.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "notice",
+    "entity_filter": [
+      "videoondemand"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
+  },
+  {
+    "query_id": "cuad_50_notice",
+    "query_text": "terminate renewal 30 days written notice",
+    "expected_fact": "The Term will automatically renew for successive additional periods of one (1) year each, provided that: (a) Distributor has made all Guaranteed Minimum Purchases and has complied with the marketing r",
+    "expected_source": "EUROPEANMICROHOLDINGSINC_03_06_1998-EX-10.6-DISTRIBUTOR_AGREEMENT.txt",
+    "expected_level": "fact",
+    "difficulty": "medium",
+    "clause_type": "notice",
+    "entity_filter": [
+      "distributor"
     ],
     "entity_filter_source": "document_name",
     "entity_filter_reason": null

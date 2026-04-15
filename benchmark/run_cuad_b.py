@@ -31,8 +31,8 @@ from benchmark.systems.graphrag import GraphRagSystem
 from benchmark.systems.rag import RagSystem
 
 CUAD_MODE_B_QUERIES_PATH = CUAD_ROOT / "queries_cuad_b.json"
-CUAD_MODE_B_RESULTS_PATH = "results_cuad_b.json"
-CUAD_MODE_B_REPORT_PATH = "report_cuad_b.md"
+CUAD_MODE_B_RESULTS_PATH = "results_cuad_b_50.json"
+CUAD_MODE_B_REPORT_PATH = "report_cuad_b_50.md"
 
 
 @dataclass(slots=True)
@@ -197,8 +197,8 @@ def load_cuad_b_queries(
 ) -> list[CuadModeBQuery]:
     raw_queries = json.loads(Path(queries_path).read_text(encoding="utf-8"))
     queries = [CuadModeBQuery(**item) for item in raw_queries]
-    if len(queries) != 5:
-        raise ValueError(f"CUAD Mode B must contain exactly 5 queries; found {len(queries)}.")
+    if len(queries) != 20:
+        raise ValueError(f"CUAD Mode B must contain exactly 20 queries; found {len(queries)}.")
 
     seen_ids: set[str] = set()
     for query in queries:

@@ -69,6 +69,13 @@ The repository also includes a reproducible benchmark harness that compares:
 - `GraphRAG`
 - `Akashik`
 
+`RAG-Embedding` is optional because it generates local sentence-transformer embeddings. Enable it explicitly with `--with-embeddings` after installing the benchmark extra:
+
+```bash
+./.venv/bin/pip install -e ".[benchmark]"
+python benchmark/run.py --with-embeddings
+```
+
 Run it from the repo root with:
 
 ```bash

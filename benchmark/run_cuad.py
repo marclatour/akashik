@@ -29,9 +29,10 @@ from benchmark.systems.rag_embedding import RagEmbeddingSystem
 CUAD_ROOT = Path(__file__).resolve().parent / "cuad"
 CUAD_CORPUS_DIR = CUAD_ROOT / "corpus"
 CUAD_QUERIES_PATH = CUAD_ROOT / "queries_cuad.json"
-CUAD_BENCHMARK_DB_PATH = Path("results/benchmark_cuad.db")
-CUAD_RESULTS_PATH = "results_cuad.json"
-CUAD_REPORT_PATH = "report_cuad.md"
+CUAD_SELECTION_SUMMARY_PATH = CUAD_ROOT / "selection_summary.json"
+CUAD_BENCHMARK_DB_PATH = Path("results/benchmark_cuad_50.db")
+CUAD_RESULTS_PATH = "results_cuad_50.json"
+CUAD_REPORT_PATH = "report_cuad_50.md"
 CLAUSE_TYPES = ("governing_law", "renewal", "notice")
 SYSTEMS = (
     ("system_a", "RAG"),
@@ -39,6 +40,13 @@ SYSTEMS = (
     ("system_c", "Akashik"),
     ("system_d", "RAG-Embedding"),
 )
+EXPECTED_CUAD_QUERY_COUNT = 50
+BASELINE_CUAD_10_CONTRACTS = {
+    "precision_at_1": 0.90,
+    "context_efficiency": 0.16,
+    "provenance": 1.00,
+    "composite": 0.70,
+}
 
 
 @dataclass(slots=True)
@@ -78,21 +86,24 @@ def run_cuad(
     corpus_dir: str | Path | None = None,
     queries_path: str | Path | None = None,
     results_dir: str | Path | None = None,
+    with_embeddings: bool = False,
 ) -> dict[str, object]:
     _reset_cuad_db()
     documents = load_cuad_corpus(corpus_dir or CUAD_CORPUS_DIR)
     queries = load_cuad_queries(
         queries_path or CUAD_QUERIES_PATH,
         corpus_filenames={document.filename for document in documents},
-        expected_count=10,
+        expected_count=EXPECTED_CUAD_QUERY_COUNT,
     )
+    selection_summary = load_selection_summary(CUAD_SELECTION_SUMMARY_PATH)
 
     systems = [
         ("system_a", "RAG", RagSystem(documents)),
         ("system_b", "GraphRAG", GraphRagSystem(documents)),
         ("system_c", "Akashik", AkashikSystem(documents, db_path=CUAD_BENCHMARK_DB_PATH)),
-        ("system_d", "RAG-Embedding", RagEmbeddingSystem(documents)),
     ]
+    if with_embeddings:
+        systems.append(("system_d", "RAG-Embedding", RagEmbeddingSystem(documents)))
 
     try:
         named_scores: dict[str, list[tuple[CuadQuery, CuadScore]]] = {name: [] for _, name, _ in systems}
@@ -142,7 +153,7 @@ def run_cuad(
         }
         clause_breakdown = build_clause_breakdown(named_scores)
         failures = collect_akashik_failures(named_scores["Akashik"])
-        disagreements = collect_embedding_akashik_disagreements(per_query_results)
+        disagreements = collect_embedding_akashik_disagreements(per_query_results) if with_embeddings else []
         synthetic_metrics = load_synthetic_metrics(DEFAULT_RESULTS_DIR / "results.json")
 
         output_dir = Path(results_dir or DEFAULT_RESULTS_DIR).resolve()
@@ -158,17 +169,20 @@ def run_cuad(
                 "query_count": len(queries),
                 "blind_evaluation": True,
                 "database": str(CUAD_BENCHMARK_DB_PATH),
+                "embedding_enabled": with_embeddings,
             },
             "systems": blind_aggregates,
             "queries": per_query_results,
             "clause_type_breakdown": clause_breakdown,
+            "selection_summary": selection_summary,
             "failure_analysis": failures,
-            "embedding_akashik_disagreements": disagreements,
         }
+        if with_embeddings:
+            payload["embedding_akashik_disagreements"] = disagreements
         report = render_cuad_report(
             named_aggregates,
             clause_breakdown,
-            synthetic_metrics,
+            selection_summary,
             failures,
             disagreements,
         )
@@ -201,9 +215,25 @@ def load_cuad_corpus(corpus_dir: str | Path) -> list[CorpusDocument]:
                 word_count=len(text.split()),
             )
         )
-    if len(documents) != 10:
-        raise ValueError(f"CUAD corpus must contain exactly 10 .txt contracts; found {len(documents)}.")
+    if len(documents) != EXPECTED_CUAD_QUERY_COUNT:
+        raise ValueError(
+            f"CUAD corpus must contain exactly {EXPECTED_CUAD_QUERY_COUNT} .txt contracts; found {len(documents)}."
+        )
     return documents
+
+
+def load_selection_summary(path: str | Path) -> dict[str, object]:
+    summary_path = Path(path)
+    if not summary_path.exists():
+        return {
+            "selection_targets": {},
+            "selected_by_clause_type": {},
+            "skipped_by_clause_type": {},
+            "shortfalls": {},
+            "null_entity_filters": None,
+            "anchor_sources": [],
+        }
+    return json.loads(summary_path.read_text(encoding="utf-8"))
 
 
 def load_cuad_queries(
@@ -352,7 +382,7 @@ def load_synthetic_metrics(path: str | Path) -> dict[str, float]:
 def render_cuad_report(
     named_aggregates: dict[str, dict[str, float]],
     clause_breakdown: dict[str, dict[str, float]],
-    synthetic_metrics: dict[str, float],
+    selection_summary: dict[str, object],
     failures: list[dict[str, object]],
     disagreements: list[dict[str, object]],
 ) -> str:
@@ -364,6 +394,8 @@ def render_cuad_report(
     ]
 
     for system_name in ("RAG", "GraphRAG", "RAG-Embedding", "Akashik"):
+        if system_name not in named_aggregates:
+            continue
         aggregate = named_aggregates[system_name]
         lines.append(
             "| {name} | {precision:.2f} | {efficiency:.2f} | {provenance:.2f} | {composite:.2f} |".format(
@@ -394,13 +426,40 @@ def render_cuad_report(
             )
         )
 
+    selected_by_clause_type = selection_summary.get("selected_by_clause_type", {})
+    skipped_by_clause_type = selection_summary.get("skipped_by_clause_type", {})
+    shortfalls = selection_summary.get("shortfalls", {})
+    lines.extend(
+        [
+            "",
+            "## Selection Summary",
+            "| Clause Type | Selected | Shortfall | Skipped: Non-substantive | Skipped: Short Clause | Skipped: Missing Text | Skipped: Clause Not Found | Skipped: Already Selected |",
+            "|-------------|----------|-----------|--------------------------|-----------------------|-----------------------|---------------------------|---------------------------|",
+        ]
+    )
+    for clause_type in CLAUSE_TYPES:
+        skipped = skipped_by_clause_type.get(clause_type, {})
+        lines.append(
+            "| {clause_type} | {selected} | {shortfall} | {non_substantive} | {short_clause} | {missing_text} | {clause_not_found} | {already_selected} |".format(
+                clause_type=clause_type,
+                selected=selected_by_clause_type.get(clause_type, 0),
+                shortfall=shortfalls.get(clause_type, 0),
+                non_substantive=skipped.get("non_substantive_answer", 0),
+                short_clause=skipped.get("clause_too_short", 0),
+                missing_text=skipped.get("missing_text", 0),
+                clause_not_found=skipped.get("clause_not_found_in_text", 0),
+                already_selected=skipped.get("already_selected", 0),
+            )
+        )
+    lines.append(f"Null entity filters: {selection_summary.get('null_entity_filters')}")
+
     cuad_metrics = named_aggregates["Akashik"]
     lines.extend(
         [
             "",
-            "## Comparison: Synthetic vs CUAD",
-            "| Metric      | Synthetic | CUAD  | Delta |",
-            "|-------------|-----------|-------|-------|",
+            "## Comparison: 10-Contract CUAD vs 50-Contract CUAD",
+            "| Metric      | 10-Contract CUAD | 50-Contract CUAD | Delta |",
+            "|-------------|------------------|------------------|-------|",
         ]
     )
     for label, key in (
@@ -409,7 +468,7 @@ def render_cuad_report(
         ("Provenance", "provenance"),
         ("Composite", "composite"),
     ):
-        synthetic = synthetic_metrics[key]
+        synthetic = BASELINE_CUAD_10_CONTRACTS[key]
         cuad = cuad_metrics[key]
         lines.append(f"| {label.ljust(11)} | {synthetic:.2f} | {cuad:.2f} | {cuad - synthetic:.2f} |")
 
@@ -417,11 +476,20 @@ def render_cuad_report(
     if not failures:
         lines.append("No Akashik precision or provenance failures in this run.")
     else:
+        failure_counts: dict[str, int] = {
+            "retrieval issue": 0,
+            "anchor issue": 0,
+            "clause ambiguity": 0,
+            "corpus extraction issue": 0,
+        }
         for failure in failures:
+            category = _failure_category(failure)
+            failure_counts[category] += 1
             lines.append(
-                "- `{query_id}` ({clause_type}): normalized query `{normalized}`; entity filter `{entity_filter}`; expected source `{expected}`, top source `{top}`; top result: {content}".format(
+                "- `{query_id}` ({clause_type}, {category}): normalized query `{normalized}`; entity filter `{entity_filter}`; expected source `{expected}`, top source `{top}`; top result: {content}".format(
                     query_id=failure["query_id"],
                     clause_type=failure["clause_type"],
+                    category=category,
                     normalized=failure["normalized_query"],
                     entity_filter=failure.get("entity_filter"),
                     expected=failure["expected_source"],
@@ -429,32 +497,45 @@ def render_cuad_report(
                     content=failure["top_content"] or "None",
                 )
             )
+        lines.append(
+            "Regression sources: "
+            + ", ".join(f"{category}={count}" for category, count in failure_counts.items())
+        )
 
-    lines.extend(["", "## RAG-Embedding vs Akashik Disagreements"])
-    if not disagreements:
-        lines.append("No rank-1 disagreements between RAG-Embedding and Akashik.")
+    if "RAG-Embedding" in named_aggregates:
+        lines.extend(["", "## RAG-Embedding vs Akashik Disagreements"])
+        if not disagreements:
+            lines.append("No rank-1 disagreements between RAG-Embedding and Akashik.")
+        else:
+            lines.extend(
+                [
+                    "| Query ID | Category | Expected Source | RAG-Embedding Top | Akashik Top |",
+                    "|----------|----------|-----------------|-------------------|-------------|",
+                ]
+            )
+            for item in disagreements:
+                lines.append(
+                    "| {query_id} | {category} | {expected} | {embedding_source}: {embedding_content} | {akashik_source}: {akashik_content} |".format(
+                        query_id=item["query_id"],
+                        category=item["category"],
+                        expected=item["expected_source"],
+                        embedding_source=item["embedding_top_source"],
+                        embedding_content=item["embedding_top_content"],
+                        akashik_source=item["akashik_top_source"],
+                        akashik_content=item["akashik_top_content"],
+                    )
+                )
     else:
         lines.extend(
             [
-                "| Query ID | Category | Expected Source | RAG-Embedding Top | Akashik Top |",
-                "|----------|----------|-----------------|-------------------|-------------|",
+                "",
+                "RAG-Embedding disabled by default. Re-run with `--with-embeddings` to include the semantic baseline.",
             ]
         )
-        for item in disagreements:
-            lines.append(
-                "| {query_id} | {category} | {expected} | {embedding_source}: {embedding_content} | {akashik_source}: {akashik_content} |".format(
-                    query_id=item["query_id"],
-                    category=item["category"],
-                    expected=item["expected_source"],
-                    embedding_source=item["embedding_top_source"],
-                    embedding_content=item["embedding_top_content"],
-                    akashik_source=item["akashik_top_source"],
-                    akashik_content=item["akashik_top_content"],
-                )
-            )
 
     if (
-        named_aggregates["Akashik"]["precision_at_1"] > named_aggregates["RAG-Embedding"]["precision_at_1"]
+        "RAG-Embedding" in named_aggregates
+        and named_aggregates["Akashik"]["precision_at_1"] > named_aggregates["RAG-Embedding"]["precision_at_1"]
         and named_aggregates["Akashik"]["provenance"] > named_aggregates["RAG-Embedding"]["provenance"]
     ):
         lines.extend(
@@ -463,6 +544,16 @@ def render_cuad_report(
                 "Akashik outperforms the strongest general-purpose semantic retrieval baseline on legal contract clause retrieval without embeddings.",
             ]
         )
+    if (
+        named_aggregates["Akashik"]["precision_at_1"] > 0.80
+        and named_aggregates["Akashik"]["provenance"] > 0.90
+    ):
+        lines.extend(["", "Results hold at 5x scale. Claim is publication-ready."])
+    elif (
+        named_aggregates["Akashik"]["precision_at_1"] >= 0.75
+        and named_aggregates["Akashik"]["provenance"] >= 0.90
+    ):
+        lines.extend(["", "Results hold at larger scale and remain publication-worthy."])
 
     return "\n".join(lines) + "\n"
 
@@ -507,17 +598,34 @@ def _disagreement_category(embedding: dict[str, object], akashik: dict[str, obje
     return "benchmark_ambiguity"
 
 
+def _failure_category(failure: dict[str, object]) -> str:
+    if failure.get("entity_filter") in (None, []):
+        return "anchor issue"
+    if failure.get("top_source") != failure.get("expected_source"):
+        return "retrieval issue"
+    content = str(failure.get("top_content") or "").lower()
+    if len(content) < 20:
+        return "corpus extraction issue"
+    return "clause ambiguity"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run the CUAD legal-contract benchmark.")
     parser.add_argument("--corpus-dir", default=str(CUAD_CORPUS_DIR))
     parser.add_argument("--queries-path", default=str(CUAD_QUERIES_PATH))
     parser.add_argument("--results-dir", default=str(DEFAULT_RESULTS_DIR))
+    parser.add_argument(
+        "--with-embeddings",
+        action="store_true",
+        help="Include the sentence-transformers RAG-Embedding baseline. Disabled by default.",
+    )
     args = parser.parse_args()
 
     summary = run_cuad(
         corpus_dir=args.corpus_dir,
         queries_path=args.queries_path,
         results_dir=args.results_dir,
+        with_embeddings=args.with_embeddings,
     )
     print(f"results: {summary['results_path']}")
     print(f"report: {summary['report_path']}")

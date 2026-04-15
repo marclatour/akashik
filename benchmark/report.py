@@ -39,6 +39,8 @@ def render_report(
     ]
 
     for system_name in ("RAG", "GraphRAG", "RAG-Embedding", "Akashik"):
+        if system_name not in named_aggregates:
+            continue
         aggregate = named_aggregates[system_name]
         overall = aggregate["overall"]
         by_difficulty = aggregate["by_difficulty"]
@@ -82,28 +84,36 @@ def render_report(
                 f"- Akashik provenance miss {miss['query_id']}: expected {miss['expected_source']}, got {miss['top_source']}."
             )
 
-    lines.extend(["", "## RAG-Embedding vs Akashik Disagreements"])
-    if not disagreements:
-        lines.append("No rank-1 disagreements between RAG-Embedding and Akashik.")
+    if "RAG-Embedding" in named_aggregates:
+        lines.extend(["", "## RAG-Embedding vs Akashik Disagreements"])
+        if not disagreements:
+            lines.append("No rank-1 disagreements between RAG-Embedding and Akashik.")
+        else:
+            lines.extend(
+                [
+                    "| Query ID | Category | Expected Source | RAG-Embedding Top | Akashik Top |",
+                    "|----------|----------|-----------------|-------------------|-------------|",
+                ]
+            )
+            for item in disagreements:
+                lines.append(
+                    "| {query_id} | {category} | {expected} | {embedding_source}: {embedding_content} | {akashik_source}: {akashik_content} |".format(
+                        query_id=item["query_id"],
+                        category=item["category"],
+                        expected=item["expected_source"],
+                        embedding_source=item["embedding_top_source"],
+                        embedding_content=item["embedding_top_content"],
+                        akashik_source=item["akashik_top_source"],
+                        akashik_content=item["akashik_top_content"],
+                    )
+                )
     else:
         lines.extend(
             [
-                "| Query ID | Category | Expected Source | RAG-Embedding Top | Akashik Top |",
-                "|----------|----------|-----------------|-------------------|-------------|",
+                "",
+                "RAG-Embedding disabled by default. Re-run with `--with-embeddings` to include the semantic baseline.",
             ]
         )
-        for item in disagreements:
-            lines.append(
-                "| {query_id} | {category} | {expected} | {embedding_source}: {embedding_content} | {akashik_source}: {akashik_content} |".format(
-                    query_id=item["query_id"],
-                    category=item["category"],
-                    expected=item["expected_source"],
-                    embedding_source=item["embedding_top_source"],
-                    embedding_content=item["embedding_top_content"],
-                    akashik_source=item["akashik_top_source"],
-                    akashik_content=item["akashik_top_content"],
-                )
-            )
 
     return "\n".join(lines) + "\n"
 

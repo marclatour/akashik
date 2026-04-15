@@ -210,6 +210,7 @@ __marimo__/
 akashik.db
 results/benchmark.db
 results/benchmark_cuad.db
+results/benchmark_cuad_50.db
 results/results_cuad*.json
 
 # CUAD
