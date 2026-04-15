@@ -76,6 +76,28 @@ def test_fts_match_returns_requested_fact_at_rank_one(tmp_path) -> None:
         assert response.results[0].unit.source == "doc.txt"
 
 
+def test_fts_rerank_prefers_shorter_fact_with_same_terms(tmp_path, monkeypatch) -> None:
+    with Store(tmp_path / "store.db") as store:
+        document = store.insert(_unit("document", "Project notes.", source="doc.txt"))
+        section = store.insert(_unit("section", "Brevity section.", parent_id=document.id, source="doc.txt"))
+        long_fact = store.insert(
+            _unit(
+                "fact",
+                "needle appears in this long preamble sentence that keeps adding operational context "
+                "about routing, provenance, archival notes, and repeated explanatory detail.",
+                parent_id=section.id,
+                source="doc.txt",
+            )
+        )
+        short_fact = store.insert(_unit("fact", "needle answer.", parent_id=section.id, source="doc.txt"))
+
+        monkeypatch.setattr(store, "search_fts", lambda *_args, **_kwargs: [long_fact, short_fact])
+
+        response = retrieve("needle", store, level="fact")
+
+        assert response.results[0].unit.id == short_fact.id
+
+
 def test_traversal_resolves_to_requested_level(tmp_path) -> None:
     with Store(tmp_path / "store.db") as store:
         document = store.insert(_unit("document", "Root document"))

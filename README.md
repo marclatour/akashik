@@ -60,3 +60,30 @@ Each memory unit stores:
 ```bash
 ./.venv/bin/python -m pytest
 ```
+
+## Benchmark
+
+The repository also includes a reproducible benchmark harness that compares:
+
+- `RAG`
+- `GraphRAG`
+- `Akashik`
+
+Run it from the repo root with:
+
+```bash
+python benchmark/run.py
+```
+
+Outputs:
+
+- `results/results.json`
+- `results/report.md`
+
+The benchmark uses a checked-in synthetic corpus in `benchmark/corpus/` and a fixed query set in `benchmark/queries.json`. It exits non-zero if Akashik does not beat the RAG baseline on hard-query `Precision@1` and overall `Provenance`.
+
+After running `benchmark/run.py`, inspect the benchmark store with:
+
+```bash
+akashik --db results/benchmark.db query --text "..." --level fact
+```

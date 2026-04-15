@@ -30,7 +30,7 @@ def retrieve(query: str, store, *, level: str | None = None, limit: int = 10) ->
     if response.results:
         return response
 
-    fts_matches = store.search_fts(text, limit=max(limit * 5, 20))
+    fts_matches = _rerank_fts_matches(store.search_fts(text, limit=max(limit * 5, 20)))
     response = _build_response(
         fts_matches,
         store,
@@ -67,6 +67,25 @@ def _build_response(
         )
     top_confidence = results[0].confidence if results else 0.0
     return RetrievalResponse(results=results, confidence=top_confidence)
+
+
+def _rerank_fts_matches(candidates: list[MemoryUnit]) -> list[MemoryUnit]:
+    scored_candidates: list[tuple[float, int, MemoryUnit]] = []
+    for index, candidate in enumerate(candidates):
+        score = 1.0 - (index * 0.001)
+        if candidate.level == "fact":
+            score += _fact_brevity_bonus(candidate)
+        scored_candidates.append((score, index, candidate))
+
+    scored_candidates.sort(key=lambda item: (-item[0], item[1]))
+    return [candidate for _, _, candidate in scored_candidates]
+
+
+def _fact_brevity_bonus(candidate: MemoryUnit) -> float:
+    token_count = len(candidate.content.split())
+    if token_count == 0:
+        return 0.0
+    return (1.0 / token_count) * 0.5
 
 
 def _resolve_candidates(candidates: list[MemoryUnit], store, *, level: str | None) -> list[MemoryUnit]:
