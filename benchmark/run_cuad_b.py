@@ -46,6 +46,7 @@ class CuadModeBQuery:
     original_difficulty: str
     difficulty_mode_b: str
     clause_type: str
+    entity_filter: list[str] | None = None
 
     @property
     def difficulty(self) -> str:
@@ -63,8 +64,14 @@ class ExistingCuadAkashikSystem:
             )
         self._store = Store(db_path)
 
-    def search(self, query: str, *, limit: int = 5) -> list[RetrievedItem]:
-        response = retrieve(query, self._store, level="fact", limit=limit)
+    def search(
+        self,
+        query: str,
+        *,
+        limit: int = 5,
+        entity_filter: list[str] | None = None,
+    ) -> list[RetrievedItem]:
+        response = retrieve(query, self._store, level="fact", limit=limit, entity_filter=entity_filter)
         results: list[RetrievedItem] = []
         for index, result in enumerate(response.results, start=1):
             results.append(
@@ -121,11 +128,15 @@ def run_cuad_b(
                 "original_difficulty": query.original_difficulty,
                 "difficulty_mode_b": query.difficulty_mode_b,
                 "clause_type": query.clause_type,
+                "entity_filter": query.entity_filter,
                 "systems": {},
             }
 
             for blind_id, display_name, system in systems:
-                results = system.search(query.query_text, limit=5)
+                if display_name == "Akashik":
+                    results = system.search(query.query_text, limit=5, entity_filter=query.entity_filter)
+                else:
+                    results = system.search(query.query_text, limit=5)
                 score = evaluate_cuad_query(query, results)
                 named_scores[display_name].append((query, score))
                 row["systems"][blind_id] = score.as_dict()

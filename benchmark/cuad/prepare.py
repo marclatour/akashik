@@ -166,6 +166,7 @@ def _build_mode_a_queries(contracts: list[PreparedContract]) -> list[dict[str, A
                 "expected_level": "fact",
                 "difficulty": "medium",
                 "clause_type": clause_type,
+                "entity_filter": [contract.party_prefix] if clause_type == "governing_law" and contract.party_prefix else None,
             }
         )
     return queries
@@ -233,6 +234,7 @@ def _build_mode_b_queries(mode_a_queries: list[dict[str, Any]]) -> list[dict[str
                 "original_difficulty": source["difficulty"],
                 "difficulty_mode_b": "natural",
                 "clause_type": clause_type,
+                "entity_filter": source.get("entity_filter"),
             }
         )
     return mode_b

@@ -6,7 +6,10 @@
     "expected_source": "CybergyHoldingsInc_20140520_10-Q_EX-10.27_8605784_EX-10.27_Affiliate_Agreement.txt",
     "expected_level": "fact",
     "difficulty": "medium",
-    "clause_type": "governing_law"
+    "clause_type": "governing_law",
+    "entity_filter": [
+      "birch"
+    ]
   },
   {
     "query_id": "cuad_02_governing_law",
@@ -15,7 +18,10 @@
     "expected_source": "EuromediaHoldingsCorp_20070215_10SB12G_EX-10.B_01__525118_EX-10.B_01__Content_License_Agreement.txt",
     "expected_level": "fact",
     "difficulty": "medium",
-    "clause_type": "governing_law"
+    "clause_type": "governing_law",
+    "entity_filter": [
+      "rogers"
+    ]
   },
   {
     "query_id": "cuad_03_governing_law",
@@ -24,7 +30,10 @@
     "expected_source": "GopageCorp_20140221_10-K_EX-10.1_8432966_EX-10.1_Content_License_Agreement.txt",
     "expected_level": "fact",
     "difficulty": "medium",
-    "clause_type": "governing_law"
+    "clause_type": "governing_law",
+    "entity_filter": [
+      "psitech"
+    ]
   },
   {
     "query_id": "cuad_04_governing_law",
@@ -33,7 +42,10 @@
     "expected_source": "EdietsComInc_20001030_10QSB_EX-10.4_2606646_EX-10.4_Co-Branding_Agreement.txt",
     "expected_level": "fact",
     "difficulty": "medium",
-    "clause_type": "governing_law"
+    "clause_type": "governing_law",
+    "entity_filter": [
+      "women"
+    ]
   },
   {
     "query_id": "cuad_05_renewal",
@@ -42,7 +54,8 @@
     "expected_source": "TomOnlineInc_20060501_20-F_EX-4.46_749700_EX-4.46_Co-Branding_Agreement.txt",
     "expected_level": "fact",
     "difficulty": "medium",
-    "clause_type": "renewal"
+    "clause_type": "renewal",
+    "entity_filter": null
   },
   {
     "query_id": "cuad_06_renewal",
@@ -51,7 +64,8 @@
     "expected_source": "FuseMedicalInc_20190321_10-K_EX-10.43_11575454_EX-10.43_Distributor_Agreement.txt",
     "expected_level": "fact",
     "difficulty": "medium",
-    "clause_type": "renewal"
+    "clause_type": "renewal",
+    "entity_filter": null
   },
   {
     "query_id": "cuad_07_renewal",
@@ -60,7 +74,8 @@
     "expected_source": "WaterNowInc_20191120_10-Q_EX-10.12_11900227_EX-10.12_Distributor_Agreement.txt",
     "expected_level": "fact",
     "difficulty": "medium",
-    "clause_type": "renewal"
+    "clause_type": "renewal",
+    "entity_filter": null
   },
   {
     "query_id": "cuad_08_notice",
@@ -69,7 +84,8 @@
     "expected_source": "EcoScienceSolutionsInc_20171117_8-K_EX-10.1_10956472_EX-10.1_Endorsement_Agreement.txt",
     "expected_level": "fact",
     "difficulty": "medium",
-    "clause_type": "notice"
+    "clause_type": "notice",
+    "entity_filter": null
   },
   {
     "query_id": "cuad_09_notice",
@@ -78,7 +94,8 @@
     "expected_source": "VitalibisInc_20180316_8-K_EX-10.2_11100168_EX-10.2_Hosting_Agreement.txt",
     "expected_level": "fact",
     "difficulty": "medium",
-    "clause_type": "notice"
+    "clause_type": "notice",
+    "entity_filter": null
   },
   {
     "query_id": "cuad_10_notice",
@@ -87,6 +104,7 @@
     "expected_source": "GpaqAcquisitionHoldingsInc_20200123_S-4A_EX-10.6_11951677_EX-10.6_License_Agreement.txt",
     "expected_level": "fact",
     "difficulty": "medium",
-    "clause_type": "notice"
+    "clause_type": "notice",
+    "entity_filter": null
   }
 ]

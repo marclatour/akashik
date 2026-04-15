@@ -19,8 +19,14 @@ class AkashikSystem:
         for document in documents:
             ingest_file(document.path, self._store)
 
-    def search(self, query: str, *, limit: int = 5) -> list[RetrievedItem]:
-        response = retrieve(query, self._store, level="fact", limit=limit)
+    def search(
+        self,
+        query: str,
+        *,
+        limit: int = 5,
+        entity_filter: list[str] | None = None,
+    ) -> list[RetrievedItem]:
+        response = retrieve(query, self._store, level="fact", limit=limit, entity_filter=entity_filter)
         results: list[RetrievedItem] = []
         for index, result in enumerate(response.results, start=1):
             results.append(

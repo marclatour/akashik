@@ -8,7 +8,10 @@
     "original_query_id": "cuad_01_governing_law",
     "original_difficulty": "medium",
     "difficulty_mode_b": "natural",
-    "clause_type": "governing_law"
+    "clause_type": "governing_law",
+    "entity_filter": [
+      "birch"
+    ]
   },
   {
     "query_id": "cuad_02_governing_law_b",
@@ -19,7 +22,10 @@
     "original_query_id": "cuad_02_governing_law",
     "original_difficulty": "medium",
     "difficulty_mode_b": "natural",
-    "clause_type": "governing_law"
+    "clause_type": "governing_law",
+    "entity_filter": [
+      "rogers"
+    ]
   },
   {
     "query_id": "cuad_05_renewal_b",
@@ -30,7 +36,8 @@
     "original_query_id": "cuad_05_renewal",
     "original_difficulty": "medium",
     "difficulty_mode_b": "natural",
-    "clause_type": "renewal"
+    "clause_type": "renewal",
+    "entity_filter": null
   },
   {
     "query_id": "cuad_08_notice_b",
@@ -41,7 +48,8 @@
     "original_query_id": "cuad_08_notice",
     "original_difficulty": "medium",
     "difficulty_mode_b": "natural",
-    "clause_type": "notice"
+    "clause_type": "notice",
+    "entity_filter": null
   },
   {
     "query_id": "cuad_09_notice_b",
@@ -52,6 +60,7 @@
     "original_query_id": "cuad_09_notice",
     "original_difficulty": "medium",
     "difficulty_mode_b": "natural",
-    "clause_type": "notice"
+    "clause_type": "notice",
+    "entity_filter": null
   }
 ]

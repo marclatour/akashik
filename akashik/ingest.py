@@ -11,6 +11,7 @@ from akashik.schema import MemoryUnit
 
 _SECTION_SPLIT_RE = re.compile(r"\n\s*\n+")
 _SENTENCE_SPLIT_RE = re.compile(r'(?<=[.!?])(?:["\')\]]+)?\s+')
+_ENTITY_RE = re.compile(r"\b[A-Z][A-Za-z0-9&.\-]*(?:\s+[A-Z][A-Za-z0-9&.\-]*){0,3}\b")
 
 
 def ingest_file(
@@ -34,6 +35,7 @@ def ingest_file(
         return existing[0]
 
     base_metadata = _base_metadata(path, metadata)
+    base_metadata["entities"] = extract_entities(raw_text)
 
     with store.transaction():
         document = store.insert(_make_unit("document", raw_text, metadata=base_metadata))
@@ -71,6 +73,34 @@ def split_facts(text: str) -> list[str]:
         return []
     parts = [part.strip() for part in _SENTENCE_SPLIT_RE.split(collapsed) if part.strip()]
     return parts or [collapsed]
+
+
+def extract_entities(text: str) -> list[str]:
+    seen: set[str] = set()
+    entities: list[str] = []
+    for match in _ENTITY_RE.findall(text[:500]):
+        entity = _clean_entity(match)
+        if not entity:
+            continue
+        for value in _entity_values(entity):
+            key = value.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            entities.append(value)
+    return entities
+
+
+def _clean_entity(entity: str) -> str:
+    return entity.strip(" ,.;:()[]{}\"'")
+
+
+def _entity_values(entity: str) -> list[str]:
+    values = [entity]
+    first_token = entity.split()[0].strip(" ,.;:()[]{}\"'")
+    if first_token and first_token != entity:
+        values.append(first_token)
+    return values
 
 
 def _base_metadata(path: Path, metadata: dict | None) -> dict:

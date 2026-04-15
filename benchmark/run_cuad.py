@@ -44,6 +44,7 @@ class CuadQuery:
     expected_level: str
     difficulty: str
     clause_type: str
+    entity_filter: list[str] | None = None
 
 
 @dataclass(slots=True)
@@ -96,11 +97,15 @@ def run_cuad(
                 "expected_level": query.expected_level,
                 "difficulty": query.difficulty,
                 "clause_type": query.clause_type,
+                "entity_filter": query.entity_filter,
                 "systems": {},
             }
 
             for blind_id, display_name, system in systems:
-                results = system.search(query.query_text, limit=5)
+                if display_name == "Akashik":
+                    results = system.search(query.query_text, limit=5, entity_filter=query.entity_filter)
+                else:
+                    results = system.search(query.query_text, limit=5)
                 score = evaluate_cuad_query(query, results)
                 named_scores[display_name].append((query, score))
                 row["systems"][blind_id] = score.as_dict()
@@ -271,6 +276,7 @@ def collect_akashik_failures(query_scores: list[tuple[CuadQuery, CuadScore]]) ->
                 "clause_type": query.clause_type,
                 "query_text": query.query_text,
                 "normalized_query": normalize_query(query.query_text),
+                "entity_filter": query.entity_filter,
                 "expected_source": query.expected_source,
                 "top_source": top_result.get("source"),
                 "top_content": _compact(str(top_result.get("content", ""))),
@@ -364,10 +370,11 @@ def render_cuad_report(
     else:
         for failure in failures:
             lines.append(
-                "- `{query_id}` ({clause_type}): normalized query `{normalized}`; expected source `{expected}`, top source `{top}`; top result: {content}".format(
+                "- `{query_id}` ({clause_type}): normalized query `{normalized}`; entity filter `{entity_filter}`; expected source `{expected}`, top source `{top}`; top result: {content}".format(
                     query_id=failure["query_id"],
                     clause_type=failure["clause_type"],
                     normalized=failure["normalized_query"],
+                    entity_filter=failure.get("entity_filter"),
                     expected=failure["expected_source"],
                     top=failure["top_source"],
                     content=failure["top_content"] or "None",
