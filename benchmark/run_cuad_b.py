@@ -47,6 +47,8 @@ class CuadModeBQuery:
     difficulty_mode_b: str
     clause_type: str
     entity_filter: list[str] | None = None
+    entity_filter_source: str | None = None
+    entity_filter_reason: str | None = None
 
     @property
     def difficulty(self) -> str:
@@ -129,6 +131,8 @@ def run_cuad_b(
                 "difficulty_mode_b": query.difficulty_mode_b,
                 "clause_type": query.clause_type,
                 "entity_filter": query.entity_filter,
+                "entity_filter_source": query.entity_filter_source,
+                "entity_filter_reason": query.entity_filter_reason,
                 "systems": {},
             }
 

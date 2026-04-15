@@ -12,6 +12,25 @@ from akashik.schema import MemoryUnit
 _SECTION_SPLIT_RE = re.compile(r"\n\s*\n+")
 _SENTENCE_SPLIT_RE = re.compile(r'(?<=[.!?])(?:["\')\]]+)?\s+')
 _ENTITY_RE = re.compile(r"\b[A-Z][A-Za-z0-9&.\-]*(?:\s+[A-Z][A-Za-z0-9&.\-]*){0,3}\b")
+_ANCHOR_TOKEN_RE = re.compile(r"\b[\w/-]+\b", re.UNICODE)
+_ANCHOR_SKIP_TOKENS = {
+    "agreement",
+    "and",
+    "co",
+    "contract",
+    "copy",
+    "corp",
+    "dated",
+    "ex",
+    "execution",
+    "exhibit",
+    "inc",
+    "license",
+    "llc",
+    "ltd",
+    "the",
+    "this",
+}
 
 
 def ingest_file(
@@ -35,7 +54,7 @@ def ingest_file(
         return existing[0]
 
     base_metadata = _base_metadata(path, metadata)
-    base_metadata["entities"] = extract_entities(raw_text)
+    base_metadata["entities"] = extract_entities(raw_text, filename=path.stem)
 
     with store.transaction():
         document = store.insert(_make_unit("document", raw_text, metadata=base_metadata))
@@ -75,20 +94,29 @@ def split_facts(text: str) -> list[str]:
     return parts or [collapsed]
 
 
-def extract_entities(text: str) -> list[str]:
+def extract_entities(text: str, *, filename: str | None = None) -> list[str]:
     seen: set[str] = set()
     entities: list[str] = []
+    if filename:
+        _append_entity_values(entities, seen, [_first_anchor_token(filename)])
+    _append_entity_values(entities, seen, _anchor_tokens(text[:500]))
     for match in _ENTITY_RE.findall(text[:500]):
         entity = _clean_entity(match)
         if not entity:
             continue
-        for value in _entity_values(entity):
-            key = value.lower()
-            if key in seen:
-                continue
-            seen.add(key)
-            entities.append(value)
+        _append_entity_values(entities, seen, _entity_values(entity))
     return entities
+
+
+def _append_entity_values(entities: list[str], seen: set[str], values: list[str | None]) -> None:
+    for value in values:
+        if not value:
+            continue
+        key = value.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        entities.append(value)
 
 
 def _clean_entity(entity: str) -> str:
@@ -97,10 +125,33 @@ def _clean_entity(entity: str) -> str:
 
 def _entity_values(entity: str) -> list[str]:
     values = [entity]
-    first_token = entity.split()[0].strip(" ,.;:()[]{}\"'")
-    if first_token and first_token != entity:
-        values.append(first_token)
+    values.extend(_anchor_tokens(entity))
     return values
+
+
+def _anchor_tokens(text: str) -> list[str]:
+    tokens: list[str] = []
+    for raw_token in _ANCHOR_TOKEN_RE.findall(text or ""):
+        token = _clean_anchor_token(raw_token)
+        if token and token not in tokens:
+            tokens.append(token)
+    return tokens
+
+
+def _first_anchor_token(text: str) -> str | None:
+    tokens = _anchor_tokens(text)
+    return tokens[0] if tokens else None
+
+
+def _clean_anchor_token(token: str) -> str:
+    cleaned = re.sub(r"[^a-z0-9]", "", token.lower())
+    if len(cleaned) < 4:
+        return ""
+    if cleaned in _ANCHOR_SKIP_TOKENS:
+        return ""
+    if any(character.isdigit() for character in cleaned):
+        return ""
+    return cleaned
 
 
 def _base_metadata(path: Path, metadata: dict | None) -> dict:

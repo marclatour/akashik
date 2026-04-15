@@ -55,13 +55,33 @@ CLAUSE_PLAN = (
 MODE_B_SOURCE_INDEXES = (0, 1, 4, 7, 8)
 _WHITESPACE_RE = re.compile(r"\s+")
 _TOKEN_RE = re.compile(r"\b[\w/-]+\b", re.UNICODE)
+_ANCHOR_SKIP_TOKENS = {
+    "agreement",
+    "and",
+    "co",
+    "contract",
+    "copy",
+    "corp",
+    "dated",
+    "ex",
+    "execution",
+    "exhibit",
+    "inc",
+    "license",
+    "llc",
+    "ltd",
+    "the",
+    "this",
+}
 
 
 @dataclass(slots=True)
 class PreparedContract:
     filename: str
     source_filename: str
-    party_prefix: str
+    entity_anchor: str | None
+    entity_anchor_source: str | None
+    entity_anchor_null_reason: str | None
     text: str
     clauses: dict[str, str]
     answers: dict[str, str]
@@ -131,11 +151,14 @@ def _select_contracts(contexts: dict[str, str], *, count: int) -> list[PreparedC
             if not clauses:
                 continue
 
+            entity_anchor, entity_anchor_source, null_reason = _select_entity_anchor(row)
             selected.append(
                 PreparedContract(
                     filename=_safe_filename(row["Filename"]),
                     source_filename=row["Filename"],
-                    party_prefix=_party_prefix(row.get("Parties-Answer", "")),
+                    entity_anchor=entity_anchor,
+                    entity_anchor_source=entity_anchor_source,
+                    entity_anchor_null_reason=null_reason,
                     text=text,
                     clauses=clauses,
                     answers=answers,
@@ -159,14 +182,15 @@ def _build_mode_a_queries(contracts: list[PreparedContract]) -> list[dict[str, A
                     clause_type,
                     answer,
                     clause,
-                    party_prefix=contract.party_prefix,
                 ),
                 "expected_fact": _truncate_expected_fact(clause),
                 "expected_source": contract.filename,
                 "expected_level": "fact",
                 "difficulty": "medium",
                 "clause_type": clause_type,
-                "entity_filter": [contract.party_prefix] if clause_type == "governing_law" and contract.party_prefix else None,
+                "entity_filter": [contract.entity_anchor] if contract.entity_anchor else None,
+                "entity_filter_source": contract.entity_anchor_source,
+                "entity_filter_reason": contract.entity_anchor_null_reason,
             }
         )
     return queries
@@ -176,13 +200,11 @@ def _build_mode_a_query(
     clause_type: str,
     answer: str,
     clause: str,
-    *,
-    party_prefix: str = "",
 ) -> str:
     answer_terms = " ".join(_query_tokens(answer))
     clause_lower = clause.lower()
     if clause_type == "governing_law":
-        terms = [party_prefix, "governed", "laws"]
+        terms = ["governed", "laws"]
         if "jurisdiction" in clause_lower:
             terms.append("jurisdiction")
         terms.extend(_query_tokens(answer))
@@ -235,6 +257,8 @@ def _build_mode_b_queries(mode_a_queries: list[dict[str, Any]]) -> list[dict[str
                 "difficulty_mode_b": "natural",
                 "clause_type": clause_type,
                 "entity_filter": source.get("entity_filter"),
+                "entity_filter_source": source.get("entity_filter_source"),
+                "entity_filter_reason": source.get("entity_filter_reason"),
             }
         )
     return mode_b
@@ -300,8 +324,36 @@ def _query_tokens(text: str) -> list[str]:
     return [token.lower() for token in _TOKEN_RE.findall(text) if token.strip()]
 
 
-def _party_prefix(parties_answer: str) -> str:
-    return next(iter(_query_tokens(parties_answer)), "")
+def _select_entity_anchor(row: dict[str, str]) -> tuple[str | None, str | None, str | None]:
+    sources = (
+        ("document_name", row.get("Document Name-Answer", "")),
+        ("party", row.get("Parties-Answer", "")),
+        ("filename", row.get("Filename", "")),
+    )
+    for source_name, value in sources:
+        anchor = _first_anchor_token(value)
+        if anchor:
+            return anchor, source_name, None
+    return None, None, "no meaningful anchor token"
+
+
+def _first_anchor_token(text: str) -> str | None:
+    for raw_token in _TOKEN_RE.findall(text or ""):
+        token = _clean_anchor_token(raw_token)
+        if token:
+            return token
+    return None
+
+
+def _clean_anchor_token(token: str) -> str:
+    cleaned = re.sub(r"[^a-z0-9]", "", token.lower())
+    if len(cleaned) < 4:
+        return ""
+    if cleaned in _ANCHOR_SKIP_TOKENS:
+        return ""
+    if any(character.isdigit() for character in cleaned):
+        return ""
+    return cleaned
 
 
 def _truncate_expected_fact(clause: str) -> str:

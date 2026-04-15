@@ -45,6 +45,8 @@ class CuadQuery:
     difficulty: str
     clause_type: str
     entity_filter: list[str] | None = None
+    entity_filter_source: str | None = None
+    entity_filter_reason: str | None = None
 
 
 @dataclass(slots=True)
@@ -98,6 +100,8 @@ def run_cuad(
                 "difficulty": query.difficulty,
                 "clause_type": query.clause_type,
                 "entity_filter": query.entity_filter,
+                "entity_filter_source": query.entity_filter_source,
+                "entity_filter_reason": query.entity_filter_reason,
                 "systems": {},
             }
 
@@ -277,6 +281,8 @@ def collect_akashik_failures(query_scores: list[tuple[CuadQuery, CuadScore]]) ->
                 "query_text": query.query_text,
                 "normalized_query": normalize_query(query.query_text),
                 "entity_filter": query.entity_filter,
+                "entity_filter_source": query.entity_filter_source,
+                "entity_filter_reason": query.entity_filter_reason,
                 "expected_source": query.expected_source,
                 "top_source": top_result.get("source"),
                 "top_content": _compact(str(top_result.get("content", ""))),

@@ -10,8 +10,10 @@
     "difficulty_mode_b": "natural",
     "clause_type": "governing_law",
     "entity_filter": [
-      "birch"
-    ]
+      "marketing"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
   },
   {
     "query_id": "cuad_02_governing_law_b",
@@ -24,8 +26,10 @@
     "difficulty_mode_b": "natural",
     "clause_type": "governing_law",
     "entity_filter": [
-      "rogers"
-    ]
+      "videoondemand"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
   },
   {
     "query_id": "cuad_05_renewal_b",
@@ -37,7 +41,11 @@
     "original_difficulty": "medium",
     "difficulty_mode_b": "natural",
     "clause_type": "renewal",
-    "entity_filter": null
+    "entity_filter": [
+      "cobranding"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
   },
   {
     "query_id": "cuad_08_notice_b",
@@ -49,7 +57,11 @@
     "original_difficulty": "medium",
     "difficulty_mode_b": "natural",
     "clause_type": "notice",
-    "entity_filter": null
+    "entity_filter": [
+      "endorsement"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
   },
   {
     "query_id": "cuad_09_notice_b",
@@ -61,6 +73,10 @@
     "original_difficulty": "medium",
     "difficulty_mode_b": "natural",
     "clause_type": "notice",
-    "entity_filter": null
+    "entity_filter": [
+      "services"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
   }
 ]

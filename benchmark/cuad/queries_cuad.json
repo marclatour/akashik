@@ -1,51 +1,59 @@
 [
   {
     "query_id": "cuad_01_governing_law",
-    "query_text": "birch governed laws nevada",
+    "query_text": "governed laws nevada",
     "expected_fact": "This Agreement is accepted by Company in the State of Nevada and shall be governed by and construed in accordance with the laws thereof, which laws shall prevail in the event of any conflict.",
     "expected_source": "CybergyHoldingsInc_20140520_10-Q_EX-10.27_8605784_EX-10.27_Affiliate_Agreement.txt",
     "expected_level": "fact",
     "difficulty": "medium",
     "clause_type": "governing_law",
     "entity_filter": [
-      "birch"
-    ]
+      "marketing"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
   },
   {
     "query_id": "cuad_02_governing_law",
-    "query_text": "rogers governed laws ontario canada",
+    "query_text": "governed laws ontario canada",
     "expected_fact": "This Agreement is subject to all laws, regulations, license conditions and decisions of the Canadian Radio-television and Telecommunications Commission (\"CRTC\") municipal, provincial and federal gover",
     "expected_source": "EuromediaHoldingsCorp_20070215_10SB12G_EX-10.B_01__525118_EX-10.B_01__Content_License_Agreement.txt",
     "expected_level": "fact",
     "difficulty": "medium",
     "clause_type": "governing_law",
     "entity_filter": [
-      "rogers"
-    ]
+      "videoondemand"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
   },
   {
     "query_id": "cuad_03_governing_law",
-    "query_text": "psitech governed laws nevada",
+    "query_text": "governed laws nevada",
     "expected_fact": "This Agreement shall be governed by and construed in accordance with the internal laws of the State of Nevada without giving effect to any choice or conflict of law provision or rule.",
     "expected_source": "GopageCorp_20140221_10-K_EX-10.1_8432966_EX-10.1_Content_License_Agreement.txt",
     "expected_level": "fact",
     "difficulty": "medium",
     "clause_type": "governing_law",
     "entity_filter": [
-      "psitech"
-    ]
+      "website"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
   },
   {
     "query_id": "cuad_04_governing_law",
-    "query_text": "women governed laws california",
+    "query_text": "governed laws california",
     "expected_fact": "This Agreement shall be interpreted and enforced in accordance with the laws of the State of California as applied to agreements made, entered into and performed entirely in California by California r",
     "expected_source": "EdietsComInc_20001030_10QSB_EX-10.4_2606646_EX-10.4_Co-Branding_Agreement.txt",
     "expected_level": "fact",
     "difficulty": "medium",
     "clause_type": "governing_law",
     "entity_filter": [
-      "women"
-    ]
+      "cobranding"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
   },
   {
     "query_id": "cuad_05_renewal",
@@ -55,7 +63,11 @@
     "expected_level": "fact",
     "difficulty": "medium",
     "clause_type": "renewal",
-    "entity_filter": null
+    "entity_filter": [
+      "cobranding"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
   },
   {
     "query_id": "cuad_06_renewal",
@@ -65,7 +77,11 @@
     "expected_level": "fact",
     "difficulty": "medium",
     "clause_type": "renewal",
-    "entity_filter": null
+    "entity_filter": [
+      "distributorship"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
   },
   {
     "query_id": "cuad_07_renewal",
@@ -75,7 +91,11 @@
     "expected_level": "fact",
     "difficulty": "medium",
     "clause_type": "renewal",
-    "entity_filter": null
+    "entity_filter": [
+      "exclusive"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
   },
   {
     "query_id": "cuad_08_notice",
@@ -85,7 +105,11 @@
     "expected_level": "fact",
     "difficulty": "medium",
     "clause_type": "notice",
-    "entity_filter": null
+    "entity_filter": [
+      "endorsement"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
   },
   {
     "query_id": "cuad_09_notice",
@@ -95,7 +119,11 @@
     "expected_level": "fact",
     "difficulty": "medium",
     "clause_type": "notice",
-    "entity_filter": null
+    "entity_filter": [
+      "services"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
   },
   {
     "query_id": "cuad_10_notice",
@@ -105,6 +133,10 @@
     "expected_level": "fact",
     "difficulty": "medium",
     "clause_type": "notice",
-    "entity_filter": null
+    "entity_filter": [
+      "media"
+    ],
+    "entity_filter_source": "document_name",
+    "entity_filter_reason": null
   }
 ]
