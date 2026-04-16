@@ -83,6 +83,18 @@ def test_insert_rolls_back_when_fts_write_fails(tmp_path, monkeypatch) -> None:
         assert store._conn.execute("SELECT COUNT(*) FROM memory_units_fts").fetchone()[0] == 0
 
 
+def test_transaction_rolls_back_multiple_inserts(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        with pytest.raises(RuntimeError, match="ingest failed"):
+            with store.transaction():
+                document = store.insert(_unit("document", "Document inserted before failure."))
+                store.insert(_unit("section", "Section inserted before failure.", parent_id=document.id))
+                raise RuntimeError("ingest failed")
+
+        assert store._conn.execute("SELECT COUNT(*) FROM memory_units").fetchone()[0] == 0
+        assert store._conn.execute("SELECT COUNT(*) FROM memory_units_fts").fetchone()[0] == 0
+
+
 def test_invalid_parent_is_rejected(tmp_path) -> None:
     with Store(tmp_path / "store.db") as store:
         with pytest.raises(ValueError, match="Parent"):

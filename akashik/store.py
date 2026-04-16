@@ -74,8 +74,14 @@ class Store:
         if self._conn.in_transaction:
             yield
             return
-        with self._conn:
+        self._conn.execute("BEGIN")
+        try:
             yield
+        except Exception:
+            self._conn.rollback()
+            raise
+        else:
+            self._conn.commit()
 
     def insert(self, unit: MemoryUnit) -> MemoryUnit:
         validate_level(unit.level)
