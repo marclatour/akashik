@@ -22,6 +22,7 @@ from akashik.parse_temporal_scope import parse_temporal_scope
 from akashik.parse_temporal_scope import _parse_question_date
 from akashik.retrieve import retrieve, score_documents
 from akashik.store import Store
+from akashik.temporal_resolver import classify_temporal_query
 from benchmark.longmemeval.ingest_adapter import ingest_instance
 
 LOGGER = logging.getLogger(__name__)
@@ -182,10 +183,14 @@ def _process_instance(
         LOGGER.exception("Failed to ingest instance %s", question_id)
         return None
 
-    temporal_scope = parse_temporal_scope(
-        str(instance.get("question", "")),
-        str(instance.get("question_date", "")),
-    )
+    question_text = str(instance.get("question", ""))
+    temporal_query = classify_temporal_query(question_text)
+    temporal_scope = None
+    if temporal_query is None:
+        temporal_scope = parse_temporal_scope(
+            question_text,
+            str(instance.get("question_date", "")),
+        )
     entity_filters: dict[str, str | list[str]] = {"instance_id": question_id}
     question_type = str(instance.get("question_type", ""))
     if question_type == "single-session-user":
@@ -217,7 +222,7 @@ def _process_instance(
 
     try:
         response = retrieve(
-            str(instance.get("question", "")),
+            question_text,
             store,
             level="fact",
             limit=TOP_K,
@@ -228,6 +233,11 @@ def _process_instance(
     except Exception:
         LOGGER.exception("Failed to retrieve for instance %s", question_id)
         return None
+
+    if temporal_query is not None and response.temporal_answer is None:
+        LOGGER.warning("Unsupported multi-expression temporal query: %s", question_text)
+    if response.temporal_answer is not None:
+        LOGGER.debug("instance %s temporal_answer=%s", question_id, response.temporal_answer)
 
     results = response.results
     if temporal_scope is not None:
@@ -251,6 +261,7 @@ def _process_instance(
         "abstained": abstained,
         "has_answer_hit": has_answer_hit,
         "answer_session_ids": list(instance.get("answer_session_ids", [])),
+        "temporal_resolved": response.temporal_answer is not None,
     }
 
 
@@ -309,6 +320,10 @@ def _print_report(
     )
     turn_recall = _safe_divide(sum(1 for row in non_abstention_rows if row["has_answer_hit"]), total)
     abstention_rows = [row for row in rows if str(row["question_id"]).endswith("_abs")]
+    temporal_delta_rows = [
+        row for row in non_abstention_rows if str(row.get("question_type", "")) == "temporal-reasoning"
+    ]
+    temporal_delta_resolved = sum(1 for row in temporal_delta_rows if row.get("temporal_resolved"))
 
     print("=== LongMemEval Results ===")
     print(f"Dataset:   {dataset_name}   N={total}")
@@ -346,6 +361,7 @@ def _print_report(
             f"{question_type:<28} session={session_metric:.2f}  "
             f"turn={turn_metric:.2f}  n={len(subset)}"
         )
+    print(f"Temporal deltas resolved: {temporal_delta_resolved}/{len(temporal_delta_rows)} two-event queries")
     print(f"Failed instances: {failed_instances}")
 
 

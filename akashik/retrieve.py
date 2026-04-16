@@ -12,6 +12,7 @@ from akashik.parse_temporal_scope import _parse_question_date
 from akashik.query_normalize import normalize_query
 from akashik.semantic import SemanticRanker
 from akashik.schema import LEVEL_INDEX, MemoryUnit, RetrievalResponse, RetrievalResult, validate_level
+from akashik.temporal_resolver import resolve_two_event_temporal
 
 LOGGER = logging.getLogger(__name__)
 _FTS_TOKEN_RE = re.compile(r"\w+", re.UNICODE)
@@ -78,6 +79,7 @@ def retrieve(
     document_gate_n: int = 0,
     as_of: str | None = None,
     query_date: str | None = None,
+    _enable_temporal_resolver: bool = True,
 ) -> RetrievalResponse:
     text = query.strip()
     if not text:
@@ -88,12 +90,31 @@ def retrieve(
 
     valid_at = _normalize_as_of(as_of)
     parsed_query_date = _normalize_query_date(query_date)
+    temporal_answer = None
+    if (
+        _enable_temporal_resolver
+        and entity_filters
+        and "instance_id" in entity_filters
+    ):
+        temporal_answer = resolve_two_event_temporal(
+            store,
+            text,
+            entity_filters,
+            question_date=query_date,
+        )
     exact_matches = store.fetch_by_content_hash(
         content_hash(text),
         current_only=valid_at is None,
         as_of=valid_at,
     )
-    response = _build_response(exact_matches, store, level=level, limit=limit, base_confidence=1.0)
+    response = _build_response(
+        exact_matches,
+        store,
+        level=level,
+        limit=limit,
+        base_confidence=1.0,
+        temporal_answer=temporal_answer,
+    )
     if response.results:
         return response
 
@@ -108,6 +129,7 @@ def retrieve(
         level=level,
         limit=limit,
         base_confidence=0.95,
+        temporal_answer=temporal_answer,
     )
     if response.results:
         return response
@@ -146,11 +168,12 @@ def retrieve(
         limit=limit,
         base_confidence=scoped_confidence,
         decay=0.05,
+        temporal_answer=temporal_answer,
     )
     if response.results:
         return response
 
-    return RetrievalResponse(results=[], confidence=0.0)
+    return RetrievalResponse(results=[], confidence=0.0, temporal_answer=temporal_answer)
 
 
 def _search_fts_with_entity_scope(
@@ -875,6 +898,7 @@ def _build_response(
     limit: int,
     base_confidence: float,
     decay: float = 0.01,
+    temporal_answer: dict | None = None,
 ) -> RetrievalResponse:
     resolved_units = _resolve_candidates(candidates, store, level=level)
     results: list[RetrievalResult] = []
@@ -888,7 +912,7 @@ def _build_response(
             )
         )
     top_confidence = results[0].confidence if results else 0.0
-    return RetrievalResponse(results=results, confidence=top_confidence)
+    return RetrievalResponse(results=results, confidence=top_confidence, temporal_answer=temporal_answer)
 
 
 def _rerank_fts_matches(candidates: list[MemoryUnit]) -> list[MemoryUnit]:

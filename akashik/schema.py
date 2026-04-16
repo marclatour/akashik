@@ -57,6 +57,7 @@ class RetrievalResult:
 class RetrievalResponse:
     results: list[RetrievalResult]
     confidence: float
+    temporal_answer: dict[str, Any] | None = None
 
 
 @dataclass(slots=True)

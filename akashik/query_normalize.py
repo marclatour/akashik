@@ -108,6 +108,22 @@ LEGAL_VARIANTS = {
     "governing": ["govern", "governed", "governing"],
 }
 
+EVENT_VERB_SYNONYMS = {
+    "fixed": "repaired",
+    "bought": "purchased",
+    "started": "began",
+    "finished": "completed",
+    "got": "received",
+    "made": "created",
+    "gave": "donated",
+    "sold": "listed",
+    "found": "discovered",
+}
+
+EVENT_PHRASE_SYNONYMS = {
+    "went to": "visited",
+}
+
 NUMBER_VARIANTS = {
     "1": ["1", "one"],
     "2": ["2", "two"],
@@ -163,6 +179,17 @@ def normalize_query(text: str) -> str:
     return " ".join(normalized)
 
 
+def normalize_event_description(text: str) -> str:
+    tokens = _TOKEN_RE.findall((text or "").lower())
+    tokens = _replace_event_phrases(tokens)
+    normalized: list[str] = []
+    for token in tokens:
+        replacement = EVENT_VERB_SYNONYMS.get(token, token)
+        if replacement and replacement not in normalized:
+            normalized.append(replacement)
+    return " ".join(normalized)
+
+
 def _replace_phrases(tokens: list[str]) -> list[str]:
     rewritten: list[str] = []
     index = 0
@@ -181,6 +208,25 @@ def _replace_phrases(tokens: list[str]) -> list[str]:
             continue
         rewritten.extend(replacement)
         index += replacement_size
+    return rewritten
+
+
+def _replace_event_phrases(tokens: list[str]) -> list[str]:
+    rewritten: list[str] = []
+    index = 0
+    while index < len(tokens):
+        replaced = False
+        for phrase, value in EVENT_PHRASE_SYNONYMS.items():
+            phrase_tokens = phrase.split()
+            if tokens[index : index + len(phrase_tokens)] == phrase_tokens:
+                rewritten.append(value)
+                index += len(phrase_tokens)
+                replaced = True
+                break
+        if replaced:
+            continue
+        rewritten.append(tokens[index])
+        index += 1
     return rewritten
 
 

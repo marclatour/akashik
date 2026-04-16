@@ -1,4 +1,4 @@
-# Akashik 0.9.1
+# Akashik 0.9.2
 
 Akashik is a local-first deterministic memory layer for text corpora. It stores content as a fixed hierarchy:
 
@@ -16,7 +16,7 @@ Retrieval is structure-first, not embedding-first. The default stack is:
 5. Navigator tie-breaker
 6. semantic fallback only when confidence is low
 
-Facts now support validity windows and reinforcement tracking. By default, retrieval returns only currently valid facts. Historical queries can opt into `as_of=...`.
+Facts now support validity windows, reinforcement tracking, and additive two-event temporal delta resolution. By default, retrieval returns only currently valid facts. Historical queries can opt into `as_of=...`.
 
 ## Install
 
@@ -132,6 +132,8 @@ The Navigator remains additive-only. In `0.9.1` it can also add a small confiden
 
 - recent confirmation recency relative to `query_date`
 - `confirmation_count` reinforcement, capped at `+0.03`
+
+For instance-scoped conversational queries, `retrieve()` now also attempts a deterministic two-event temporal delta resolution before the standard retrieval stack. When successful, the computed delta is attached to `RetrievalResponse.temporal_answer` while the normal fact retrieval path still runs for provenance.
 
 ## CLI
 
