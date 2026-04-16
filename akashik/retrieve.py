@@ -612,13 +612,13 @@ def _apply_navigator_tiebreak(
         return candidates
     top_score = float(candidates[0]["final_score"])
     second_score = float(candidates[1]["final_score"])
-    if top_score - second_score > 0.05:
+    if top_score - second_score > 0.02:
         return candidates
 
     tied_candidates: list[dict[str, object]] = []
     remainder_start = 0
     for index, candidate in enumerate(candidates):
-        if top_score - float(candidate["final_score"]) <= 0.05:
+        if top_score - float(candidate["final_score"]) <= 0.02:
             tied_candidates.append(candidate)
             remainder_start = index + 1
             continue

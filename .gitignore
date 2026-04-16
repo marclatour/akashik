@@ -216,3 +216,6 @@ results/results_cuad*.json
 # CUAD
 benchmark/cuad/master_clauses.csv
 benchmark/cuad/CUAD_v1.json
+benchmark/cuad/corpus.db
+results/*.md
+results/*.json
