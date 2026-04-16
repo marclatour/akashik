@@ -25,6 +25,7 @@ class MemoryUnit:
     parent_id: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
     embedding: bytes | None = None
+    section_heading: str | None = None
     id: str = field(default_factory=lambda: str(uuid4()))
 
     def __post_init__(self) -> None:

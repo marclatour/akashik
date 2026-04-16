@@ -138,9 +138,11 @@ def _search_fts_with_entity_scope(
         f"""
         SELECT fact.id, fact.level, fact.content, fact.content_hash, fact.normalized_hash,
                fact.parent_id, fact.metadata, fact.embedding,
+               fact.section_heading,
                fact.fts_rowid,
                section.id AS section_id,
                section.content AS section_content,
+               section.section_heading AS section_heading,
                section.metadata AS section_metadata,
                section.fts_rowid AS section_fts_rowid,
                document.id AS document_id,
@@ -414,8 +416,7 @@ def _section_heading_boost(section_title: str, clause_type: str | None, content:
 
 
 def _section_title_for_row(store, row) -> str:
-    section_metadata = json.loads(row["section_metadata"]) if row["section_metadata"] else {}
-    title = str(section_metadata.get("title", "") or "").strip()
+    title = str(row["section_heading"] or "").strip()
     if title:
         return title
 
@@ -449,7 +450,7 @@ def _nearest_inline_heading(section_content: str, fact_content: str) -> str:
 def _previous_section_title(store, *, document_id: str, section_fts_rowid: int) -> str:
     rows = store._conn.execute(
         """
-        SELECT content, metadata
+        SELECT content, section_heading
         FROM memory_units
         WHERE parent_id = ?
           AND level = 'section'
@@ -460,10 +461,9 @@ def _previous_section_title(store, *, document_id: str, section_fts_rowid: int) 
         (document_id, section_fts_rowid),
     ).fetchall()
     for row in rows:
-        metadata = json.loads(row["metadata"]) if row["metadata"] else {}
-        metadata_title = str(metadata.get("title", "") or "").strip()
-        if metadata_title:
-            return metadata_title
+        section_heading = str(row["section_heading"] or "").strip()
+        if section_heading:
+            return section_heading
         title = _standalone_section_title(row["content"])
         if title:
             return title

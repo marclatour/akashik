@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from akashik.identity import content_hash, normalized_hash
+from akashik.ingest import extract_section_heading
 from akashik.schema import MemoryUnit
 from akashik.store import Store
 
@@ -11,7 +12,12 @@ def _metadata(source: str = "tests") -> dict:
     return {"source": source, "timestamp": "2026-04-14T00:00:00+00:00", "tags": []}
 
 
-def _unit(level: str, content: str, parent_id: str | None = None) -> MemoryUnit:
+def _unit(
+    level: str,
+    content: str,
+    parent_id: str | None = None,
+    section_heading: str | None = None,
+) -> MemoryUnit:
     return MemoryUnit(
         level=level,
         content=content,
@@ -19,6 +25,7 @@ def _unit(level: str, content: str, parent_id: str | None = None) -> MemoryUnit:
         normalized_hash=normalized_hash(content),
         parent_id=parent_id,
         metadata=_metadata(),
+        section_heading=section_heading,
     )
 
 
@@ -64,6 +71,31 @@ def test_search_fts_and_stats(tmp_path) -> None:
         assert stats.by_level["document"] == 1
         assert stats.by_level["section"] == 1
         assert stats.by_level["fact"] == 0
+
+
+def test_section_heading_round_trips(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        unit = store.insert(_unit("fact", "Heading is a first-class field.", section_heading="Renewal Term"))
+
+        fetched = store.fetch_by_id(unit.id)
+
+        assert fetched is not None
+        assert fetched.section_heading == "Renewal Term"
+
+
+def test_null_section_heading_round_trips_as_none(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        unit = store.insert(_unit("fact", "Missing heading stays null."))
+
+        fetched = store.fetch_by_id(unit.id)
+
+        assert fetched is not None
+        assert fetched.section_heading is None
+
+
+def test_section_heading_extraction_only_considers_first_non_empty_line() -> None:
+    assert extract_section_heading("\nRenewal Term\nThis section continues.") == "Renewal Term"
+    assert extract_section_heading("This first line is a complete sentence.\nRenewal Term") is None
 
 
 def test_insert_rolls_back_when_fts_write_fails(tmp_path, monkeypatch) -> None:

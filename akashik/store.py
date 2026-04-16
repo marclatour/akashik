@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS memory_units (
     normalized_hash TEXT NOT NULL,
     parent_id TEXT REFERENCES memory_units(id),
     metadata TEXT NOT NULL DEFAULT '{}',
-    embedding BLOB
+    embedding BLOB,
+    section_heading TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_memory_units_level ON memory_units(level);
@@ -41,6 +42,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS memory_units_fts USING fts5(
 
 _SELECT_COLUMNS = """
 SELECT id, level, content, content_hash, normalized_hash, parent_id, metadata, embedding
+       , section_heading
 FROM memory_units
 """
 
@@ -59,6 +61,15 @@ class Store:
     def initialize(self) -> None:
         with self._conn:
             self._conn.executescript(_SCHEMA_SQL)
+            self._migrate_schema()
+
+    def _migrate_schema(self) -> None:
+        columns = {
+            row["name"]
+            for row in self._conn.execute("PRAGMA table_info(memory_units)").fetchall()
+        }
+        if "section_heading" not in columns:
+            self._conn.execute("ALTER TABLE memory_units ADD COLUMN section_heading TEXT")
 
     def close(self) -> None:
         self._conn.close()
@@ -104,8 +115,9 @@ class Store:
         cursor = self._conn.execute(
             """
             INSERT INTO memory_units (
-                id, level, content, content_hash, normalized_hash, parent_id, metadata, embedding
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                id, level, content, content_hash, normalized_hash, parent_id, metadata,
+                embedding, section_heading
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 unit.id,
@@ -116,6 +128,7 @@ class Store:
                 unit.parent_id,
                 json.dumps(unit.metadata, sort_keys=True),
                 unit.embedding,
+                unit.section_heading,
             ),
         )
         return int(cursor.lastrowid)
@@ -198,6 +211,7 @@ class Store:
             """
             SELECT m.id, m.level, m.content, m.content_hash, m.normalized_hash,
                    m.parent_id, m.metadata, m.embedding,
+                   m.section_heading,
                    m.fts_rowid,
                    bm25(memory_units_fts) AS rank
             FROM memory_units_fts AS f
@@ -269,6 +283,7 @@ class Store:
             parent_id=row["parent_id"],
             metadata=json.loads(row["metadata"]) if row["metadata"] else {},
             embedding=row["embedding"],
+            section_heading=row["section_heading"],
         )
 
 

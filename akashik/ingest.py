@@ -59,12 +59,14 @@ def ingest_file(
     with store.transaction():
         document = store.insert(_make_unit("document", raw_text, metadata=base_metadata))
         for section_text in split_sections(raw_text):
+            section_heading = extract_section_heading(section_text)
             section = store.insert(
                 _make_unit(
                     "section",
                     section_text,
                     parent_id=document.id,
                     metadata=base_metadata,
+                    section_heading=section_heading,
                 )
             )
             for fact_text in split_facts(section_text):
@@ -74,6 +76,7 @@ def ingest_file(
                         fact_text,
                         parent_id=section.id,
                         metadata=base_metadata,
+                        section_heading=section_heading,
                     )
                 )
     return document
@@ -92,6 +95,17 @@ def split_facts(text: str) -> list[str]:
         return []
     parts = [part.strip() for part in _SENTENCE_SPLIT_RE.split(collapsed) if part.strip()]
     return parts or [collapsed]
+
+
+def extract_section_heading(text: str) -> str | None:
+    for line in text.splitlines():
+        heading = line.strip()
+        if not heading:
+            continue
+        if len(heading) <= 60 and not heading.endswith((".", "?", "!")):
+            return heading
+        return None
+    return None
 
 
 def extract_entities(text: str, *, filename: str | None = None) -> list[str]:
@@ -211,6 +225,7 @@ def _make_unit(
     *,
     parent_id: str | None = None,
     metadata: dict | None = None,
+    section_heading: str | None = None,
 ) -> MemoryUnit:
     return MemoryUnit(
         level=level,
@@ -219,4 +234,5 @@ def _make_unit(
         normalized_hash=normalized_hash(content),
         parent_id=parent_id,
         metadata=dict(metadata or {}),
+        section_heading=section_heading,
     )
