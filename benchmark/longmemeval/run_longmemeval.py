@@ -10,9 +10,13 @@ if __package__ in (None, ""):
 
 import argparse
 from collections import defaultdict
+from datetime import timedelta
 import json
 import logging
+import os
 from pathlib import Path
+import sys
+import time
 
 from akashik.parse_temporal_scope import parse_temporal_scope
 from akashik.parse_temporal_scope import _parse_question_date
@@ -37,6 +41,12 @@ def main() -> int:
         help="Process only the first N instances. Useful for faster diagnostics.",
     )
     parser.add_argument("--document-gate-n", type=int, default=5)
+    parser.add_argument(
+        "--per-instance-store",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Use a fresh SQLite store per instance. Disable for shared-store debugging.",
+    )
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -68,23 +78,41 @@ def main() -> int:
 
     failed_instances = 0
     emitted: list[dict[str, object]] = []
-    with Store(args.store) as store, output_path.open("w", encoding="utf-8") as handle:
-        for index, instance in enumerate(instances, start=1):
-            line = _process_instance(
-                store,
-                instance,
-                abstention_threshold=args.abstention_threshold,
-                document_gate_n=args.document_gate_n,
-            )
-            if line is None:
-                failed_instances += 1
-                continue
-            emitted.append(line)
-            handle.write(json.dumps(line, sort_keys=True) + "\n")
-            if index % 10 == 0:
-                print(".", end="", flush=True)
+    started_at = time.monotonic()
+    with output_path.open("w", encoding="utf-8") as handle:
+        if args.per_instance_store:
+            for index, instance in enumerate(instances, start=1):
+                question_id = str(instance.get("question_id", f"instance_{index}"))
+                store_path = _instance_store_path(question_id)
+                line = _process_with_ephemeral_store(
+                    store_path,
+                    instance,
+                    abstention_threshold=args.abstention_threshold,
+                    document_gate_n=args.document_gate_n,
+                )
+                if line is None:
+                    failed_instances += 1
+                else:
+                    emitted.append(line)
+                    handle.write(json.dumps(line, sort_keys=True) + "\n")
+                _print_progress(index=index, total=len(instances), started_at=started_at)
+        else:
+            with Store(args.store) as store:
+                for index, instance in enumerate(instances, start=1):
+                    line = _process_instance(
+                        store,
+                        instance,
+                        abstention_threshold=args.abstention_threshold,
+                        document_gate_n=args.document_gate_n,
+                    )
+                    if line is None:
+                        failed_instances += 1
+                    else:
+                        emitted.append(line)
+                        handle.write(json.dumps(line, sort_keys=True) + "\n")
+                    _print_progress(index=index, total=len(instances), started_at=started_at)
         if instances:
-            print("")
+            _finish_progress()
 
     _print_report(
         dataset_name=data_path.name,
@@ -107,6 +135,26 @@ def _run_dry_run(abstention_threshold: float) -> int:
         )
     print(json.dumps(line, sort_keys=True))
     return 0
+
+
+def _process_with_ephemeral_store(
+    store_path: str,
+    instance: dict,
+    *,
+    abstention_threshold: float,
+    document_gate_n: int,
+) -> dict[str, object] | None:
+    store = Store(store_path)
+    try:
+        return _process_instance(
+            store,
+            instance,
+            abstention_threshold=abstention_threshold,
+            document_gate_n=document_gate_n,
+        )
+    finally:
+        store.close()
+        _cleanup_store_files(store_path)
 
 
 def _process_instance(
@@ -293,6 +341,46 @@ def _safe_divide(numerator: int, denominator: int) -> float:
     if denominator == 0:
         return 0.0
     return numerator / denominator
+
+
+def _instance_store_path(question_id: str) -> str:
+    safe_question_id = "".join(character if character.isalnum() or character in {"_", "-"} else "_" for character in question_id)
+    return f"/tmp/akashik_lme_{safe_question_id}.db"
+
+
+def _cleanup_store_files(store_path: str) -> None:
+    paths = [store_path, f"{store_path}-wal", f"{store_path}-shm"]
+    for path in paths:
+        if not os.path.exists(path):
+            continue
+        try:
+            os.unlink(path)
+        except OSError as exc:
+            LOGGER.warning("could not delete instance store %s: %s", path, exc)
+
+
+def _print_progress(*, index: int, total: int, started_at: float) -> None:
+    if total == 0 or index % 10 != 0:
+        return
+    elapsed_seconds = max(time.monotonic() - started_at, 0.0)
+    rate = elapsed_seconds / index if index else 0.0
+    remaining_seconds = max((total - index) * rate, 0.0)
+    percent = int((index / total) * 100)
+    message = (
+        f"{'.' * min(index // 10, 10)} {index}/{total} ({percent}%) | "
+        f"elapsed {_format_duration(elapsed_seconds)} | eta {_format_duration(remaining_seconds)}"
+    )
+    end = "\r" if sys.stdout.isatty() else "\n"
+    print(message, end=end, flush=True)
+
+
+def _finish_progress() -> None:
+    if sys.stdout.isatty():
+        print("")
+
+
+def _format_duration(seconds: float) -> str:
+    return str(timedelta(seconds=int(seconds)))
 
 
 if __name__ == "__main__":
