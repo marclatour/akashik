@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import importlib
+
 from akashik.identity import content_hash, normalized_hash
 from akashik.ingest import ingest_file
-from akashik.retrieve import retrieve
+from akashik.retrieve import _apply_navigator_tiebreak, retrieve
 from akashik.schema import MemoryUnit
 from akashik.store import Store
+
+retrieve_module = importlib.import_module("akashik.retrieve")
 
 
 def _metadata(source: str = "tests") -> dict:
@@ -128,6 +132,46 @@ def test_empty_result_returns_zero_confidence(tmp_path) -> None:
         assert blank.confidence == 0.0
         assert missing.results == []
         assert missing.confidence == 0.0
+
+
+def test_navigator_tiebreak_does_not_override_clear_winner(monkeypatch) -> None:
+    first = _unit("fact", "First fact.", source="doc.txt")
+    second = _unit("fact", "Second fact.", source="doc.txt")
+    candidates = [
+        {"unit": first, "final_score": 1.0},
+        {"unit": second, "final_score": 0.9},
+    ]
+
+    monkeypatch.setattr(
+        retrieve_module,
+        "rank_facts",
+        lambda facts, query: [(facts[1], 0.9), (facts[0], 0.1)],
+    )
+
+    ranked = _apply_navigator_tiebreak(candidates, "test query", use_navigator=True)
+
+    assert [detail["unit"].id for detail in ranked] == [first.id, second.id]
+
+
+def test_navigator_tiebreak_only_reorders_near_tie(monkeypatch) -> None:
+    first = _unit("fact", "First fact.", source="doc.txt")
+    second = _unit("fact", "Second fact.", source="doc.txt")
+    third = _unit("fact", "Third fact.", source="doc.txt")
+    candidates = [
+        {"unit": first, "final_score": 1.0},
+        {"unit": second, "final_score": 0.97},
+        {"unit": third, "final_score": 0.8},
+    ]
+
+    monkeypatch.setattr(
+        retrieve_module,
+        "rank_facts",
+        lambda facts, query: [(facts[1], 0.9), (facts[0], 0.8)],
+    )
+
+    ranked = _apply_navigator_tiebreak(candidates, "test query", use_navigator=True)
+
+    assert [detail["unit"].id for detail in ranked] == [second.id, first.id, third.id]
 
 
 def test_acceptance_case_ingest_and_retrieve_unique_fact(tmp_path) -> None:

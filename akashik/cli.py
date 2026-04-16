@@ -49,10 +49,17 @@ def ingest_command(ctx: click.Context, file_path: Path, level: str) -> None:
 @click.option("--text", required=True)
 @click.option("--level", type=click.Choice(LEVELS))
 @click.option("--limit", default=10, show_default=True, type=int)
+@click.option("--navigator/--no-navigator", default=True, show_default=True)
 @click.pass_context
-def query_command(ctx: click.Context, text: str, level: str | None, limit: int) -> None:
+def query_command(
+    ctx: click.Context,
+    text: str,
+    level: str | None,
+    limit: int,
+    navigator: bool,
+) -> None:
     with _open_store(ctx) as store:
-        response = retrieve(text, store, level=level, limit=limit)
+        response = retrieve(text, store, level=level, limit=limit, use_navigator=navigator)
 
     if not response.results:
         click.echo("No matches. confidence=0.0")

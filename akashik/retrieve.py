@@ -6,6 +6,7 @@ import json
 import re
 
 from akashik.identity import content_hash, normalized_hash
+from akashik.navigator import rank_facts
 from akashik.query_normalize import normalize_query
 from akashik.schema import LEVEL_INDEX, MemoryUnit, RetrievalResponse, RetrievalResult, validate_level
 
@@ -64,6 +65,7 @@ def retrieve(
     entity_filter: list[str] | None = None,
     clause_type: str | None = None,
     debug_label: str | None = None,
+    use_navigator: bool = True,
 ) -> RetrievalResponse:
     text = query.strip()
     if not text:
@@ -98,6 +100,7 @@ def retrieve(
             limit=fts_limit,
             clause_type=clause_type,
             debug_label=debug_label,
+            use_navigator=use_navigator,
         )
     else:
         fts_matches = _rerank_fts_matches(store.search_fts(fts_query, limit=fts_limit))
@@ -123,6 +126,7 @@ def _search_fts_with_entity_scope(
     limit: int,
     clause_type: str | None = None,
     debug_label: str | None = None,
+    use_navigator: bool = True,
 ) -> list[MemoryUnit]:
     document_ids = _document_ids_matching_entities(store, entity_filter)
     if not document_ids:
@@ -194,6 +198,7 @@ def _search_fts_with_entity_scope(
         ),
     )
     ranked = _rerank_scoped_fact_candidates(by_document[winning_document])
+    ranked = _apply_navigator_tiebreak(ranked, query, use_navigator=use_navigator)
 
     if debug_label:
         _print_scoped_debug(
@@ -593,6 +598,42 @@ def _rerank_fts_matches(candidates: list[MemoryUnit]) -> list[MemoryUnit]:
     )
     best_candidates = sorted(by_source[best_source], key=lambda item: (-item[0], item[1]))
     return [candidate for _, _, candidate in best_candidates]
+
+
+def _apply_navigator_tiebreak(
+    candidates: list[dict[str, object]],
+    query: str,
+    *,
+    use_navigator: bool,
+) -> list[dict[str, object]]:
+    if not use_navigator:
+        return candidates
+    if len(candidates) < 2:
+        return candidates
+    top_score = float(candidates[0]["final_score"])
+    second_score = float(candidates[1]["final_score"])
+    if top_score - second_score > 0.05:
+        return candidates
+
+    tied_candidates: list[dict[str, object]] = []
+    remainder_start = 0
+    for index, candidate in enumerate(candidates):
+        if top_score - float(candidate["final_score"]) <= 0.05:
+            tied_candidates.append(candidate)
+            remainder_start = index + 1
+            continue
+        break
+    if len(tied_candidates) < 2:
+        return candidates
+
+    facts = [candidate["unit"] for candidate in tied_candidates]
+    ranked_facts = [fact for fact, _score in rank_facts(facts, query)]
+    ranked_by_id = {fact.id: index for index, fact in enumerate(ranked_facts)}
+    reranked_ties = sorted(
+        tied_candidates,
+        key=lambda candidate: ranked_by_id.get(candidate["unit"].id, len(ranked_by_id)),
+    )
+    return reranked_ties + candidates[remainder_start:]
 
 
 def _fact_brevity_bonus(candidate: MemoryUnit) -> float:
