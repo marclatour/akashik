@@ -8,6 +8,7 @@ import re
 
 from akashik.identity import content_hash, normalized_hash
 from akashik.navigator import rank_facts
+from akashik.parse_temporal_scope import _parse_question_date
 from akashik.query_normalize import normalize_query
 from akashik.semantic import SemanticRanker
 from akashik.schema import LEVEL_INDEX, MemoryUnit, RetrievalResponse, RetrievalResult, validate_level
@@ -58,6 +59,7 @@ _DEFINITION_PREFIXES = (
 )
 _MAX_SCORE_ADJUSTMENT = 0.3
 _SEMANTIC_RANKER = SemanticRanker()
+_SEMANTIC_FALLBACK_THRESHOLD = _SEMANTIC_RANKER.config.confidence_threshold
 _FACT_METADATA_ONLY_KEYS = {"speaker", "has_answer"}
 
 
@@ -74,6 +76,7 @@ def retrieve(
     use_navigator: bool = True,
     use_semantic: bool = True,
     document_gate_n: int = 0,
+    as_of: str | None = None,
 ) -> RetrievalResponse:
     text = query.strip()
     if not text:
@@ -82,12 +85,21 @@ def retrieve(
     if level is not None:
         validate_level(level)
 
-    exact_matches = store.fetch_by_content_hash(content_hash(text))
+    valid_at = _normalize_as_of(as_of)
+    exact_matches = store.fetch_by_content_hash(
+        content_hash(text),
+        current_only=valid_at is None,
+        as_of=valid_at,
+    )
     response = _build_response(exact_matches, store, level=level, limit=limit, base_confidence=1.0)
     if response.results:
         return response
 
-    normalized_matches = store.fetch_by_normalized_hash(normalized_hash(text))
+    normalized_matches = store.fetch_by_normalized_hash(
+        normalized_hash(text),
+        current_only=valid_at is None,
+        as_of=valid_at,
+    )
     response = _build_response(
         normalized_matches,
         store,
@@ -101,7 +113,7 @@ def retrieve(
     fts_query = normalize_query(text)
     fts_limit = max(limit * 5, 20)
     if entity_filter or entity_filters:
-        fts_matches = _search_fts_with_entity_scope(
+        fts_matches, scoped_confidence = _search_fts_with_entity_scope(
             store,
             fts_query,
             entity_filter=entity_filter,
@@ -112,15 +124,24 @@ def retrieve(
             use_navigator=use_navigator,
             use_semantic=use_semantic,
             document_gate_n=document_gate_n,
+            as_of=valid_at,
         )
     else:
-        fts_matches = _rerank_fts_matches(store.search_fts(fts_query, limit=fts_limit))
+        fts_matches = _rerank_fts_matches(
+            store.search_fts(
+                fts_query,
+                limit=fts_limit,
+                current_only=valid_at is None,
+                as_of=valid_at,
+            )
+        )
+        scoped_confidence = 0.8
     response = _build_response(
         fts_matches,
         store,
         level=level,
         limit=limit,
-        base_confidence=0.8,
+        base_confidence=scoped_confidence,
         decay=0.05,
     )
     if response.results:
@@ -141,7 +162,8 @@ def _search_fts_with_entity_scope(
     use_navigator: bool = True,
     use_semantic: bool = True,
     document_gate_n: int = 0,
-) -> list[MemoryUnit]:
+    as_of: str | None = None,
+) -> tuple[list[MemoryUnit], float]:
     document_scope_filters, fact_scope_filters = _split_entity_filters(entity_filters or {})
     document_ids = _document_ids_for_scope(
         store,
@@ -149,7 +171,7 @@ def _search_fts_with_entity_scope(
         entity_filters=document_scope_filters,
     )
     if not document_ids:
-        return []
+        return ([], 0.0)
 
     scoped_entity_filters = dict(document_scope_filters)
     if document_gate_n > 0:
@@ -158,6 +180,8 @@ def _search_fts_with_entity_scope(
             query,
             document_ids=document_ids,
             top_n=document_gate_n,
+            current_only=as_of is None,
+            as_of=as_of,
         )
         LOGGER.debug(
             "document gate: %s docs passing gate (gate_n=%s)",
@@ -185,7 +209,9 @@ def _search_fts_with_entity_scope(
     tokens = _remove_entity_filter_tokens(_fts_tokens(query), entity_filter or [])
     fts_query = _build_fts_query(tokens)
     if not fts_query:
-        return []
+        return ([], 0.0)
+
+    validity_sql, validity_params = _validity_sql(alias="fact", current_only=as_of is None, as_of=as_of)
 
     placeholders = ", ".join("?" for _ in document_ids)
     rows = store._conn.execute(
@@ -193,6 +219,7 @@ def _search_fts_with_entity_scope(
         SELECT fact.id, fact.level, fact.content, fact.content_hash, fact.normalized_hash,
                fact.parent_id, fact.metadata, fact.embedding,
                fact.section_heading,
+               fact.valid_from, fact.valid_until,
                fact.fts_rowid,
                section.id AS section_id,
                section.content AS section_content,
@@ -209,16 +236,23 @@ def _search_fts_with_entity_scope(
         WHERE memory_units_fts MATCH ?
           AND fact.level = 'fact'
           AND document.id IN ({placeholders})
+          {validity_sql}
           {_fact_filter_sql(fact_scope_filters)}
         ORDER BY bm25(memory_units_fts), fact.fts_rowid
         LIMIT ?
         """,
-        (fts_query, *document_ids, *_fact_filter_params(fact_scope_filters), max(limit * 50, 1000)),
+        (
+            fts_query,
+            *document_ids,
+            *validity_params,
+            *_fact_filter_params(fact_scope_filters),
+            max(limit * 50, 1000),
+        ),
     ).fetchall()
 
     details = _scoped_candidate_details(store, rows, tokens, explicit_clause_type=clause_type)
     if not details:
-        return []
+        return ([], 0.0)
 
     by_document: dict[str, list[dict[str, object]]] = {}
     document_scores: dict[str, float] = {}
@@ -261,7 +295,7 @@ def _search_fts_with_entity_scope(
             candidates=ranked,
         )
 
-    return [detail["unit"] for detail in ranked[:limit]]
+    return ([detail["unit"] for detail in ranked[:limit]], _scoped_result_confidence(ranked))
 
 
 def score_documents(
@@ -269,13 +303,23 @@ def score_documents(
     query: str,
     entity_filters: dict[str, str | list[str]] | None,
     top_n: int = 5,
+    *,
+    current_only: bool = True,
+    as_of: str | None = None,
 ) -> list[str]:
     document_scope_filters, _fact_scope_filters = _split_entity_filters(entity_filters or {})
     document_ids = _document_ids_for_scope(store, entity_filter=None, entity_filters=document_scope_filters)
     if not document_ids:
         LOGGER.debug("score_documents: 0 documents scored, top-%s: []", top_n)
         return []
-    return _score_documents_for_scope(store, query, document_ids=document_ids, top_n=top_n)
+    return _score_documents_for_scope(
+        store,
+        query,
+        document_ids=document_ids,
+        top_n=top_n,
+        current_only=current_only,
+        as_of=as_of,
+    )
 
 
 def _score_documents_for_scope(
@@ -284,12 +328,20 @@ def _score_documents_for_scope(
     *,
     document_ids: list[str],
     top_n: int,
+    current_only: bool = True,
+    as_of: str | None = None,
 ) -> list[str]:
     tokens = _fts_tokens(query)
     fts_query = _build_fts_query(tokens)
     if not fts_query or not document_ids:
         LOGGER.debug("score_documents: 0 documents scored, top-%s: []", top_n)
         return []
+
+    validity_sql, validity_params = _validity_sql(
+        alias="fact",
+        current_only=current_only,
+        as_of=as_of,
+    )
 
     placeholders = ", ".join("?" for _ in document_ids)
     rows = store._conn.execute(
@@ -305,10 +357,11 @@ def _score_documents_for_scope(
         WHERE memory_units_fts MATCH ?
           AND fact.level = 'fact'
           AND document.id IN ({placeholders})
+          {validity_sql}
         ORDER BY bm25(memory_units_fts), fact.fts_rowid
         LIMIT ?
         """,
-        (fts_query, *document_ids, max(top_n * 50, 1000)),
+        (fts_query, *document_ids, *validity_params, max(top_n * 50, 1000)),
     ).fetchall()
 
     document_scores: dict[str, float] = {}
@@ -493,6 +546,35 @@ def _remove_entity_filter_tokens(tokens: list[str], entity_filter: list[str]) ->
 
 def _build_fts_query(tokens: list[str]) -> str:
     return " OR ".join(f'"{token}"' for token in tokens)
+
+
+def _normalize_as_of(as_of: str | None) -> str | None:
+    if not as_of:
+        return None
+    return _parse_question_date(as_of).isoformat()
+
+
+def _validity_sql(
+    *,
+    alias: str,
+    current_only: bool,
+    as_of: str | None,
+) -> tuple[str, list[object]]:
+    if as_of:
+        return (
+            f"AND (({alias}.valid_from IS NULL OR {alias}.valid_from <= ?) AND ({alias}.valid_until IS NULL OR {alias}.valid_until > ?))",
+            [as_of, as_of],
+        )
+    if current_only:
+        return (f"AND {alias}.valid_until IS NULL", [])
+    return ("", [])
+
+
+def _scoped_result_confidence(candidates: list[dict[str, object]]) -> float:
+    if not candidates:
+        return 0.0
+    raw_score = float(candidates[0].get("raw_score", 0.0))
+    return round(min(0.8, max(0.0, raw_score)), 3)
 
 
 def _scoped_candidate_details(

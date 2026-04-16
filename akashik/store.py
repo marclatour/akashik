@@ -24,13 +24,16 @@ CREATE TABLE IF NOT EXISTS memory_units (
     parent_id TEXT REFERENCES memory_units(id),
     metadata TEXT NOT NULL DEFAULT '{}',
     embedding BLOB,
-    section_heading TEXT
+    section_heading TEXT,
+    valid_from TEXT,
+    valid_until TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_memory_units_level ON memory_units(level);
 CREATE INDEX IF NOT EXISTS idx_memory_units_content_hash ON memory_units(content_hash);
 CREATE INDEX IF NOT EXISTS idx_memory_units_normalized_hash ON memory_units(normalized_hash);
 CREATE INDEX IF NOT EXISTS idx_memory_units_parent_id ON memory_units(parent_id);
+CREATE INDEX IF NOT EXISTS idx_validity ON memory_units(valid_until);
 
 CREATE VIRTUAL TABLE IF NOT EXISTS memory_units_fts USING fts5(
     content,
@@ -43,6 +46,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS memory_units_fts USING fts5(
 _SELECT_COLUMNS = """
 SELECT id, level, content, content_hash, normalized_hash, parent_id, metadata, embedding
        , section_heading
+       , valid_from, valid_until
 FROM memory_units
 """
 
@@ -70,6 +74,11 @@ class Store:
         }
         if "section_heading" not in columns:
             self._conn.execute("ALTER TABLE memory_units ADD COLUMN section_heading TEXT")
+        if "valid_from" not in columns:
+            self._conn.execute("ALTER TABLE memory_units ADD COLUMN valid_from TEXT")
+        if "valid_until" not in columns:
+            self._conn.execute("ALTER TABLE memory_units ADD COLUMN valid_until TEXT")
+        self._conn.execute("CREATE INDEX IF NOT EXISTS idx_validity ON memory_units(valid_until)")
 
     def close(self) -> None:
         self._conn.close()
@@ -116,8 +125,8 @@ class Store:
             """
             INSERT INTO memory_units (
                 id, level, content, content_hash, normalized_hash, parent_id, metadata,
-                embedding, section_heading
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                embedding, section_heading, valid_from, valid_until
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 unit.id,
@@ -129,6 +138,8 @@ class Store:
                 json.dumps(unit.metadata, sort_keys=True),
                 unit.embedding,
                 unit.section_heading,
+                unit.valid_from,
+                unit.valid_until,
             ),
         )
         return int(cursor.lastrowid)
@@ -149,17 +160,39 @@ class Store:
         ).fetchone()
         return self._row_to_unit(row) if row else None
 
-    def fetch_by_content_hash(self, hash_value: str) -> list[MemoryUnit]:
+    def fetch_by_content_hash(
+        self,
+        hash_value: str,
+        *,
+        current_only: bool = False,
+        as_of: str | None = None,
+    ) -> list[MemoryUnit]:
+        validity_sql, params = self._validity_sql(
+            alias="memory_units",
+            current_only=current_only,
+            as_of=as_of,
+        )
         rows = self._conn.execute(
-            f"{_SELECT_COLUMNS} WHERE content_hash = ? ORDER BY fts_rowid",
-            (hash_value,),
+            f"{_SELECT_COLUMNS} WHERE content_hash = ?{validity_sql} ORDER BY fts_rowid",
+            (hash_value, *params),
         ).fetchall()
         return [self._row_to_unit(row) for row in rows]
 
-    def fetch_by_normalized_hash(self, hash_value: str) -> list[MemoryUnit]:
+    def fetch_by_normalized_hash(
+        self,
+        hash_value: str,
+        *,
+        current_only: bool = False,
+        as_of: str | None = None,
+    ) -> list[MemoryUnit]:
+        validity_sql, params = self._validity_sql(
+            alias="memory_units",
+            current_only=current_only,
+            as_of=as_of,
+        )
         rows = self._conn.execute(
-            f"{_SELECT_COLUMNS} WHERE normalized_hash = ? ORDER BY fts_rowid",
-            (hash_value,),
+            f"{_SELECT_COLUMNS} WHERE normalized_hash = ?{validity_sql} ORDER BY fts_rowid",
+            (hash_value, *params),
         ).fetchall()
         return [self._row_to_unit(row) for row in rows]
 
@@ -223,22 +256,38 @@ class Store:
                 descendants.extend(self.fetch_descendants_at_level(child.id, level))
         return descendants
 
-    def search_fts(self, query: str, limit: int = 20) -> list[MemoryUnit]:
+    def search_fts(
+        self,
+        query: str,
+        limit: int = 20,
+        *,
+        current_only: bool = False,
+        as_of: str | None = None,
+    ) -> list[MemoryUnit]:
         query_tokens = self._fts_tokens(query)
         fts_query = self._build_fts_query(query_tokens)
         if not fts_query:
             return []
         fetch_limit = max(limit * 50, 1000)
+        validity_sql, validity_params = self._validity_sql(
+            alias="m",
+            current_only=current_only,
+            as_of=as_of,
+        )
         rows = self._conn.execute(
             """
             SELECT m.id, m.level, m.content, m.content_hash, m.normalized_hash,
                    m.parent_id, m.metadata, m.embedding,
                    m.section_heading,
+                   m.valid_from, m.valid_until,
                    m.fts_rowid,
                    bm25(memory_units_fts) AS rank
             FROM memory_units_fts AS f
             JOIN memory_units AS m ON m.fts_rowid = f.rowid
             WHERE memory_units_fts MATCH ?
+            """
+            + validity_sql
+            + """
             ORDER BY bm25(memory_units_fts),
                      CASE m.level
                          WHEN 'fact' THEN 0
@@ -250,7 +299,7 @@ class Store:
                      m.fts_rowid
             LIMIT ?
             """,
-            (fts_query, fetch_limit),
+            (fts_query, *validity_params, fetch_limit),
         ).fetchall()
 
         scored_rows = []
@@ -326,6 +375,36 @@ class Store:
             params.append(value)
         return "\n".join(clauses), params
 
+    def close_fact(self, fact_id: str, valid_until: str) -> None:
+        self._conn.execute(
+            """
+            UPDATE memory_units
+            SET valid_until = ?
+            WHERE id = ?
+              AND level = 'fact'
+            """,
+            (valid_until, fact_id),
+        )
+
+    def _validity_sql(
+        self,
+        *,
+        alias: str,
+        current_only: bool,
+        as_of: str | None,
+    ) -> tuple[str, list[object]]:
+        if as_of:
+            return (
+                f"\n              AND ({alias}.level != 'fact' OR ({alias}.valid_from IS NULL OR {alias}.valid_from <= ?) AND ({alias}.valid_until IS NULL OR {alias}.valid_until > ?))",
+                [as_of, as_of],
+            )
+        if current_only:
+            return (
+                f"\n              AND ({alias}.level != 'fact' OR {alias}.valid_until IS NULL)",
+                [],
+            )
+        return ("", [])
+
     def _row_to_unit(self, row: sqlite3.Row) -> MemoryUnit:
         return MemoryUnit(
             id=row["id"],
@@ -337,6 +416,8 @@ class Store:
             metadata=json.loads(row["metadata"]) if row["metadata"] else {},
             embedding=row["embedding"],
             section_heading=row["section_heading"],
+            valid_from=row["valid_from"],
+            valid_until=row["valid_until"],
         )
 
 

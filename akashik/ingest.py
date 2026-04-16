@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 import re
 
+from akashik.contradiction import close_fact, extract_triple, find_contradicting_fact
 from akashik.identity import content_hash, normalized_hash
 from akashik.schema import MemoryUnit
 
@@ -72,15 +73,74 @@ def ingest_file(
                 )
             )
             for fact_text in split_facts(section_text):
-                store.insert(
-                    _make_unit(
-                        "fact",
-                        fact_text,
-                        parent_id=section.id,
-                        metadata=base_metadata,
-                        section_entities=section_entities,
-                        section_heading=section_heading,
-                    )
+                _insert_fact_unit(
+                    store,
+                    fact_text,
+                    parent_id=section.id,
+                    metadata=base_metadata,
+                    section_entities=section_entities,
+                    section_heading=section_heading,
+                )
+    return document
+
+
+def ingest_text(
+    store,
+    text: str,
+    *,
+    level: str = "document",
+    metadata: dict | None = None,
+) -> MemoryUnit:
+    if level != "document":
+        raise ValueError("Akashik ingest only supports document-level text input.")
+
+    raw_text = str(text)
+    existing = [
+        unit
+        for unit in store.fetch_by_content_hash(content_hash(raw_text))
+        if unit.level == "document"
+    ]
+    if existing:
+        return existing[0]
+
+    base_metadata = {
+        "source": "inline",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "tags": [],
+    }
+    if metadata:
+        base_metadata.update(metadata)
+    base_metadata["source"] = str(base_metadata.get("source", "inline"))
+    base_metadata["tags"] = list(base_metadata.get("tags", []))
+    base_metadata["entities"] = _merge_entity_lists(
+        list(base_metadata.get("entities", [])),
+        extract_entities(raw_text),
+    )
+
+    sections = split_sections(raw_text)
+    if not sections and raw_text.strip():
+        sections = [raw_text.strip()]
+
+    with store.transaction():
+        document = store.insert(_make_unit("document", raw_text, metadata=base_metadata))
+        for section_text in sections:
+            section_heading = extract_section_heading(section_text)
+            section = store.insert(
+                _make_unit(
+                    "section",
+                    section_text,
+                    parent_id=document.id,
+                    metadata=base_metadata,
+                    section_heading=section_heading,
+                )
+            )
+            for fact_text in split_facts(section_text):
+                _insert_fact_unit(
+                    store,
+                    fact_text,
+                    parent_id=section.id,
+                    metadata=base_metadata,
+                    section_heading=section_heading,
                 )
     return document
 
@@ -248,6 +308,53 @@ def _merge_child_metadata(
     return merged
 
 
+def _merge_entity_lists(*groups: object) -> list[str]:
+    merged: list[str] = []
+    seen: set[str] = set()
+    for group in groups:
+        if not isinstance(group, list):
+            continue
+        for value in group:
+            if not isinstance(value, str):
+                continue
+            normalized = value.strip()
+            if not normalized:
+                continue
+            lowered = normalized.lower()
+            if lowered in seen:
+                continue
+            seen.add(lowered)
+            merged.append(normalized)
+    return merged
+
+
+def _insert_fact_unit(
+    store,
+    content: str,
+    *,
+    parent_id: str,
+    metadata: dict | None = None,
+    section_entities: dict | None = None,
+    section_heading: str | None = None,
+) -> MemoryUnit:
+    unit = _make_unit(
+        "fact",
+        content,
+        parent_id=parent_id,
+        metadata=metadata,
+        section_entities=section_entities,
+        section_heading=section_heading,
+    )
+    triple = extract_triple(unit.content)
+    valid_from = unit.valid_from
+    instance_id = str(unit.metadata.get("instance_id", "")).strip() or None
+    if triple and valid_from:
+        contradiction = find_contradicting_fact(store, triple, instance_id)
+        if contradiction is not None:
+            close_fact(store, contradiction.id, valid_from)
+    return store.insert(unit)
+
+
 def _make_unit(
     level: str,
     content: str,
@@ -257,12 +364,18 @@ def _make_unit(
     section_entities: dict | None = None,
     section_heading: str | None = None,
 ) -> MemoryUnit:
+    merged_metadata = _merge_child_metadata(metadata, section_entities)
     return MemoryUnit(
         level=level,
         content=content,
         content_hash=content_hash(content),
         normalized_hash=normalized_hash(content),
         parent_id=parent_id,
-        metadata=_merge_child_metadata(metadata, section_entities),
+        metadata=merged_metadata,
         section_heading=section_heading,
+        valid_from=(
+            str(merged_metadata.get("session_date"))
+            if level == "fact" and merged_metadata.get("session_date")
+            else None
+        ),
     )

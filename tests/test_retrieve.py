@@ -21,6 +21,8 @@ def _unit(
     parent_id: str | None = None,
     source: str = "tests",
     metadata: dict | None = None,
+    valid_from: str | None = None,
+    valid_until: str | None = None,
 ) -> MemoryUnit:
     unit_metadata = _metadata(source)
     if metadata:
@@ -32,6 +34,8 @@ def _unit(
         normalized_hash=normalized_hash(content),
         parent_id=parent_id,
         metadata=unit_metadata,
+        valid_from=valid_from,
+        valid_until=valid_until,
     )
 
 
@@ -302,6 +306,121 @@ def test_document_gate_max_not_sum(tmp_path) -> None:
         )
 
         assert ranked[0] == strong.id
+
+
+def test_retrieve_excludes_superseded_by_default(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        document = store.insert(
+            _unit("document", "Document test", metadata={"instance_id": "instance"})
+        )
+        section = store.insert(
+            _unit("section", "Section test", parent_id=document.id, metadata={"instance_id": "instance"})
+        )
+        old_fact = store.insert(
+            _unit(
+                "fact",
+                "I live in Chicago",
+                parent_id=section.id,
+                metadata={"instance_id": "instance"},
+                valid_from="2022-01-01",
+                valid_until="2024-06-01",
+            )
+        )
+        new_fact = store.insert(
+            _unit(
+                "fact",
+                "I moved to New York",
+                parent_id=section.id,
+                metadata={"instance_id": "instance"},
+                valid_from="2024-06-01",
+            )
+        )
+
+        response = retrieve("where do I live", store, level="fact", entity_filters={"instance_id": "instance"})
+
+        assert response.results
+        assert response.results[0].unit.id == new_fact.id
+        assert all(result.unit.id != old_fact.id for result in response.results)
+
+
+def test_retrieve_as_of_historical(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        document = store.insert(
+            _unit("document", "Document test", metadata={"instance_id": "instance"})
+        )
+        section = store.insert(
+            _unit("section", "Section test", parent_id=document.id, metadata={"instance_id": "instance"})
+        )
+        old_fact = store.insert(
+            _unit(
+                "fact",
+                "I live in Chicago",
+                parent_id=section.id,
+                metadata={"instance_id": "instance"},
+                valid_from="2022-01-01",
+                valid_until="2024-06-01",
+            )
+        )
+        store.insert(
+            _unit(
+                "fact",
+                "I moved to New York",
+                parent_id=section.id,
+                metadata={"instance_id": "instance"},
+                valid_from="2024-06-01",
+            )
+        )
+
+        response = retrieve(
+            "where do I live",
+            store,
+            level="fact",
+            entity_filters={"instance_id": "instance"},
+            as_of="2023-01-01",
+        )
+
+        assert response.results
+        assert response.results[0].unit.id == old_fact.id
+
+
+def test_retrieve_as_of_current(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        document = store.insert(
+            _unit("document", "Document test", metadata={"instance_id": "instance"})
+        )
+        section = store.insert(
+            _unit("section", "Section test", parent_id=document.id, metadata={"instance_id": "instance"})
+        )
+        store.insert(
+            _unit(
+                "fact",
+                "I live in Chicago",
+                parent_id=section.id,
+                metadata={"instance_id": "instance"},
+                valid_from="2022-01-01",
+                valid_until="2024-06-01",
+            )
+        )
+        new_fact = store.insert(
+            _unit(
+                "fact",
+                "I moved to New York",
+                parent_id=section.id,
+                metadata={"instance_id": "instance"},
+                valid_from="2024-06-01",
+            )
+        )
+
+        response = retrieve(
+            "where do I live",
+            store,
+            level="fact",
+            entity_filters={"instance_id": "instance"},
+            as_of="2025-01-01",
+        )
+
+        assert response.results
+        assert response.results[0].unit.id == new_fact.id
 
 
 def _sample_document() -> str:
