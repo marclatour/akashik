@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 
 from akashik.identity import content_hash, normalized_hash
@@ -11,6 +12,7 @@ from akashik.query_normalize import normalize_query
 from akashik.semantic import SemanticRanker
 from akashik.schema import LEVEL_INDEX, MemoryUnit, RetrievalResponse, RetrievalResult, validate_level
 
+LOGGER = logging.getLogger(__name__)
 _FTS_TOKEN_RE = re.compile(r"\w+", re.UNICODE)
 _INLINE_HEADING_RE = re.compile(
     r"(?:^|\s)(?:\d+(?:\.\d+)*\.?\s*)?([A-Z][A-Z0-9 '&/,;-]{3,})\."
@@ -56,6 +58,7 @@ _DEFINITION_PREFIXES = (
 )
 _MAX_SCORE_ADJUSTMENT = 0.3
 _SEMANTIC_RANKER = SemanticRanker()
+_FACT_METADATA_ONLY_KEYS = {"speaker", "has_answer"}
 
 
 def retrieve(
@@ -65,10 +68,12 @@ def retrieve(
     level: str | None = None,
     limit: int = 10,
     entity_filter: list[str] | None = None,
+    entity_filters: dict[str, str | list[str]] | None = None,
     clause_type: str | None = None,
     debug_label: str | None = None,
     use_navigator: bool = True,
     use_semantic: bool = True,
+    document_gate_n: int = 0,
 ) -> RetrievalResponse:
     text = query.strip()
     if not text:
@@ -95,16 +100,18 @@ def retrieve(
 
     fts_query = normalize_query(text)
     fts_limit = max(limit * 5, 20)
-    if entity_filter:
+    if entity_filter or entity_filters:
         fts_matches = _search_fts_with_entity_scope(
             store,
             fts_query,
             entity_filter=entity_filter,
+            entity_filters=entity_filters,
             limit=fts_limit,
             clause_type=clause_type,
             debug_label=debug_label,
             use_navigator=use_navigator,
             use_semantic=use_semantic,
+            document_gate_n=document_gate_n,
         )
     else:
         fts_matches = _rerank_fts_matches(store.search_fts(fts_query, limit=fts_limit))
@@ -126,18 +133,56 @@ def _search_fts_with_entity_scope(
     store,
     query: str,
     *,
-    entity_filter: list[str],
+    entity_filter: list[str] | None,
+    entity_filters: dict[str, str | list[str]] | None,
     limit: int,
     clause_type: str | None = None,
     debug_label: str | None = None,
     use_navigator: bool = True,
     use_semantic: bool = True,
+    document_gate_n: int = 0,
 ) -> list[MemoryUnit]:
-    document_ids = _document_ids_matching_entities(store, entity_filter)
+    document_scope_filters, fact_scope_filters = _split_entity_filters(entity_filters or {})
+    document_ids = _document_ids_for_scope(
+        store,
+        entity_filter=entity_filter,
+        entity_filters=document_scope_filters,
+    )
     if not document_ids:
         return []
 
-    tokens = _remove_entity_filter_tokens(_fts_tokens(query), entity_filter)
+    scoped_entity_filters = dict(document_scope_filters)
+    if document_gate_n > 0:
+        gated_document_ids = _score_documents_for_scope(
+            store,
+            query,
+            document_ids=document_ids,
+            top_n=document_gate_n,
+        )
+        LOGGER.debug(
+            "document gate: %s docs passing gate (gate_n=%s)",
+            len(gated_document_ids),
+            document_gate_n,
+        )
+        if gated_document_ids:
+            gated_session_ids = _document_ids_to_session_ids(store, gated_document_ids)
+            if gated_session_ids:
+                scoped_entity_filters["session_id"] = gated_session_ids
+                LOGGER.debug(
+                    "document gate: restricted to session_ids %s",
+                    gated_session_ids,
+                )
+                document_ids = _document_ids_for_scope(
+                    store,
+                    entity_filter=entity_filter,
+                    entity_filters=scoped_entity_filters,
+                )
+            else:
+                LOGGER.debug("document gate: no session_ids resolved — fail-open")
+        else:
+            LOGGER.debug("document gate: empty result — fail-open, using full instance scope")
+
+    tokens = _remove_entity_filter_tokens(_fts_tokens(query), entity_filter or [])
     fts_query = _build_fts_query(tokens)
     if not fts_query:
         return []
@@ -164,10 +209,11 @@ def _search_fts_with_entity_scope(
         WHERE memory_units_fts MATCH ?
           AND fact.level = 'fact'
           AND document.id IN ({placeholders})
+          {_fact_filter_sql(fact_scope_filters)}
         ORDER BY bm25(memory_units_fts), fact.fts_rowid
         LIMIT ?
         """,
-        (fts_query, *document_ids, max(limit * 50, 1000)),
+        (fts_query, *document_ids, *_fact_filter_params(fact_scope_filters), max(limit * 50, 1000)),
     ).fetchall()
 
     details = _scoped_candidate_details(store, rows, tokens, explicit_clause_type=clause_type)
@@ -218,6 +264,100 @@ def _search_fts_with_entity_scope(
     return [detail["unit"] for detail in ranked[:limit]]
 
 
+def score_documents(
+    store,
+    query: str,
+    entity_filters: dict[str, str | list[str]] | None,
+    top_n: int = 5,
+) -> list[str]:
+    document_scope_filters, _fact_scope_filters = _split_entity_filters(entity_filters or {})
+    document_ids = _document_ids_for_scope(store, entity_filter=None, entity_filters=document_scope_filters)
+    if not document_ids:
+        LOGGER.debug("score_documents: 0 documents scored, top-%s: []", top_n)
+        return []
+    return _score_documents_for_scope(store, query, document_ids=document_ids, top_n=top_n)
+
+
+def _score_documents_for_scope(
+    store,
+    query: str,
+    *,
+    document_ids: list[str],
+    top_n: int,
+) -> list[str]:
+    tokens = _fts_tokens(query)
+    fts_query = _build_fts_query(tokens)
+    if not fts_query or not document_ids:
+        LOGGER.debug("score_documents: 0 documents scored, top-%s: []", top_n)
+        return []
+
+    placeholders = ", ".join("?" for _ in document_ids)
+    rows = store._conn.execute(
+        f"""
+        SELECT document.id AS document_id,
+               fact.content AS content,
+               fact.fts_rowid AS fact_fts_rowid,
+               bm25(memory_units_fts) AS rank
+        FROM memory_units_fts
+        JOIN memory_units AS fact ON fact.fts_rowid = memory_units_fts.rowid
+        JOIN memory_units AS section ON section.id = fact.parent_id
+        JOIN memory_units AS document ON document.id = section.parent_id
+        WHERE memory_units_fts MATCH ?
+          AND fact.level = 'fact'
+          AND document.id IN ({placeholders})
+        ORDER BY bm25(memory_units_fts), fact.fts_rowid
+        LIMIT ?
+        """,
+        (fts_query, *document_ids, max(top_n * 50, 1000)),
+    ).fetchall()
+
+    document_scores: dict[str, float] = {}
+    document_order: dict[str, int] = {}
+    for row in rows:
+        rank = float(row["rank"])
+        rank_score = -rank if rank < 0 else 1.0 / (1.0 + rank)
+        coverage = _token_coverage(tokens, row["content"])
+        score = rank_score * coverage
+        document_id = str(row["document_id"])
+        document_scores[document_id] = max(document_scores.get(document_id, 0.0), score)
+        document_order.setdefault(document_id, int(row["fact_fts_rowid"]))
+
+    ranked_document_ids = [
+        document_id
+        for document_id, _score in sorted(
+            document_scores.items(),
+            key=lambda item: (-item[1], document_order[item[0]]),
+        )[:top_n]
+    ]
+    LOGGER.debug(
+        "score_documents: %s documents scored, top-%s: %s",
+        len(document_scores),
+        top_n,
+        ranked_document_ids[:top_n],
+    )
+    return ranked_document_ids
+
+
+def _document_ids_for_scope(
+    store,
+    *,
+    entity_filter: list[str] | None,
+    entity_filters: dict[str, str | list[str]] | None,
+) -> list[str]:
+    list_ids = _document_ids_matching_entities(store, entity_filter or [])
+    map_ids = _document_ids_matching_filter_map(store, entity_filters or {})
+    if entity_filter and entity_filters:
+        return [document_id for document_id in list_ids if document_id in set(map_ids)]
+    if entity_filter:
+        return list_ids
+    if entity_filters:
+        return map_ids
+    rows = store._conn.execute(
+        "SELECT id FROM memory_units WHERE level = 'document' ORDER BY fts_rowid"
+    ).fetchall()
+    return [str(row["id"]) for row in rows]
+
+
 def _document_ids_matching_entities(store, entity_filter: list[str]) -> list[str]:
     filters = {_normalize_entity_filter(value) for value in entity_filter if value.strip()}
     filters.discard("")
@@ -239,6 +379,80 @@ def _document_ids_matching_entities(store, entity_filter: list[str]) -> list[str
         if filters <= entity_values:
             document_ids.append(row["id"])
     return document_ids
+
+
+def _document_ids_matching_filter_map(
+    store,
+    entity_filters: dict[str, str | list[str]],
+) -> list[str]:
+    if not entity_filters:
+        return []
+    documents = store.fetch_by_metadata_filters(level="document", filters=entity_filters)
+    return [document.id for document in documents]
+
+
+def _split_entity_filters(
+    entity_filters: dict[str, str | list[str]],
+) -> tuple[dict[str, str | list[str]], dict[str, str | list[str]]]:
+    document_filters: dict[str, str | list[str]] = {}
+    fact_filters: dict[str, str | list[str]] = {}
+    for key, value in entity_filters.items():
+        if key in _FACT_METADATA_ONLY_KEYS:
+            fact_filters[key] = value
+        else:
+            document_filters[key] = value
+    return document_filters, fact_filters
+
+
+def _fact_filter_sql(filters: dict[str, str | list[str]]) -> str:
+    clauses: list[str] = []
+    for key, value in filters.items():
+        if value is None:
+            continue
+        if isinstance(value, list):
+            values = [item for item in value if item not in (None, "")]
+            if not values:
+                clauses.append("AND 1 = 0")
+                continue
+            placeholders = ", ".join("?" for _ in values)
+            clauses.append(f"AND json_extract(fact.metadata, ?) IN ({placeholders})")
+            continue
+        clauses.append("AND json_extract(fact.metadata, ?) = ?")
+    return "\n          ".join(clauses)
+
+
+def _fact_filter_params(filters: dict[str, str | list[str]]) -> list[object]:
+    params: list[object] = []
+    for key, value in filters.items():
+        if value is None:
+            continue
+        if isinstance(value, list):
+            values = [item for item in value if item not in (None, "")]
+            if not values:
+                continue
+            params.append(f"$.{key}")
+            params.extend(values)
+            continue
+        params.append(f"$.{key}")
+        params.append(value)
+    return params
+
+
+def _document_ids_to_session_ids(store, document_ids: list[str]) -> list[str]:
+    session_ids: list[str] = []
+    for document_id in document_ids:
+        document = store.fetch_by_id(document_id)
+        if document is None:
+            LOGGER.debug("document gate: UUID %s not found in store, skipping", document_id)
+            continue
+        session_id = str(document.metadata.get("session_id", "")).strip()
+        if not session_id:
+            LOGGER.debug("document gate: UUID %s has no session_id, skipping", document_id)
+            continue
+        if session_id in session_ids:
+            continue
+        session_ids.append(session_id)
+    return session_ids
 
 
 def _metadata_entity_values(entities: object) -> set[str]:

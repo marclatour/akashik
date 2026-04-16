@@ -16,7 +16,7 @@ from pathlib import Path
 
 from akashik.parse_temporal_scope import parse_temporal_scope
 from akashik.parse_temporal_scope import _parse_question_date
-from akashik.retrieve import retrieve
+from akashik.retrieve import retrieve, score_documents
 from akashik.store import Store
 from benchmark.longmemeval.ingest_adapter import ingest_instance
 
@@ -33,8 +33,10 @@ def main() -> int:
     parser.add_argument(
         "--limit",
         type=int,
+        default=0,
         help="Process only the first N instances. Useful for faster diagnostics.",
     )
+    parser.add_argument("--document-gate-n", type=int, default=5)
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -59,7 +61,7 @@ def main() -> int:
         return 1
 
     instances = json.loads(data_path.read_text(encoding="utf-8"))
-    if args.limit is not None:
+    if args.limit:
         instances = instances[: args.limit]
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -72,6 +74,7 @@ def main() -> int:
                 store,
                 instance,
                 abstention_threshold=args.abstention_threshold,
+                document_gate_n=args.document_gate_n,
             )
             if line is None:
                 failed_instances += 1
@@ -100,12 +103,19 @@ def _run_dry_run(abstention_threshold: float) -> int:
             store,
             SYNTHETIC_INSTANCE,
             abstention_threshold=abstention_threshold,
+            document_gate_n=5,
         )
     print(json.dumps(line, sort_keys=True))
     return 0
 
 
-def _process_instance(store, instance: dict, *, abstention_threshold: float) -> dict[str, object] | None:
+def _process_instance(
+    store,
+    instance: dict,
+    *,
+    abstention_threshold: float,
+    document_gate_n: int,
+) -> dict[str, object] | None:
     question_id = str(instance.get("question_id", ""))
     try:
         ingest_instance(store, instance)
@@ -117,7 +127,7 @@ def _process_instance(store, instance: dict, *, abstention_threshold: float) -> 
         str(instance.get("question", "")),
         str(instance.get("question_date", "")),
     )
-    entity_filters = {"instance_id": question_id}
+    entity_filters: dict[str, str | list[str]] = {"instance_id": question_id}
     question_type = str(instance.get("question_type", ""))
     if question_type == "single-session-user":
         entity_filters["speaker"] = "user"
@@ -126,6 +136,25 @@ def _process_instance(store, instance: dict, *, abstention_threshold: float) -> 
     if temporal_scope is not None:
         entity_filters["session_date_start"] = str(temporal_scope[0])
         entity_filters["session_date_end"] = str(temporal_scope[1])
+    retrieval_filters = {
+        key: value
+        for key, value in entity_filters.items()
+        if not key.startswith("session_date_")
+    }
+    gated_doc_ids: list[str] = []
+    if document_gate_n > 0:
+        gated_doc_ids = score_documents(
+            store,
+            str(instance.get("question", "")),
+            retrieval_filters,
+            top_n=document_gate_n,
+        )
+        LOGGER.debug(
+            "instance %s: correct sessions %s, gate selected %s",
+            question_id,
+            list(instance.get("answer_session_ids", [])),
+            gated_doc_ids,
+        )
 
     try:
         response = retrieve(
@@ -133,7 +162,8 @@ def _process_instance(store, instance: dict, *, abstention_threshold: float) -> 
             store,
             level="fact",
             limit=TOP_K,
-            entity_filter=[value for key, value in entity_filters.items() if not key.startswith("session_date_")],
+            entity_filters=retrieval_filters,
+            document_gate_n=document_gate_n,
         )
     except Exception:
         LOGGER.exception("Failed to retrieve for instance %s", question_id)

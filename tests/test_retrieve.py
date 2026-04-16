@@ -4,7 +4,7 @@ import importlib
 
 from akashik.identity import content_hash, normalized_hash
 from akashik.ingest import ingest_file
-from akashik.retrieve import _apply_navigator_tiebreak, retrieve
+from akashik.retrieve import _apply_navigator_tiebreak, retrieve, score_documents
 from akashik.schema import MemoryUnit
 from akashik.store import Store
 
@@ -15,14 +15,23 @@ def _metadata(source: str = "tests") -> dict:
     return {"source": source, "timestamp": "2026-04-14T00:00:00+00:00", "tags": []}
 
 
-def _unit(level: str, content: str, parent_id: str | None = None, source: str = "tests") -> MemoryUnit:
+def _unit(
+    level: str,
+    content: str,
+    parent_id: str | None = None,
+    source: str = "tests",
+    metadata: dict | None = None,
+) -> MemoryUnit:
+    unit_metadata = _metadata(source)
+    if metadata:
+        unit_metadata.update(metadata)
     return MemoryUnit(
         level=level,
         content=content,
         content_hash=content_hash(content),
         normalized_hash=normalized_hash(content),
         parent_id=parent_id,
-        metadata=_metadata(source),
+        metadata=unit_metadata,
     )
 
 
@@ -190,6 +199,111 @@ def test_acceptance_case_ingest_and_retrieve_unique_fact(tmp_path) -> None:
         assert top.parent_chain[1].id == document.id
 
 
+def test_document_gate_narrows_candidates(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        target_doc = _make_document_with_fact(
+            store,
+            session_id="id2",
+            content="alpha evidence signal",
+            extra_words="context",
+        )
+        for index in range(3, 11):
+            _make_document_with_fact(
+                store,
+                session_id=f"id{index}",
+                content=f"alpha filler {index}",
+                extra_words="filler noise",
+            )
+
+        gated = score_documents(store, "alpha evidence signal", {"session_id": [f"id{index}" for index in range(2, 11)]}, top_n=5)
+        response = retrieve(
+            "alpha evidence signal",
+            store,
+            level="fact",
+            entity_filters={"session_id": [f"id{index}" for index in range(2, 11)]},
+            document_gate_n=5,
+        )
+
+        assert target_doc.id in gated
+        assert response.results
+        assert response.results[0].unit.metadata["session_id"] == "id2"
+
+
+def test_document_gate_fail_open(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        _make_document_with_fact(store, session_id="id1", content="fallback evidence", extra_words="proof")
+
+        assert score_documents(store, "query that matches nothing", {"session_id": ["id1"]}, top_n=5) == []
+        response = retrieve(
+            "fallback evidence",
+            store,
+            level="fact",
+            entity_filters={"session_id": ["id1"]},
+            document_gate_n=5,
+        )
+
+        assert response.results
+
+
+def test_document_gate_disabled(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        _make_document_with_fact(store, session_id="id1", content="alpha evidence", extra_words="proof")
+
+        without_gate = retrieve(
+            "alpha evidence",
+            store,
+            level="fact",
+            entity_filters={"session_id": ["id1"]},
+            document_gate_n=0,
+        )
+        baseline = retrieve(
+            "alpha evidence",
+            store,
+            level="fact",
+            entity_filters={"session_id": ["id1"]},
+        )
+
+        assert [result.unit.id for result in without_gate.results] == [result.unit.id for result in baseline.results]
+
+
+def test_multi_value_entity_filter(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        first = _make_document_with_fact(store, session_id="id1", content="alpha one", extra_words="proof")
+        second = _make_document_with_fact(store, session_id="id2", content="alpha two", extra_words="proof")
+        _make_document_with_fact(store, session_id="id3", content="alpha three", extra_words="proof")
+
+        documents = store.fetch_by_metadata_filters(
+            level="document",
+            filters={"session_id": ["id1", "id2"]},
+        )
+
+        assert {document.id for document in documents} == {first.id, second.id}
+
+
+def test_document_gate_max_not_sum(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        strong = _make_document_with_fact(
+            store,
+            session_id="strong",
+            content="alpha beta gamma",
+            extra_words="",
+        )
+        _make_document_with_facts(
+            store,
+            session_id="weak",
+            facts=[f"alpha weak {index}" for index in range(10)],
+        )
+
+        ranked = score_documents(
+            store,
+            "alpha beta gamma",
+            {"session_id": ["strong", "weak"]},
+            top_n=2,
+        )
+
+        assert ranked[0] == strong.id
+
+
 def _sample_document() -> str:
     paragraph_one = " ".join(
         [
@@ -224,3 +338,58 @@ def _sample_document() -> str:
         * 9
     )
     return "\n\n".join([paragraph_one, paragraph_two, paragraph_three])
+
+
+def _make_document_with_fact(store, *, session_id: str, content: str, extra_words: str) -> MemoryUnit:
+    document = store.insert(
+        _unit(
+            "document",
+            f"Document {session_id}",
+            metadata={"session_id": session_id, "instance_id": "instance"},
+        )
+    )
+    section = store.insert(
+        _unit(
+            "section",
+            f"Section {session_id}",
+            parent_id=document.id,
+            metadata={"session_id": session_id, "instance_id": "instance"},
+        )
+    )
+    store.insert(
+        _unit(
+            "fact",
+            f"{content} {extra_words}".strip(),
+            parent_id=section.id,
+            metadata={"session_id": session_id, "instance_id": "instance"},
+        )
+    )
+    return document
+
+
+def _make_document_with_facts(store, *, session_id: str, facts: list[str]) -> MemoryUnit:
+    document = store.insert(
+        _unit(
+            "document",
+            f"Document {session_id}",
+            metadata={"session_id": session_id, "instance_id": "instance"},
+        )
+    )
+    section = store.insert(
+        _unit(
+            "section",
+            f"Section {session_id}",
+            parent_id=document.id,
+            metadata={"session_id": session_id, "instance_id": "instance"},
+        )
+    )
+    for fact in facts:
+        store.insert(
+            _unit(
+                "fact",
+                fact,
+                parent_id=section.id,
+                metadata={"session_id": session_id, "instance_id": "instance"},
+            )
+        )
+    return document

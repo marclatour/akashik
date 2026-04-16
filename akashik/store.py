@@ -170,6 +170,28 @@ class Store:
         ).fetchall()
         return [self._row_to_unit(row) for row in rows]
 
+    def fetch_by_metadata_filters(
+        self,
+        *,
+        level: str | None = None,
+        filters: dict[str, str | list[str]] | None = None,
+    ) -> list[MemoryUnit]:
+        if level is not None:
+            validate_level(level)
+        filters = filters or {}
+        sql = [_SELECT_COLUMNS.strip(), "WHERE 1 = 1"]
+        params: list[object] = []
+        if level is not None:
+            sql.append("AND level = ?")
+            params.append(level)
+        where_sql, where_params = self._metadata_filter_sql(filters)
+        if where_sql:
+            sql.append(where_sql)
+            params.extend(where_params)
+        sql.append("ORDER BY fts_rowid")
+        rows = self._conn.execute("\n".join(sql), tuple(params)).fetchall()
+        return [self._row_to_unit(row) for row in rows]
+
     def fetch_parent_chain(self, unit_id: str) -> list[MemoryUnit]:
         chain: list[MemoryUnit] = []
         current = self.fetch_by_id(unit_id)
@@ -272,6 +294,37 @@ class Store:
         if not tokens:
             return ""
         return " OR ".join(f'"{token}"' for token in tokens)
+
+    def _metadata_filter_sql(
+        self,
+        filters: dict[str, str | list[str]],
+    ) -> tuple[str, list[object]]:
+        clauses: list[str] = []
+        params: list[object] = []
+        for key, value in filters.items():
+            if value is None:
+                continue
+            if isinstance(value, list):
+                values = [item for item in value if item not in (None, "")]
+                if not values:
+                    return "AND 1 = 0", []
+                placeholders = ", ".join("?" for _ in values)
+                if key == "document_id":
+                    clauses.append(f"AND id IN ({placeholders})")
+                    params.extend(values)
+                    continue
+                clauses.append(f"AND json_extract(metadata, ?) IN ({placeholders})")
+                params.append(f"$.{key}")
+                params.extend(values)
+                continue
+            if key == "document_id":
+                clauses.append("AND id = ?")
+                params.append(value)
+                continue
+            clauses.append("AND json_extract(metadata, ?) = ?")
+            params.append(f"$.{key}")
+            params.append(value)
+        return "\n".join(clauses), params
 
     def _row_to_unit(self, row: sqlite3.Row) -> MemoryUnit:
         return MemoryUnit(

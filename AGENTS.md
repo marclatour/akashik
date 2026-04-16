@@ -16,7 +16,6 @@ Akashik stores and retrieves text memories with deterministic lookup, not vector
 Create a virtualenv and install the package in editable mode:
 
 ```bash
-python3 -m venv .venv
 ./.venv/bin/python -m pip install -e ".[dev]"
 ```
 
@@ -63,6 +62,12 @@ akashik stats
 ```
 
 Default database path is `./akashik.db`.
+
+## Documentation Rules
+
+- Keep `README.md` current as features, CLI behavior, benchmarks, and workflows change.
+- If a change adds or alters a runnable script, benchmark, or command flow, update the matching `README.md` example in the same change.
+- Use `./.venv/bin/python ...` in documentation and command examples instead of bare `python ...`.
 
 ## Notes For Changes
 

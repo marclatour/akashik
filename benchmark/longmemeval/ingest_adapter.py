@@ -36,7 +36,7 @@ def ingest_instance(store, instance: dict) -> int:
         question_type=question_type,
         entities=[question_id, question_type],
     )
-    corpus = _make_unit("corpus", instance.get("question", question_id), metadata=corpus_metadata)
+    corpus = _make_unit("corpus", f"instance:{question_id}", metadata=corpus_metadata)
 
     with store.transaction():
         corpus = store.insert(corpus)
