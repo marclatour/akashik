@@ -8,6 +8,7 @@ import re
 from akashik.identity import content_hash, normalized_hash
 from akashik.navigator import rank_facts
 from akashik.query_normalize import normalize_query
+from akashik.semantic import SemanticRanker
 from akashik.schema import LEVEL_INDEX, MemoryUnit, RetrievalResponse, RetrievalResult, validate_level
 
 _FTS_TOKEN_RE = re.compile(r"\w+", re.UNICODE)
@@ -54,6 +55,7 @@ _DEFINITION_PREFIXES = (
     "is defined",
 )
 _MAX_SCORE_ADJUSTMENT = 0.3
+_SEMANTIC_RANKER = SemanticRanker()
 
 
 def retrieve(
@@ -66,6 +68,7 @@ def retrieve(
     clause_type: str | None = None,
     debug_label: str | None = None,
     use_navigator: bool = True,
+    use_semantic: bool = True,
 ) -> RetrievalResponse:
     text = query.strip()
     if not text:
@@ -101,6 +104,7 @@ def retrieve(
             clause_type=clause_type,
             debug_label=debug_label,
             use_navigator=use_navigator,
+            use_semantic=use_semantic,
         )
     else:
         fts_matches = _rerank_fts_matches(store.search_fts(fts_query, limit=fts_limit))
@@ -127,6 +131,7 @@ def _search_fts_with_entity_scope(
     clause_type: str | None = None,
     debug_label: str | None = None,
     use_navigator: bool = True,
+    use_semantic: bool = True,
 ) -> list[MemoryUnit]:
     document_ids = _document_ids_matching_entities(store, entity_filter)
     if not document_ids:
@@ -199,6 +204,7 @@ def _search_fts_with_entity_scope(
     )
     ranked = _rerank_scoped_fact_candidates(by_document[winning_document])
     ranked = _apply_navigator_tiebreak(ranked, query, use_navigator=use_navigator)
+    ranked = _apply_semantic_fallback(ranked, query, use_semantic=use_semantic)
 
     if debug_label:
         _print_scoped_debug(
@@ -634,6 +640,27 @@ def _apply_navigator_tiebreak(
         key=lambda candidate: ranked_by_id.get(candidate["unit"].id, len(ranked_by_id)),
     )
     return reranked_ties + candidates[remainder_start:]
+
+
+def _apply_semantic_fallback(
+    candidates: list[dict[str, object]],
+    query: str,
+    *,
+    use_semantic: bool,
+) -> list[dict[str, object]]:
+    if not use_semantic:
+        return candidates
+    if not candidates:
+        return candidates
+
+    current_confidence = float(candidates[0].get("final_score", 0.0))
+    facts = [candidate["unit"] for candidate in candidates]
+    reranked = _SEMANTIC_RANKER.rerank(query, facts, current_confidence=current_confidence)
+    if len(reranked) != len(candidates):
+        return candidates
+
+    candidate_by_id = {candidate["unit"].id: candidate for candidate in candidates}
+    return [candidate_by_id[fact.id] for fact in reranked if fact.id in candidate_by_id]
 
 
 def _fact_brevity_bonus(candidate: MemoryUnit) -> float:

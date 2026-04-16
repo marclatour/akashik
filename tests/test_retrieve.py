@@ -159,7 +159,7 @@ def test_navigator_tiebreak_only_reorders_near_tie(monkeypatch) -> None:
     third = _unit("fact", "Third fact.", source="doc.txt")
     candidates = [
         {"unit": first, "final_score": 1.0},
-        {"unit": second, "final_score": 0.97},
+        {"unit": second, "final_score": 0.99},
         {"unit": third, "final_score": 0.8},
     ]
 
