@@ -1,0 +1,92 @@
+[
+  {
+    "query_id": "medium_01",
+    "query_text": "When are harbor crews supposed to do the morning check now?",
+    "expected_fact": "Current Meridian Harbor policy sets the dawn inspection window at 05:40.",
+    "expected_source": "meridian_harbor_notice_two.txt",
+    "expected_level": "fact",
+    "original_difficulty": "medium",
+    "difficulty_mode_b": "natural"
+  },
+  {
+    "query_id": "medium_02",
+    "query_text": "Where should station staff send the old document boxes under the latest rail instructions?",
+    "expected_fact": "Current Meridian Rail schedule loads archive trunks at Dock Letter E.",
+    "expected_source": "meridian_rail_schedule_b.txt",
+    "expected_level": "fact",
+    "original_difficulty": "medium",
+    "difficulty_mode_b": "natural"
+  },
+  {
+    "query_id": "medium_04",
+    "query_text": "Which case holds the blue navigation instrument in the original gallery catalog?",
+    "expected_fact": "The blue copper compass sits on Shelf 12 in Atlas Room.",
+    "expected_source": "lantern_gallery_catalog.txt",
+    "expected_level": "fact",
+    "original_difficulty": "medium",
+    "difficulty_mode_b": "natural"
+  },
+  {
+    "query_id": "medium_05",
+    "query_text": "Where is the red team's pine sample tray stored?",
+    "expected_fact": "The Atlas Pine moisture tray rests on Rack C4 beside the Meridian moss jars.",
+    "expected_source": "atlas_field_manual_red.txt",
+    "expected_level": "fact",
+    "original_difficulty": "medium",
+    "difficulty_mode_b": "natural"
+  },
+  {
+    "query_id": "medium_06",
+    "query_text": "Where is the silver team's pine sample tray stored?",
+    "expected_fact": "The Atlas Pine moisture tray rests on Rack C6 beside the Meridian moss jars.",
+    "expected_source": "atlas_field_manual_silver.txt",
+    "expected_level": "fact",
+    "original_difficulty": "medium",
+    "difficulty_mode_b": "natural"
+  },
+  {
+    "query_id": "medium_08",
+    "query_text": "What access number is used for the reserve turbine line?",
+    "expected_fact": "Lantern turbine line Beta holds reserve key code 8841.",
+    "expected_source": "copper_reserve_digest.txt",
+    "expected_level": "fact",
+    "original_difficulty": "medium",
+    "difficulty_mode_b": "natural"
+  },
+  {
+    "query_id": "hard_01",
+    "query_text": "Which entrance do green-card harbor workers use under the latest rule?",
+    "expected_fact": "Current Meridian Harbor policy assigns green badges to Gate 6.",
+    "expected_source": "meridian_harbor_notice_two.txt",
+    "expected_level": "fact",
+    "original_difficulty": "hard",
+    "difficulty_mode_b": "natural"
+  },
+  {
+    "query_id": "hard_03",
+    "query_text": "When does the harbor morning inspection happen under the latest rule?",
+    "expected_fact": "Current Meridian Harbor policy sets the dawn inspection window at 05:40.",
+    "expected_source": "meridian_harbor_notice_two.txt",
+    "expected_level": "fact",
+    "original_difficulty": "hard",
+    "difficulty_mode_b": "natural"
+  },
+  {
+    "query_id": "hard_06",
+    "query_text": "What time does the River Glass exhibit start these days?",
+    "expected_fact": "The River Glass exhibit now opens at 11:15 in the Meridian Lantern Gallery.",
+    "expected_source": "lantern_gallery_update.txt",
+    "expected_level": "fact",
+    "original_difficulty": "hard",
+    "difficulty_mode_b": "natural"
+  },
+  {
+    "query_id": "hard_07",
+    "query_text": "Where is the blue compass currently located?",
+    "expected_fact": "The blue copper compass now sits on Shelf 14 in Atlas Room.",
+    "expected_source": "lantern_gallery_update.txt",
+    "expected_level": "fact",
+    "original_difficulty": "hard",
+    "difficulty_mode_b": "natural"
+  }
+]

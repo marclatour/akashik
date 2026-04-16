@@ -1,0 +1,186 @@
+[
+  {
+    "query_id": "easy_01",
+    "query_text": "Current Meridian Harbor policy assigns green badges to Gate 6.",
+    "expected_fact": "Current Meridian Harbor policy assigns green badges to Gate 6.",
+    "expected_source": "meridian_harbor_notice_two.txt",
+    "expected_level": "fact",
+    "difficulty": "easy"
+  },
+  {
+    "query_id": "easy_02",
+    "query_text": "Current Meridian Rail schedule sends Train Atlas from Platform 5 at 20:05.",
+    "expected_fact": "Current Meridian Rail schedule sends Train Atlas from Platform 5 at 20:05.",
+    "expected_source": "meridian_rail_schedule_b.txt",
+    "expected_level": "fact",
+    "difficulty": "easy"
+  },
+  {
+    "query_id": "easy_03",
+    "query_text": "The River Glass exhibit opens at 09:30 in the Meridian Lantern Gallery.",
+    "expected_fact": "The River Glass exhibit opens at 09:30 in the Meridian Lantern Gallery.",
+    "expected_source": "lantern_gallery_catalog.txt",
+    "expected_level": "fact",
+    "difficulty": "easy"
+  },
+  {
+    "query_id": "easy_04",
+    "query_text": "The blue copper compass now sits on Shelf 14 in Atlas Room.",
+    "expected_fact": "The blue copper compass now sits on Shelf 14 in Atlas Room.",
+    "expected_source": "lantern_gallery_update.txt",
+    "expected_level": "fact",
+    "difficulty": "easy"
+  },
+  {
+    "query_id": "easy_05",
+    "query_text": "The Atlas Pine survey packet uses amber ribbon and sample code R17.",
+    "expected_fact": "The Atlas Pine survey packet uses amber ribbon and sample code R17.",
+    "expected_source": "atlas_field_manual_red.txt",
+    "expected_level": "fact",
+    "difficulty": "easy"
+  },
+  {
+    "query_id": "easy_06",
+    "query_text": "The Atlas Pine survey packet uses silver ribbon and sample code S19.",
+    "expected_fact": "The Atlas Pine survey packet uses silver ribbon and sample code S19.",
+    "expected_source": "atlas_field_manual_silver.txt",
+    "expected_level": "fact",
+    "difficulty": "easy"
+  },
+  {
+    "query_id": "easy_07",
+    "query_text": "Northwind Clinic assigns triage card Indigo 3 to the Lantern desk.",
+    "expected_fact": "Northwind Clinic assigns triage card Indigo 3 to the Lantern desk.",
+    "expected_source": "northwind_clinic_brief.txt",
+    "expected_level": "fact",
+    "difficulty": "easy"
+  },
+  {
+    "query_id": "easy_08",
+    "query_text": "Copper Reserve Digest records Pump Seven at Atlas Basin with pressure 41.",
+    "expected_fact": "Copper Reserve Digest records Pump Seven at Atlas Basin with pressure 41.",
+    "expected_source": "copper_reserve_digest.txt",
+    "expected_level": "fact",
+    "difficulty": "easy"
+  },
+  {
+    "query_id": "medium_01",
+    "query_text": "Current Meridian Harbor policy dawn inspection window 05:40",
+    "expected_fact": "Current Meridian Harbor policy sets the dawn inspection window at 05:40.",
+    "expected_source": "meridian_harbor_notice_two.txt",
+    "expected_level": "fact",
+    "difficulty": "medium"
+  },
+  {
+    "query_id": "medium_02",
+    "query_text": "Current Meridian Rail schedule archive trunks Dock Letter E",
+    "expected_fact": "Current Meridian Rail schedule loads archive trunks at Dock Letter E.",
+    "expected_source": "meridian_rail_schedule_b.txt",
+    "expected_level": "fact",
+    "difficulty": "medium"
+  },
+  {
+    "query_id": "medium_03",
+    "query_text": "Curator Leda North Aurora guide card signs",
+    "expected_fact": "Curator Leda North signs the Aurora guide card.",
+    "expected_source": "lantern_gallery_catalog.txt",
+    "expected_level": "fact",
+    "difficulty": "medium"
+  },
+  {
+    "query_id": "medium_04",
+    "query_text": "blue copper compass Shelf 12 Atlas Room",
+    "expected_fact": "The blue copper compass sits on Shelf 12 in Atlas Room.",
+    "expected_source": "lantern_gallery_catalog.txt",
+    "expected_level": "fact",
+    "difficulty": "medium"
+  },
+  {
+    "query_id": "medium_05",
+    "query_text": "Atlas Pine moisture tray Rack C4 Meridian moss jars",
+    "expected_fact": "The Atlas Pine moisture tray rests on Rack C4 beside the Meridian moss jars.",
+    "expected_source": "atlas_field_manual_red.txt",
+    "expected_level": "fact",
+    "difficulty": "medium"
+  },
+  {
+    "query_id": "medium_06",
+    "query_text": "Atlas Pine moisture tray Rack C6 Meridian moss jars",
+    "expected_fact": "The Atlas Pine moisture tray rests on Rack C6 beside the Meridian moss jars.",
+    "expected_source": "atlas_field_manual_silver.txt",
+    "expected_level": "fact",
+    "difficulty": "medium"
+  },
+  {
+    "query_id": "medium_07",
+    "query_text": "Atlas Ward Meridian recovery room 07:45",
+    "expected_fact": "Atlas Ward opens the Meridian recovery room at 07:45.",
+    "expected_source": "northwind_clinic_brief.txt",
+    "expected_level": "fact",
+    "difficulty": "medium"
+  },
+  {
+    "query_id": "medium_08",
+    "query_text": "Lantern turbine line Beta reserve key code 8841",
+    "expected_fact": "Lantern turbine line Beta holds reserve key code 8841.",
+    "expected_source": "copper_reserve_digest.txt",
+    "expected_level": "fact",
+    "difficulty": "medium"
+  },
+  {
+    "query_id": "hard_01",
+    "query_text": "current Meridian Harbor policy green badges Gate 6",
+    "expected_fact": "Current Meridian Harbor policy assigns green badges to Gate 6.",
+    "expected_source": "meridian_harbor_notice_two.txt",
+    "expected_level": "fact",
+    "difficulty": "hard"
+  },
+  {
+    "query_id": "hard_02",
+    "query_text": "current Meridian Harbor policy Lantern crates Atlas Terminal East",
+    "expected_fact": "Current Meridian Harbor policy routes Lantern crates through Atlas Terminal East.",
+    "expected_source": "meridian_harbor_notice_two.txt",
+    "expected_level": "fact",
+    "difficulty": "hard"
+  },
+  {
+    "query_id": "hard_03",
+    "query_text": "current Meridian Harbor policy dawn inspection window",
+    "expected_fact": "Current Meridian Harbor policy sets the dawn inspection window at 05:40.",
+    "expected_source": "meridian_harbor_notice_two.txt",
+    "expected_level": "fact",
+    "difficulty": "hard"
+  },
+  {
+    "query_id": "hard_04",
+    "query_text": "current Meridian Rail schedule Train Atlas Platform 5",
+    "expected_fact": "Current Meridian Rail schedule sends Train Atlas from Platform 5 at 20:05.",
+    "expected_source": "meridian_rail_schedule_b.txt",
+    "expected_level": "fact",
+    "difficulty": "hard"
+  },
+  {
+    "query_id": "hard_05",
+    "query_text": "current Meridian Rail schedule Lantern shuttle Bay 4",
+    "expected_fact": "Current Meridian Rail schedule keeps the Lantern shuttle at Bay 4.",
+    "expected_source": "meridian_rail_schedule_b.txt",
+    "expected_level": "fact",
+    "difficulty": "hard"
+  },
+  {
+    "query_id": "hard_06",
+    "query_text": "River Glass exhibit now opens Meridian Lantern Gallery",
+    "expected_fact": "The River Glass exhibit now opens at 11:15 in the Meridian Lantern Gallery.",
+    "expected_source": "lantern_gallery_update.txt",
+    "expected_level": "fact",
+    "difficulty": "hard"
+  },
+  {
+    "query_id": "hard_07",
+    "query_text": "blue copper compass now sits Shelf 14 Atlas Room",
+    "expected_fact": "The blue copper compass now sits on Shelf 14 in Atlas Room.",
+    "expected_source": "lantern_gallery_update.txt",
+    "expected_level": "fact",
+    "difficulty": "hard"
+  }
+]
