@@ -77,6 +77,7 @@ def retrieve(
     use_semantic: bool = True,
     document_gate_n: int = 0,
     as_of: str | None = None,
+    query_date: str | None = None,
 ) -> RetrievalResponse:
     text = query.strip()
     if not text:
@@ -86,6 +87,7 @@ def retrieve(
         validate_level(level)
 
     valid_at = _normalize_as_of(as_of)
+    parsed_query_date = _normalize_query_date(query_date)
     exact_matches = store.fetch_by_content_hash(
         content_hash(text),
         current_only=valid_at is None,
@@ -125,6 +127,7 @@ def retrieve(
             use_semantic=use_semantic,
             document_gate_n=document_gate_n,
             as_of=valid_at,
+            query_date=parsed_query_date,
         )
     else:
         fts_matches = _rerank_fts_matches(
@@ -163,6 +166,7 @@ def _search_fts_with_entity_scope(
     use_semantic: bool = True,
     document_gate_n: int = 0,
     as_of: str | None = None,
+    query_date=None,
 ) -> tuple[list[MemoryUnit], float]:
     document_scope_filters, fact_scope_filters = _split_entity_filters(entity_filters or {})
     document_ids = _document_ids_for_scope(
@@ -283,7 +287,12 @@ def _search_fts_with_entity_scope(
         ),
     )
     ranked = _rerank_scoped_fact_candidates(by_document[winning_document])
-    ranked = _apply_navigator_tiebreak(ranked, query, use_navigator=use_navigator)
+    ranked = _apply_navigator_tiebreak(
+        ranked,
+        query,
+        use_navigator=use_navigator,
+        query_date=query_date,
+    )
     ranked = _apply_semantic_fallback(ranked, query, use_semantic=use_semantic)
 
     if debug_label:
@@ -552,6 +561,12 @@ def _normalize_as_of(as_of: str | None) -> str | None:
     if not as_of:
         return None
     return _parse_question_date(as_of).isoformat()
+
+
+def _normalize_query_date(query_date: str | None):
+    if not query_date:
+        return None
+    return _parse_question_date(query_date)
 
 
 def _validity_sql(
@@ -907,6 +922,7 @@ def _apply_navigator_tiebreak(
     query: str,
     *,
     use_navigator: bool,
+    query_date=None,
 ) -> list[dict[str, object]]:
     if not use_navigator:
         return candidates
@@ -929,7 +945,11 @@ def _apply_navigator_tiebreak(
         return candidates
 
     facts = [candidate["unit"] for candidate in tied_candidates]
-    ranked_facts = [fact for fact, _score in rank_facts(facts, query)]
+    try:
+        ranked_pairs = rank_facts(facts, query, query_date=query_date)
+    except TypeError:
+        ranked_pairs = rank_facts(facts, query)
+    ranked_facts = [fact for fact, _score in ranked_pairs]
     ranked_by_id = {fact.id: index for index, fact in enumerate(ranked_facts)}
     reranked_ties = sorted(
         tied_candidates,

@@ -26,7 +26,9 @@ CREATE TABLE IF NOT EXISTS memory_units (
     embedding BLOB,
     section_heading TEXT,
     valid_from TEXT,
-    valid_until TEXT
+    valid_until TEXT,
+    confirmation_count INTEGER DEFAULT 1,
+    last_confirmed_at TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_memory_units_level ON memory_units(level);
@@ -47,6 +49,7 @@ _SELECT_COLUMNS = """
 SELECT id, level, content, content_hash, normalized_hash, parent_id, metadata, embedding
        , section_heading
        , valid_from, valid_until
+       , confirmation_count, last_confirmed_at
 FROM memory_units
 """
 
@@ -78,6 +81,12 @@ class Store:
             self._conn.execute("ALTER TABLE memory_units ADD COLUMN valid_from TEXT")
         if "valid_until" not in columns:
             self._conn.execute("ALTER TABLE memory_units ADD COLUMN valid_until TEXT")
+        if "confirmation_count" not in columns:
+            self._conn.execute(
+                "ALTER TABLE memory_units ADD COLUMN confirmation_count INTEGER DEFAULT 1"
+            )
+        if "last_confirmed_at" not in columns:
+            self._conn.execute("ALTER TABLE memory_units ADD COLUMN last_confirmed_at TEXT")
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_validity ON memory_units(valid_until)")
 
     def close(self) -> None:
@@ -125,8 +134,9 @@ class Store:
             """
             INSERT INTO memory_units (
                 id, level, content, content_hash, normalized_hash, parent_id, metadata,
-                embedding, section_heading, valid_from, valid_until
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                embedding, section_heading, valid_from, valid_until,
+                confirmation_count, last_confirmed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 unit.id,
@@ -140,6 +150,8 @@ class Store:
                 unit.section_heading,
                 unit.valid_from,
                 unit.valid_until,
+                unit.confirmation_count,
+                unit.last_confirmed_at,
             ),
         )
         return int(cursor.lastrowid)
@@ -280,6 +292,7 @@ class Store:
                    m.parent_id, m.metadata, m.embedding,
                    m.section_heading,
                    m.valid_from, m.valid_until,
+                   m.confirmation_count, m.last_confirmed_at,
                    m.fts_rowid,
                    bm25(memory_units_fts) AS rank
             FROM memory_units_fts AS f
@@ -386,6 +399,18 @@ class Store:
             (valid_until, fact_id),
         )
 
+    def increment_confirmation(self, fact_id: str, confirmed_at: str) -> None:
+        self._conn.execute(
+            """
+            UPDATE memory_units
+            SET confirmation_count = COALESCE(confirmation_count, 1) + 1,
+                last_confirmed_at = ?
+            WHERE id = ?
+              AND level = 'fact'
+            """,
+            (confirmed_at, fact_id),
+        )
+
     def _validity_sql(
         self,
         *,
@@ -406,6 +431,7 @@ class Store:
         return ("", [])
 
     def _row_to_unit(self, row: sqlite3.Row) -> MemoryUnit:
+        keys = set(row.keys())
         return MemoryUnit(
             id=row["id"],
             level=row["level"],
@@ -418,6 +444,8 @@ class Store:
             section_heading=row["section_heading"],
             valid_from=row["valid_from"],
             valid_until=row["valid_until"],
+            confirmation_count=int(row["confirmation_count"] or 1) if "confirmation_count" in keys else 1,
+            last_confirmed_at=row["last_confirmed_at"] if "last_confirmed_at" in keys else None,
         )
 
 

@@ -1,4 +1,4 @@
-# Akashik 0.9.0
+# Akashik 0.9.1
 
 Akashik is a local-first deterministic memory layer for text corpora. It stores content as a fixed hierarchy:
 
@@ -16,7 +16,7 @@ Retrieval is structure-first, not embedding-first. The default stack is:
 5. Navigator tie-breaker
 6. semantic fallback only when confidence is low
 
-Facts now support validity windows. By default, retrieval returns only currently valid facts. Historical queries can opt into `as_of=...`.
+Facts now support validity windows and reinforcement tracking. By default, retrieval returns only currently valid facts. Historical queries can opt into `as_of=...`.
 
 ## Install
 
@@ -81,8 +81,11 @@ Each `MemoryUnit` stores:
 - nullable `section_heading`
 - nullable `valid_from`
 - nullable `valid_until`
+- `confirmation_count`
+- nullable `last_confirmed_at`
 
 `valid_from` is set from `session_date` when present on fact units. `valid_until` is set when a newer contradicting fact supersedes an older one.
+Repeated normalized restatements of the same current-valid fact increment `confirmation_count` and update `last_confirmed_at` instead of creating duplicate fact units.
 
 ## Ingestion
 
@@ -105,6 +108,12 @@ Rule-based contradiction detection currently covers a small, explicit pattern ta
 
 Unmatched facts are stored normally and do not participate in belief revision.
 
+Repeated current-valid facts are absorbed as confirmations:
+
+- `confirmation_count` starts at `1`
+- `last_confirmed_at` starts at `valid_from`
+- restating the same normalized fact in the same `instance_id` increments the existing fact instead of inserting a duplicate
+
 ## Retrieval
 
 `retrieve()` supports:
@@ -115,8 +124,14 @@ Unmatched facts are stored normally and do not participate in belief revision.
 - `use_navigator`
 - `use_semantic`
 - `as_of="YYYY-MM-DD"` for historical queries
+- `query_date="..."` when recency-aware Navigator scoring should use a question-relative date
 
 Default behavior excludes superseded facts. Historical queries include only facts valid at the requested date.
+
+The Navigator remains additive-only. In `0.9.1` it can also add a small confidence-decay boost based on:
+
+- recent confirmation recency relative to `query_date`
+- `confirmation_count` reinforcement, capped at `+0.03`
 
 ## CLI
 

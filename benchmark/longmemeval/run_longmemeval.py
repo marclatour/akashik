@@ -42,6 +42,11 @@ def main() -> int:
     )
     parser.add_argument("--document-gate-n", type=int, default=5)
     parser.add_argument(
+        "--question-type",
+        default="",
+        help="Only evaluate instances whose question_type matches this value.",
+    )
+    parser.add_argument(
         "--per-instance-store",
         action=argparse.BooleanOptionalAction,
         default=True,
@@ -71,6 +76,12 @@ def main() -> int:
         return 1
 
     instances = json.loads(data_path.read_text(encoding="utf-8"))
+    if args.question_type:
+        instances = [
+            instance
+            for instance in instances
+            if str(instance.get("question_type", "")) == args.question_type
+        ]
     if args.limit:
         instances = instances[: args.limit]
     output_path = Path(args.output)
@@ -212,6 +223,7 @@ def _process_instance(
             limit=TOP_K,
             entity_filters=retrieval_filters,
             document_gate_n=document_gate_n,
+            query_date=str(instance.get("question_date", "")),
         )
     except Exception:
         LOGGER.exception("Failed to retrieve for instance %s", question_id)

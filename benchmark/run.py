@@ -30,7 +30,9 @@ def run_benchmark(
     results_dir: str | Path | None = None,
     with_embeddings: bool = False,
 ) -> dict[str, object]:
-    _reset_benchmark_db()
+    output_dir = Path(results_dir or DEFAULT_RESULTS_DIR).resolve()
+    benchmark_db = output_dir / "benchmark.db"
+    _reset_benchmark_db(benchmark_db)
     documents = load_corpus(corpus_dir or DEFAULT_CORPUS_DIR)
     queries = load_queries(
         queries_path or DEFAULT_QUERIES_PATH,
@@ -40,7 +42,7 @@ def run_benchmark(
     systems = [
         ("system_a", "RAG", RagSystem(documents)),
         ("system_b", "GraphRAG", GraphRagSystem(documents)),
-        ("system_c", "Akashik", AkashikSystem(documents)),
+        ("system_c", "Akashik", AkashikSystem(documents, db_path=benchmark_db)),
     ]
     if with_embeddings:
         systems.append(("system_d", "RAG-Embedding", RagEmbeddingSystem(documents)))
@@ -81,7 +83,6 @@ def run_benchmark(
         gate = evaluate_gate(named_scores, named_aggregates)
         disagreements = collect_embedding_akashik_disagreements(per_query_results) if with_embeddings else []
 
-        output_dir = Path(results_dir or DEFAULT_RESULTS_DIR).resolve()
         output_dir.mkdir(parents=True, exist_ok=True)
 
         payload = build_results_payload(
@@ -111,8 +112,7 @@ def run_benchmark(
             system.close()
 
 
-def _reset_benchmark_db() -> None:
-    benchmark_db = Path("results/benchmark.db")
+def _reset_benchmark_db(benchmark_db: Path) -> None:
     if benchmark_db.exists():
         benchmark_db.unlink()
 

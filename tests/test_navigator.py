@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from datetime import date
+
 from akashik.identity import content_hash, normalized_hash
 from akashik.navigator import (
+    _decay_score,
     is_label_like,
     rank_facts,
     score_heading_match,
@@ -16,6 +19,8 @@ def _fact(
     *,
     section_heading: str | None = None,
     metadata: dict | None = None,
+    confirmation_count: int = 1,
+    last_confirmed_at: str | None = None,
 ) -> MemoryUnit:
     return MemoryUnit(
         level="fact",
@@ -24,6 +29,8 @@ def _fact(
         normalized_hash=normalized_hash(content),
         metadata=dict(metadata or {"source": "test.txt"}),
         section_heading=section_heading,
+        confirmation_count=confirmation_count,
+        last_confirmed_at=last_confirmed_at,
     )
 
 
@@ -122,3 +129,39 @@ def test_rank_facts_stable_on_ties() -> None:
     ranked = rank_facts([first, second], "unmatched query")
 
     assert [fact for fact, _score in ranked] == [first, second]
+
+
+def test_decay_score_unreinforced() -> None:
+    fact = _fact("Test fact.", confirmation_count=1, last_confirmed_at="2024-11-30")
+
+    assert _decay_score(fact, query_date=date(2024, 12, 1)) == 0.03
+
+
+def test_decay_score_reinforced() -> None:
+    fact = _fact("Test fact.", confirmation_count=3, last_confirmed_at="2024-11-30")
+
+    assert _decay_score(fact, query_date=date(2024, 12, 1)) == 0.05
+
+
+def test_decay_score_recent() -> None:
+    fact = _fact("Test fact.", confirmation_count=1, last_confirmed_at="2024-11-30")
+
+    assert _decay_score(fact, query_date=date(2024, 12, 1)) == 0.03
+
+
+def test_decay_score_stale() -> None:
+    fact = _fact("Test fact.", confirmation_count=1, last_confirmed_at="2022-01-01")
+
+    assert _decay_score(fact, query_date=date(2024, 12, 1)) == 0.0
+
+
+def test_decay_score_no_query_date() -> None:
+    fact = _fact("Test fact.", confirmation_count=4, last_confirmed_at="2024-11-01")
+
+    assert _decay_score(fact, query_date=None) == 0.0
+
+
+def test_decay_score_max() -> None:
+    fact = _fact("Test fact.", confirmation_count=4, last_confirmed_at="2024-12-01")
+
+    assert _decay_score(fact, query_date=date(2024, 12, 1)) == 0.06

@@ -28,6 +28,8 @@ class MemoryUnit:
     section_heading: str | None = None
     valid_from: str | None = None
     valid_until: str | None = None
+    confirmation_count: int = 1
+    last_confirmed_at: str | None = None
     id: str = field(default_factory=lambda: str(uuid4()))
 
     def __post_init__(self) -> None:

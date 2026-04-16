@@ -95,14 +95,6 @@ def ingest_text(
         raise ValueError("Akashik ingest only supports document-level text input.")
 
     raw_text = str(text)
-    existing = [
-        unit
-        for unit in store.fetch_by_content_hash(content_hash(raw_text))
-        if unit.level == "document"
-    ]
-    if existing:
-        return existing[0]
-
     base_metadata = {
         "source": "inline",
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -352,6 +344,12 @@ def _insert_fact_unit(
         contradiction = find_contradicting_fact(store, triple, instance_id)
         if contradiction is not None:
             close_fact(store, contradiction.id, valid_from)
+    existing = _find_reinforceable_fact(store, unit, instance_id)
+    if existing is not None:
+        confirmed_at = valid_from or str(unit.metadata.get("session_date", "")).strip() or None
+        if confirmed_at:
+            store.increment_confirmation(existing.id, confirmed_at)
+        return store.fetch_by_id(existing.id) or existing
     return store.insert(unit)
 
 
@@ -378,4 +376,22 @@ def _make_unit(
             if level == "fact" and merged_metadata.get("session_date")
             else None
         ),
+        confirmation_count=1,
+        last_confirmed_at=(
+            str(merged_metadata.get("session_date"))
+            if level == "fact" and merged_metadata.get("session_date")
+            else None
+        ),
     )
+
+
+def _find_reinforceable_fact(store, unit: MemoryUnit, instance_id: str | None) -> MemoryUnit | None:
+    filters: dict[str, str] | None = {"instance_id": instance_id} if instance_id else None
+    candidates = store.fetch_by_metadata_filters(level="fact", filters=filters)
+    for candidate in candidates:
+        if candidate.valid_until is not None:
+            continue
+        if candidate.normalized_hash != unit.normalized_hash:
+            continue
+        return candidate
+    return None

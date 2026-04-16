@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 import re
 
 from akashik.schema import MemoryUnit
@@ -13,6 +14,7 @@ class NavigatorConfig:
     heading_weight: float = 0.4
     specificity_weight: float = 0.4
     recency_weight: float = 0.2
+    decay_max_boost: float = 0.06
 
 
 _TOKEN_RE = re.compile(r"\w+", re.UNICODE)
@@ -182,24 +184,57 @@ def infer_clause_type(query: str) -> str | None:
 def rank_facts(
     facts: list[MemoryUnit],
     query: str,
+    query_date: date | None = None,
     config: NavigatorConfig | None = None,
 ) -> list[tuple[MemoryUnit, float]]:
     active_config = config or NavigatorConfig()
-    scored = [(fact, _navigator_score(fact, query, active_config)) for fact in facts]
+    scored = [(fact, _navigator_score(fact, query, query_date, active_config)) for fact in facts]
     return sorted(scored, key=lambda item: item[1], reverse=True)
 
 
-def _navigator_score(fact: MemoryUnit, query: str, config: NavigatorConfig) -> float:
+def _navigator_score(
+    fact: MemoryUnit,
+    query: str,
+    query_date: date | None,
+    config: NavigatorConfig,
+) -> float:
     label_like = is_label_like(fact.content)
     heading_match = 0.0 if label_like else score_heading_match(fact.section_heading, query)
     specificity = score_specificity(fact.content)
     recency = score_recency(fact.metadata)
+    decay_score = _decay_score(fact, query_date)
     score = (
         (config.heading_weight * heading_match)
         + (config.specificity_weight * specificity)
         + (config.recency_weight * recency)
+        + min(decay_score, config.decay_max_boost)
     )
     return min(score, _LABEL_SCORE_CAP) if label_like else score
+
+
+def _decay_score(
+    fact: MemoryUnit,
+    query_date: date | None,
+) -> float:
+    if query_date is None or not fact.last_confirmed_at:
+        return 0.0
+    try:
+        confirmed_date = date.fromisoformat(fact.last_confirmed_at)
+    except ValueError:
+        return 0.0
+
+    confirmation_count = max(int(fact.confirmation_count or 1), 1)
+    reinforcement_bonus = min(confirmation_count - 1, 3) * 0.01
+    age_days = max((query_date - confirmed_date).days, 0)
+    if age_days <= 30:
+        recency_bonus = 0.03
+    elif age_days <= 90:
+        recency_bonus = 0.02
+    elif age_days <= 365:
+        recency_bonus = 0.01
+    else:
+        recency_bonus = 0.0
+    return min(reinforcement_bonus + recency_bonus, 0.06)
 
 
 def _tokens(text: str) -> list[str]:

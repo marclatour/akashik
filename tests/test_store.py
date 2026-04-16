@@ -131,3 +131,30 @@ def test_invalid_parent_is_rejected(tmp_path) -> None:
     with Store(tmp_path / "store.db") as store:
         with pytest.raises(ValueError, match="Parent"):
             store.insert(_unit("fact", "Orphan fact.", parent_id="missing-parent"))
+
+
+def test_increment_confirmation_updates_fields(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        fact = store.insert(_unit("fact", "Confirmed fact."))
+
+        store.increment_confirmation(fact.id, "2024-03-01")
+        updated = store.fetch_by_id(fact.id)
+
+        assert updated is not None
+        assert updated.confirmation_count == 2
+        assert updated.last_confirmed_at == "2024-03-01"
+
+
+def test_increment_confirmation_never_touches_content(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        fact = store.insert(_unit("fact", "Content must remain stable."))
+        original_content_hash = fact.content_hash
+        original_normalized_hash = fact.normalized_hash
+
+        store.increment_confirmation(fact.id, "2024-03-01")
+        updated = store.fetch_by_id(fact.id)
+
+        assert updated is not None
+        assert updated.content == fact.content
+        assert updated.content_hash == original_content_hash
+        assert updated.normalized_hash == original_normalized_hash
