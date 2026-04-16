@@ -219,3 +219,8 @@ benchmark/cuad/CUAD_v1.json
 benchmark/cuad/corpus.db
 results/*.md
 results/*.json
+
+# LongMemEval
+benchmark/longmemeval/*.jsonl
+benchmark/longmemeval/data/*
+benchmark/longmemeval/__init__.py

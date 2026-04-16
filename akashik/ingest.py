@@ -60,12 +60,14 @@ def ingest_file(
         document = store.insert(_make_unit("document", raw_text, metadata=base_metadata))
         for section_text in split_sections(raw_text):
             section_heading = extract_section_heading(section_text)
+            section_entities: dict = {}
             section = store.insert(
                 _make_unit(
                     "section",
                     section_text,
                     parent_id=document.id,
                     metadata=base_metadata,
+                    section_entities=section_entities,
                     section_heading=section_heading,
                 )
             )
@@ -76,6 +78,7 @@ def ingest_file(
                         fact_text,
                         parent_id=section.id,
                         metadata=base_metadata,
+                        section_entities=section_entities,
                         section_heading=section_heading,
                     )
                 )
@@ -219,12 +222,39 @@ def _base_metadata(path: Path, metadata: dict | None) -> dict:
     return merged
 
 
+def _merge_child_metadata(
+    metadata: dict | None,
+    section_entities: dict | None = None,
+) -> dict:
+    merged = dict(metadata or {})
+    section_entities = dict(section_entities or {})
+    merged.update({key: value for key, value in section_entities.items() if key != "entities"})
+
+    entities: list[str] = []
+    seen: set[str] = set()
+    for value in list((metadata or {}).get("entities", [])) + list(section_entities.get("entities", [])):
+        if not isinstance(value, str):
+            continue
+        normalized = value.strip()
+        if not normalized:
+            continue
+        lowered = normalized.lower()
+        if lowered in seen:
+            continue
+        seen.add(lowered)
+        entities.append(normalized)
+    if entities:
+        merged["entities"] = entities
+    return merged
+
+
 def _make_unit(
     level: str,
     content: str,
     *,
     parent_id: str | None = None,
     metadata: dict | None = None,
+    section_entities: dict | None = None,
     section_heading: str | None = None,
 ) -> MemoryUnit:
     return MemoryUnit(
@@ -233,6 +263,6 @@ def _make_unit(
         content_hash=content_hash(content),
         normalized_hash=normalized_hash(content),
         parent_id=parent_id,
-        metadata=dict(metadata or {}),
+        metadata=_merge_child_metadata(metadata, section_entities),
         section_heading=section_heading,
     )
