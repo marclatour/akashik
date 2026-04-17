@@ -10,9 +10,11 @@ if __package__ in (None, ""):
 
 import argparse
 from dataclasses import dataclass
+from datetime import datetime
 import json
 from pathlib import Path
 
+from akashik.executor import execute as execute_query
 from akashik import Store, retrieve
 from benchmark import DEFAULT_RESULTS_DIR
 from benchmark.run_cuad import (
@@ -33,6 +35,7 @@ from benchmark.systems.rag import RagSystem
 CUAD_MODE_B_QUERIES_PATH = CUAD_ROOT / "queries_cuad_b.json"
 CUAD_MODE_B_RESULTS_PATH = "results_cuad_b_50.json"
 CUAD_MODE_B_REPORT_PATH = "report_cuad_b_50.md"
+CUAD_MODE_B_JSONL_PREFIX = "cuad_b"
 
 
 @dataclass(slots=True)
@@ -98,12 +101,31 @@ class ExistingCuadAkashikSystem:
     def close(self) -> None:
         self._store.close()
 
+    def execute(
+        self,
+        query: str,
+        *,
+        limit: int = 5,
+        entity_filter: list[str] | None = None,
+        clause_type: str | None = None,
+        abstention_threshold: float = 0.3,
+    ):
+        return execute_query(
+            self._store,
+            query,
+            entity_filter=entity_filter,
+            clause_type=clause_type,
+            top_k=limit,
+            abstention_threshold=abstention_threshold,
+        )
+
 
 def run_cuad_b(
     *,
     corpus_dir: str | Path | None = None,
     queries_path: str | Path | None = None,
     results_dir: str | Path | None = None,
+    use_executor: bool = True,
 ) -> dict[str, object]:
     documents = load_cuad_corpus(corpus_dir or CUAD_CORPUS_DIR)
     queries = load_cuad_b_queries(
@@ -120,6 +142,7 @@ def run_cuad_b(
     try:
         named_scores: dict[str, list[tuple[CuadModeBQuery, object]]] = {name: [] for _, name, _ in systems}
         per_query_results: list[dict[str, object]] = []
+        executor_rows: list[dict[str, object]] = []
 
         for query in queries:
             row = {
@@ -147,6 +170,26 @@ def run_cuad_b(
                 named_scores[display_name].append((query, score))
                 row["systems"][blind_id] = score.as_dict()
                 row["systems"][blind_id]["results"] = [item.as_dict() for item in results]
+                if display_name == "Akashik":
+                    executor_result = None
+                    if use_executor:
+                        executor_result = system.execute(
+                            query.query_text,
+                            limit=5,
+                            entity_filter=query.entity_filter,
+                            clause_type=query.clause_type,
+                        )
+                    executor_rows.append(
+                        {
+                            "question_id": query.query_id,
+                            "question": query.query_text,
+                            "question_type": query.clause_type,
+                            "answer": query.expected_fact,
+                            "executor_answer": executor_result.answer if executor_result else None,
+                            "executor_abstained": executor_result.abstained if executor_result else True,
+                            "executor_answer_type": executor_result.answer_type if executor_result else "unknown",
+                        }
+                    )
 
             per_query_results.append(row)
 
@@ -165,6 +208,7 @@ def run_cuad_b(
         output_dir.mkdir(parents=True, exist_ok=True)
         results_path = output_dir / CUAD_MODE_B_RESULTS_PATH
         report_path = output_dir / CUAD_MODE_B_REPORT_PATH
+        output_path = _default_output_path()
 
         payload = {
             "benchmark": {
@@ -180,12 +224,17 @@ def run_cuad_b(
         report = render_cuad_b_report(named_aggregates, failures)
         write_json(results_path, payload)
         write_markdown(report_path, report)
+        with output_path.open("w", encoding="utf-8") as handle:
+            for row in executor_rows:
+                handle.write(json.dumps(row, sort_keys=True) + "\n")
 
         return {
             "results_path": str(results_path),
             "report_path": str(report_path),
             "named_aggregates": named_aggregates,
             "failure_analysis": failures,
+            "output_path": str(output_path),
+            "executor_rows": executor_rows,
         }
     finally:
         for _, _, system in systems:
@@ -260,20 +309,65 @@ def render_cuad_b_report(
     return "\n".join(lines) + "\n"
 
 
+def _print_executor_report(rows: list[dict[str, object]]) -> None:
+    if not rows:
+        return
+    answered = sum(1 for row in rows if not row.get("executor_abstained"))
+    abstained = sum(1 for row in rows if row.get("executor_abstained"))
+    by_answer_type: dict[str, int] = {}
+    for row in rows:
+        answer_type = str(row.get("executor_answer_type", "unknown"))
+        by_answer_type[answer_type] = by_answer_type.get(answer_type, 0) + 1
+    print("")
+    print("=== Executor Results ===")
+    print(f"Answered:    {answered}")
+    print(f"Abstained:   {abstained}")
+    print("By type:")
+    for answer_type in ("factual", "temporal", "preference", "aggregation", "unknown"):
+        print(f"  {answer_type:<11} {by_answer_type.get(answer_type, 0)}")
+
+
+def _default_output_path() -> Path:
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return Path("/tmp") / f"akashik_{CUAD_MODE_B_JSONL_PREFIX}_{timestamp}.jsonl"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run CUAD Mode B natural-language diagnostics.")
     parser.add_argument("--corpus-dir", default=str(CUAD_CORPUS_DIR))
     parser.add_argument("--queries-path", default=str(CUAD_MODE_B_QUERIES_PATH))
     parser.add_argument("--results-dir", default=str(DEFAULT_RESULTS_DIR))
+    parser.add_argument(
+        "--use-executor",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Run the deterministic Executor after Akashik retrieval. Disable with --no-executor.",
+    )
+    parser.add_argument(
+        "--keep-output",
+        action="store_true",
+        help="Keep the JSONL output file after the run.",
+    )
     args = parser.parse_args()
+
+    if not CUAD_BENCHMARK_DB_PATH.exists():
+        print(f"Error: CUAD benchmark store not found: {CUAD_BENCHMARK_DB_PATH}")
+        print("Run: ./.venv/bin/python benchmark/run_cuad.py")
+        return 1
 
     summary = run_cuad_b(
         corpus_dir=args.corpus_dir,
         queries_path=args.queries_path,
         results_dir=args.results_dir,
+        use_executor=args.use_executor,
     )
+    _print_executor_report(summary["executor_rows"])
     print(f"results: {summary['results_path']}")
     print(f"report: {summary['report_path']}")
+    if args.keep_output:
+        print(f"Results saved to: {summary['output_path']}")
+    else:
+        Path(summary["output_path"]).unlink(missing_ok=True)
     return 0
 
 

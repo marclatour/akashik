@@ -70,8 +70,9 @@ def main() -> int:
     )
     parser.add_argument(
         "--use-executor",
-        action="store_true",
-        help="Run the deterministic Executor after retrieval and report additive executor stats.",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Run the deterministic Executor after retrieval and report additive executor stats. Disable with --no-executor.",
     )
     args = parser.parse_args()
 

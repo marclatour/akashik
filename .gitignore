@@ -35,6 +35,7 @@ MANIFEST
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
+results/*.db
 
 # Unit test / coverage reports
 htmlcov/
@@ -218,6 +219,7 @@ results/results_cuad*.json
 benchmark/longmemeval/stores/
 benchmark/cuad/stores/
 benchmark/stores/
+judge_cache.jsonl
 
 # CUAD
 benchmark/cuad/master_clauses.csv

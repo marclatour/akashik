@@ -111,25 +111,6 @@ Open questions:
 - How are summary units invalidated when constituent facts are superseded?
 - Does this require the Rust core first?
 
-### Local QA Judge Via Ollama + Phi-3 Mini
-
-Problem: retrieval-only metrics and deterministic executor outputs still leave an evaluation gap for answer quality, especially on benchmarks where the retrieved evidence is correct but the final phrasing or completeness of the answer matters.
-
-Idea: add a local QA judge using Ollama + Phi-3 Mini with a strict `YES` / `NO` grading prompt. Use it only for evaluation and benchmarking, never in the retrieval or executor pipeline.
-
-Why it matters: this gives Akashik a cheap local answer-quality check without introducing a hosted evaluator or polluting the core architecture with a generative dependency. It is useful for benchmark analysis, not for production inference.
-
-Constraints:
-- Evaluation-only.
-- Never in the retrieval, routing, or executor path.
-- Prompt must be strict `YES` / `NO`, not free-form analysis.
-- Must run fully local through Ollama.
-
-Open questions:
-- What benchmark slices benefit most from a local judge versus exact-match metrics?
-- How should judge disagreement with deterministic metrics be reported?
-- What model/temperature/settings keep grading stable enough to be useful?
-
 ### Navigator ML Scorer
 
 Problem: the rule-based Navigator captures useful structural priors, but there is likely still ranking headroom in how those signals are combined and weighted across corpora.

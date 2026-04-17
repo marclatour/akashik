@@ -1,4 +1,4 @@
-# Akashik 0.10.1
+# Akashik 0.10.2
 
 Akashik is a local-first deterministic memory layer for text corpora. It stores content as a fixed hierarchy:
 
@@ -16,7 +16,7 @@ Retrieval is structure-first, not embedding-first. The default stack is:
 5. Navigator tie-breaker
 6. semantic fallback only when confidence is low
 
-Facts now support validity windows, reinforcement tracking, additive two-event temporal delta resolution, ingest-time derived preference facts, and a deterministic Executor layer for cited answers. In `0.10.1`, the Executor classifier gained broader LongMemEval-style pattern coverage for factual, temporal, preference, and aggregation phrasings. By default, retrieval returns only currently valid facts. Historical queries can opt into `as_of=...`.
+Facts now support validity windows, reinforcement tracking, additive two-event temporal delta resolution, ingest-time derived preference facts, a deterministic Executor layer for cited answers, and a fully local QA judge for evaluation-only answer scoring. In `0.10.1`, the Executor classifier gained broader LongMemEval-style pattern coverage for factual, temporal, preference, and aggregation phrasings. In `0.10.2`, answer judging can run locally through Ollama + `qwen2.5:1.5b` without entering the retrieval pipeline. By default, retrieval returns only currently valid facts. Historical queries can opt into `as_of=...`.
 
 ## Install
 
@@ -28,6 +28,12 @@ Benchmark extras:
 
 ```bash
 ./.venv/bin/python -m pip install -e ".[benchmark]"
+```
+
+Local judge dependency:
+
+```bash
+./.venv/bin/python -m pip install ollama
 ```
 
 ## Library
@@ -183,6 +189,20 @@ If evidence is insufficient, the Executor abstains instead of guessing.
 
 `0.10.1` expands classifier coverage with regex-based pattern tables and keeps preference routing ahead of aggregation routing. Unknown queries still fail open to factual lookup rather than returning nothing.
 
+## Local Judge
+
+`akashik.judge` is evaluation-only. It never runs in retrieval, routing, Navigator scoring, semantic fallback, or Executor inference.
+
+Current local judge design:
+
+- Ollama-hosted `qwen2.5:1.5b`
+- deterministic exact/substring fast-path before any model call
+- strict `YES` / `NO` prompt
+- cached judgments in `~/.akashik/judge_cache.jsonl`
+- optional majority voting for more conservative scoring
+
+Use it as a post-processing benchmark tool, not as part of the product pipeline.
+
 ## Where Akashik Sits
 
 Akashik is intended to sit between a local client and an LLM, not inside the model itself.
@@ -281,6 +301,34 @@ Run Mode B:
 ./.venv/bin/python benchmark/run_cuad_b.py
 ```
 
+Keep the executor JSONL for local judging:
+
+```bash
+./.venv/bin/python benchmark/run_cuad.py --keep-output
+./.venv/bin/python benchmark/run_cuad_b.py --keep-output
+```
+
+CUAD runner behavior now matches LongMemEval:
+
+- `--use-executor` is enabled by default for both `run_cuad.py` and `run_cuad_b.py`
+- disable it explicitly with `--no-executor`
+- if `--keep-output` is omitted, the JSONL goes to `/tmp/akashik_cuad_{timestamp}.jsonl` or `/tmp/akashik_cuad_b_{timestamp}.jsonl` and is deleted after metrics print
+- if `--keep-output` is set, the runner prints the saved JSONL path
+
+Judge CUAD outputs after a kept run:
+
+```bash
+./.venv/bin/python benchmark/longmemeval/run_judge.py \
+  --results '/tmp/akashik_cuad_*.jsonl' \
+  --data benchmark/cuad/queries_cuad.json \
+  --votes 3
+
+./.venv/bin/python benchmark/longmemeval/run_judge.py \
+  --results '/tmp/akashik_cuad_b_*.jsonl' \
+  --data benchmark/cuad/queries_cuad_b.json \
+  --votes 3
+```
+
 ## LongMemEval
 
 The LongMemEval runner uses persistent per-instance SQLite stores by default. Stores are cached under:
@@ -296,8 +344,7 @@ Oracle:
 ```bash
 ./.venv/bin/python benchmark/longmemeval/run_longmemeval.py \
   --data benchmark/longmemeval/data/longmemeval_oracle.json \
-  --abstention-threshold 0.3 \
-  --use-executor
+  --abstention-threshold 0.3
 ```
 
 Current oracle baseline with executor enabled:
@@ -344,4 +391,14 @@ Result output behavior:
 - if `--output` is omitted, results go to `/tmp/akashik_lme_{dataset_stem}_{timestamp}.jsonl`
 - the output JSONL is deleted after metrics print unless `--keep-output` is set
 - when `--keep-output` is set, the runner prints the saved path
-- when `--use-executor` is set, the runner prints additive Executor answered/abstained stats and per-type counts
+- `--use-executor` is enabled by default; disable it explicitly with `--no-executor`
+- when executor is enabled, the runner prints additive Executor answered/abstained stats and per-type counts
+
+Judge post-processing:
+
+```bash
+./.venv/bin/python benchmark/longmemeval/run_judge.py \
+  --results '/tmp/akashik_lme_longmemeval_oracle_*.jsonl' \
+  --data benchmark/longmemeval/data/longmemeval_oracle.json \
+  --votes 3
+```

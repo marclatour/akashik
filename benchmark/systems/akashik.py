@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from akashik import Store, ingest_file, retrieve
+from akashik.executor import execute as execute_query
 from benchmark.corpus import CorpusDocument
 from benchmark.systems import RetrievedItem
 
@@ -12,12 +13,19 @@ from benchmark.systems import RetrievedItem
 class AkashikSystem:
     display_name = "Akashik"
 
-    def __init__(self, documents: list[CorpusDocument], *, db_path: str | Path | None = None) -> None:
+    def __init__(
+        self,
+        documents: list[CorpusDocument],
+        *,
+        db_path: str | Path | None = None,
+        ingest_documents: bool = True,
+    ) -> None:
         db_path = Path(db_path or "results/benchmark.db")
-        db_path.parent.mkdir(exist_ok=True)
+        db_path.parent.mkdir(parents=True, exist_ok=True)
         self._store = Store(db_path)
-        for document in documents:
-            ingest_file(document.path, self._store)
+        if ingest_documents:
+            for document in documents:
+                ingest_file(document.path, self._store)
 
     def search(
         self,
@@ -59,6 +67,24 @@ class AkashikSystem:
 
     def close(self) -> None:
         self._store.close()
+
+    def execute(
+        self,
+        query: str,
+        *,
+        limit: int = 5,
+        entity_filter: list[str] | None = None,
+        clause_type: str | None = None,
+        abstention_threshold: float = 0.3,
+    ):
+        return execute_query(
+            self._store,
+            query,
+            entity_filter=entity_filter,
+            clause_type=clause_type,
+            top_k=limit,
+            abstention_threshold=abstention_threshold,
+        )
 
 
 def _normalize_source(source: str) -> str:
