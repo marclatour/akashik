@@ -215,6 +215,9 @@ results/benchmark.db
 results/benchmark_cuad.db
 results/benchmark_cuad_50.db
 results/results_cuad*.json
+benchmark/longmemeval/stores/
+benchmark/cuad/stores/
+benchmark/stores/
 
 # CUAD
 benchmark/cuad/master_clauses.csv

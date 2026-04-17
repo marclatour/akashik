@@ -5,7 +5,7 @@ import pytest
 from akashik.identity import content_hash, normalized_hash
 from akashik.ingest import extract_section_heading
 from akashik.schema import MemoryUnit
-from akashik.store import Store
+from akashik.store import AKASHIK_SCHEMA_VERSION, Store
 
 
 def _metadata(source: str = "tests") -> dict:
@@ -158,3 +158,24 @@ def test_increment_confirmation_never_touches_content(tmp_path) -> None:
         assert updated.content == fact.content
         assert updated.content_hash == original_content_hash
         assert updated.normalized_hash == original_normalized_hash
+
+
+def test_schema_version_written_on_open(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        stored = store._conn.execute("PRAGMA user_version").fetchone()[0]
+
+        assert stored == AKASHIK_SCHEMA_VERSION
+
+
+def test_schema_version_mismatch_detected(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        store._conn.execute("PRAGMA user_version = 0")
+        stored = store._conn.execute("PRAGMA user_version").fetchone()[0]
+
+        assert stored == 0
+        assert store.schema_version_mismatch() is True
+
+
+def test_schema_version_match(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        assert store.schema_version_mismatch() is False

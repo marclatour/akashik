@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 import json
+import logging
 from pathlib import Path
 import re
 import sqlite3
@@ -12,6 +13,7 @@ from typing import Iterator
 from akashik.schema import LEVELS, LEVEL_INDEX, MemoryUnit, StoreStats, validate_level
 
 # FTS5 row addressing must stay integer-based. UUID ids remain the only public identifiers.
+AKASHIK_SCHEMA_VERSION = 5
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS memory_units (
@@ -54,21 +56,28 @@ FROM memory_units
 """
 
 _FTS_TOKEN_RE = re.compile(r"\w+", re.UNICODE)
+LOGGER = logging.getLogger(__name__)
 
 
 class Store:
     def __init__(self, db_path: str | Path = "./akashik.db") -> None:
         self.db_path = str(Path(db_path))
+        db_file = Path(self.db_path)
+        self._db_preexisting = db_file.exists() and db_file.stat().st_size > 0
         self._conn = sqlite3.connect(self.db_path)
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA foreign_keys = ON")
         self._conn.execute("PRAGMA journal_mode = WAL")
+        self._opened_user_version = int(self._conn.execute("PRAGMA user_version").fetchone()[0])
         self.initialize()
 
     def initialize(self) -> None:
         with self._conn:
             self._conn.executescript(_SCHEMA_SQL)
             self._migrate_schema()
+            self._conn.execute(f"PRAGMA user_version = {AKASHIK_SCHEMA_VERSION}")
+        if self._db_preexisting and self._opened_user_version != AKASHIK_SCHEMA_VERSION:
+            self._warn_schema_mismatch(self._opened_user_version)
 
     def _migrate_schema(self) -> None:
         columns = {
@@ -91,6 +100,15 @@ class Store:
 
     def close(self) -> None:
         self._conn.close()
+
+    def schema_version_mismatch(self) -> bool:
+        stored = int(self._conn.execute("PRAGMA user_version").fetchone()[0])
+        mismatch = stored != AKASHIK_SCHEMA_VERSION or (
+            self._db_preexisting and self._opened_user_version != AKASHIK_SCHEMA_VERSION
+        )
+        if mismatch:
+            self._warn_schema_mismatch(stored)
+        return mismatch
 
     def __enter__(self) -> "Store":
         return self
@@ -446,6 +464,16 @@ class Store:
             valid_until=row["valid_until"],
             confirmation_count=int(row["confirmation_count"] or 1) if "confirmation_count" in keys else 1,
             last_confirmed_at=row["last_confirmed_at"] if "last_confirmed_at" in keys else None,
+        )
+
+    def _warn_schema_mismatch(self, stored: int) -> None:
+        if stored == AKASHIK_SCHEMA_VERSION:
+            return
+        LOGGER.warning(
+            "store %s has schema version %s, current is %s — will reingest",
+            self.db_path,
+            stored,
+            AKASHIK_SCHEMA_VERSION,
         )
 
 

@@ -10,10 +10,9 @@ if __package__ in (None, ""):
 
 import argparse
 from collections import defaultdict
-from datetime import timedelta
+from datetime import datetime, timedelta
 import json
 import logging
-import os
 from pathlib import Path
 import sys
 import time
@@ -36,12 +35,22 @@ def main() -> int:
     parser.add_argument("--abstention-threshold", default=0.3, type=float)
     parser.add_argument("--output", help="JSONL output path.")
     parser.add_argument(
+        "--keep-output",
+        action="store_true",
+        help="Keep the JSONL output file after the run.",
+    )
+    parser.add_argument(
         "--limit",
         type=int,
         default=0,
         help="Process only the first N instances. Useful for faster diagnostics.",
     )
     parser.add_argument("--document-gate-n", type=int, default=5)
+    parser.add_argument(
+        "--force-reingest",
+        action="store_true",
+        help="Rebuild per-instance stores even if they already exist and match schema.",
+    )
     parser.add_argument(
         "--question-type",
         default="",
@@ -67,8 +76,6 @@ def main() -> int:
 
     if not args.data:
         parser.error("--data is required unless --dry-run is set")
-    if not args.output:
-        parser.error("--output is required unless --dry-run is set")
 
     data_path = Path(args.data)
     if not data_path.exists():
@@ -85,28 +92,44 @@ def main() -> int:
         ]
     if args.limit:
         instances = instances[: args.limit]
-    output_path = Path(args.output)
+    output_path = Path(args.output) if args.output else _default_output_path(data_path.stem)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     failed_instances = 0
     emitted: list[dict[str, object]] = []
     started_at = time.monotonic()
+    stores_reused = 0
+    stores_created = 0
+    summary_printed = False
     with output_path.open("w", encoding="utf-8") as handle:
         if args.per_instance_store:
-            for index, instance in enumerate(instances, start=1):
-                question_id = str(instance.get("question_id", f"instance_{index}"))
-                store_path = _instance_store_path(question_id)
-                line = _process_with_ephemeral_store(
+            store_plans = _build_store_plans(
+                instances,
+                dataset_stem=data_path.stem,
+                force_reingest=args.force_reingest,
+            )
+            planned_reused = sum(1 for _instance, _path, needs_ingest in store_plans if not needs_ingest)
+            planned_created = len(store_plans) - planned_reused
+            for index, (instance, store_path, needs_ingest) in enumerate(store_plans, start=1):
+                line = _process_with_persistent_store(
                     store_path,
                     instance,
                     abstention_threshold=args.abstention_threshold,
                     document_gate_n=args.document_gate_n,
+                    needs_ingest=needs_ingest,
                 )
+                if needs_ingest:
+                    stores_created += 1
+                else:
+                    stores_reused += 1
                 if line is None:
                     failed_instances += 1
                 else:
                     emitted.append(line)
                     handle.write(json.dumps(line, sort_keys=True) + "\n")
+                if not summary_printed:
+                    _print_store_summary(planned_reused, planned_created)
+                    summary_printed = True
                 _print_progress(index=index, total=len(instances), started_at=started_at)
         else:
             with Store(args.store) as store:
@@ -122,16 +145,30 @@ def main() -> int:
                     else:
                         emitted.append(line)
                         handle.write(json.dumps(line, sort_keys=True) + "\n")
+                    if not summary_printed:
+                        _print_store_summary(0, 0)
+                        summary_printed = True
                     _print_progress(index=index, total=len(instances), started_at=started_at)
         if instances:
             _finish_progress()
 
-    _print_report(
-        dataset_name=data_path.name,
-        rows=emitted,
-        threshold=args.abstention_threshold,
-        failed_instances=failed_instances,
-    )
+    try:
+        _print_report(
+            dataset_name=data_path.name,
+            rows=emitted,
+            threshold=args.abstention_threshold,
+            failed_instances=failed_instances,
+            stores_reused=stores_reused,
+            stores_created=stores_created,
+        )
+    finally:
+        if args.keep_output:
+            print(f"Results saved to: {output_path}")
+        else:
+            try:
+                output_path.unlink(missing_ok=True)
+            except OSError as exc:
+                LOGGER.warning("could not delete output file %s: %s", output_path, exc)
     return 0
 
 
@@ -149,15 +186,18 @@ def _run_dry_run(abstention_threshold: float) -> int:
     return 0
 
 
-def _process_with_ephemeral_store(
-    store_path: str,
+def _process_with_persistent_store(
+    store_path: Path,
     instance: dict,
     *,
     abstention_threshold: float,
     document_gate_n: int,
+    needs_ingest: bool,
 ) -> dict[str, object] | None:
     store = Store(store_path)
     try:
+        if needs_ingest:
+            _reset_store_contents(store)
         return _process_instance(
             store,
             instance,
@@ -166,7 +206,6 @@ def _process_with_ephemeral_store(
         )
     finally:
         store.close()
-        _cleanup_store_files(store_path)
 
 
 def _process_instance(
@@ -307,6 +346,8 @@ def _print_report(
     rows: list[dict[str, object]],
     threshold: float,
     failed_instances: int,
+    stores_reused: int,
+    stores_created: int,
 ) -> None:
     non_abstention_rows = [row for row in rows if not str(row["question_id"]).endswith("_abs")]
     total = len(non_abstention_rows)
@@ -362,6 +403,8 @@ def _print_report(
             f"turn={turn_metric:.2f}  n={len(subset)}"
         )
     print(f"Temporal deltas resolved: {temporal_delta_resolved}/{len(temporal_delta_rows)} two-event queries")
+    print(f"Stores reused:   {stores_reused}")
+    print(f"Stores created:  {stores_created}")
     print(f"Failed instances: {failed_instances}")
 
 
@@ -371,20 +414,54 @@ def _safe_divide(numerator: int, denominator: int) -> float:
     return numerator / denominator
 
 
-def _instance_store_path(question_id: str) -> str:
+def _instance_store_path(dataset_stem: str, question_id: str) -> Path:
     safe_question_id = "".join(character if character.isalnum() or character in {"_", "-"} else "_" for character in question_id)
-    return f"/tmp/akashik_lme_{safe_question_id}.db"
+    root = Path.home() / ".akashik" / "stores" / "benchmarks" / dataset_stem
+    root.mkdir(parents=True, exist_ok=True)
+    return root / f"{safe_question_id}.db"
+
+def _build_store_plans(
+    instances: list[dict],
+    *,
+    dataset_stem: str,
+    force_reingest: bool,
+) -> list[tuple[dict, Path, bool]]:
+    plans: list[tuple[dict, Path, bool]] = []
+    for instance in instances:
+        question_id = str(instance.get("question_id", ""))
+        store_path = _instance_store_path(dataset_stem, question_id)
+        needs_ingest = _store_needs_ingest(store_path, force_reingest=force_reingest)
+        plans.append((instance, store_path, needs_ingest))
+    return plans
 
 
-def _cleanup_store_files(store_path: str) -> None:
-    paths = [store_path, f"{store_path}-wal", f"{store_path}-shm"]
-    for path in paths:
-        if not os.path.exists(path):
-            continue
-        try:
-            os.unlink(path)
-        except OSError as exc:
-            LOGGER.warning("could not delete instance store %s: %s", path, exc)
+def _store_needs_ingest(store_path: Path, *, force_reingest: bool) -> bool:
+    if force_reingest:
+        return True
+    if not store_path.exists() or store_path.stat().st_size == 0:
+        return True
+    with Store(store_path) as store:
+        return store.schema_version_mismatch()
+
+
+def _reset_store_contents(store: Store) -> None:
+    with store.transaction():
+        store._conn.execute("INSERT INTO memory_units_fts(memory_units_fts) VALUES('delete-all')")
+        for level in ("fact", "section", "document", "corpus"):
+            store._conn.execute("DELETE FROM memory_units WHERE level = ?", (level,))
+
+
+def _print_store_summary(stores_reused: int, stores_created: int) -> None:
+    if stores_created == 0:
+        print(
+            f"Stores: {stores_reused} reused, {stores_created} to create — retrieval-only mode",
+            flush=True,
+        )
+        return
+    print(
+        f"Stores: {stores_reused} reused, {stores_created} to create — ingesting missing stores",
+        flush=True,
+    )
 
 
 def _print_progress(*, index: int, total: int, started_at: float) -> None:
@@ -409,6 +486,11 @@ def _finish_progress() -> None:
 
 def _format_duration(seconds: float) -> str:
     return str(timedelta(seconds=int(seconds)))
+
+
+def _default_output_path(dataset_stem: str) -> Path:
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return Path("/tmp") / f"akashik_lme_{dataset_stem}_{timestamp}.jsonl"
 
 
 if __name__ == "__main__":
