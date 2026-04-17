@@ -1,4 +1,4 @@
-# Akashik 0.10.0
+# Akashik 0.10.1
 
 Akashik is a local-first deterministic memory layer for text corpora. It stores content as a fixed hierarchy:
 
@@ -16,7 +16,7 @@ Retrieval is structure-first, not embedding-first. The default stack is:
 5. Navigator tie-breaker
 6. semantic fallback only when confidence is low
 
-Facts now support validity windows, reinforcement tracking, additive two-event temporal delta resolution, ingest-time derived preference facts, and a deterministic Executor layer for cited answers. By default, retrieval returns only currently valid facts. Historical queries can opt into `as_of=...`.
+Facts now support validity windows, reinforcement tracking, additive two-event temporal delta resolution, ingest-time derived preference facts, and a deterministic Executor layer for cited answers. In `0.10.1`, the Executor classifier gained broader LongMemEval-style pattern coverage for factual, temporal, preference, and aggregation phrasings. By default, retrieval returns only currently valid facts. Historical queries can opt into `as_of=...`.
 
 ## Install
 
@@ -181,6 +181,8 @@ The Executor always returns:
 
 If evidence is insufficient, the Executor abstains instead of guessing.
 
+`0.10.1` expands classifier coverage with regex-based pattern tables and keeps preference routing ahead of aggregation routing. Unknown queries still fail open to factual lookup rather than returning nothing.
+
 ## Where Akashik Sits
 
 Akashik is intended to sit between a local client and an LLM, not inside the model itself.
@@ -297,6 +299,17 @@ Oracle:
   --abstention-threshold 0.3 \
   --use-executor
 ```
+
+Current oracle baseline with executor enabled:
+
+- Session Recall @10: `0.97`
+- Turn Recall: `0.89`
+- Executor classifier distribution after `v0.10.1` expansion:
+  - `factual`: `97`
+  - `temporal`: `80`
+  - `preference`: `17`
+  - `aggregation`: `78`
+  - `unknown`: `228`
 
 S split:
 

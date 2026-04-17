@@ -73,6 +73,38 @@ def test_classify_unknown_fails_open() -> None:
     assert classify_query("Tell me something interesting") == "unknown"
 
 
+def test_classify_when_did_i() -> None:
+    assert classify_query("When did I start my new job?") == "temporal"
+
+
+def test_classify_what_is_my() -> None:
+    assert classify_query("What is my current address?") == "factual"
+
+
+def test_classify_what_are_my() -> None:
+    assert classify_query("What are my hobbies?") == "factual"
+
+
+def test_classify_remind_me() -> None:
+    assert classify_query("Can you remind me what I said about my diet?") == "factual"
+
+
+def test_classify_across_conversations() -> None:
+    assert classify_query("Across our conversations, how many books have I mentioned?") == "aggregation"
+
+
+def test_classify_current_state() -> None:
+    assert classify_query("What is my current job?") == "factual"
+
+
+def test_classify_how_long_ago() -> None:
+    assert classify_query("How long ago did I mention my trip to Paris?") == "temporal"
+
+
+def test_classify_preference_still_before_aggregation() -> None:
+    assert classify_query("What tools do I use most?") == "preference"
+
+
 def test_factual_lookup_returns_answer(tmp_path) -> None:
     with Store(tmp_path / "store.db") as store:
         ingest_text(store, "I live in Chicago.", metadata=_metadata())

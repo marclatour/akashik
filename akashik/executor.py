@@ -29,27 +29,55 @@ _TRAILING_TEMPORAL_RE = re.compile(
     r"\s+(?:today|yesterday|recently|last\s+\w+|this\s+\w+|next\s+\w+)\b.*$",
     re.IGNORECASE,
 )
+_TEMPORAL_SINGLE_PATTERNS = [
+    re.compile(r"\bwhen did i\b|\bwhen was\b", re.IGNORECASE),
+    re.compile(r"\bwhat date\b|\bwhat day\b", re.IGNORECASE),
+    re.compile(r"\bhow long ago\b|\bhow long have i\b", re.IGNORECASE),
+    re.compile(r"\bhow long did\b|\bhow long has\b", re.IGNORECASE),
+    re.compile(r"\bwhat year\b|\bwhat month\b", re.IGNORECASE),
+    re.compile(r"\bhow recent\b|\bmost recently\b", re.IGNORECASE),
+    re.compile(r"\bwhich .* first\b|\bwhat .* first\b", re.IGNORECASE),
+    re.compile(r"\bhow many (?:days|weeks|months) before\b|\bhow many (?:days|weeks|months) after\b", re.IGNORECASE),
+]
 _PREFERENCE_PATTERNS = [
     re.compile(r"\bwhat do i (?:like|prefer|use)\b", re.IGNORECASE),
     re.compile(r"\bwhat(?:'s| is) my favorite\b", re.IGNORECASE),
     re.compile(r"\bwhat\s+\w[\w\s-]*\s+do i (?:use|prefer)\b", re.IGNORECASE),
     re.compile(r"\bwhich\s+\w[\w\s-]*\s+do i (?:use|prefer|like|rely on)\b", re.IGNORECASE),
+    re.compile(r"\bcan you (?:recommend|suggest)\b", re.IGNORECASE),
+    re.compile(r"\bwhat kind of\b|\bwhat type of\b", re.IGNORECASE),
 ]
 _AGGREGATION_PATTERNS = [
     re.compile(r"\bhow many times\b", re.IGNORECASE),
     re.compile(r"\bhow often\b", re.IGNORECASE),
     re.compile(r"\bhow frequently\b", re.IGNORECASE),
     re.compile(r"\bhow many\s+\w+\s+did i\b", re.IGNORECASE),
+    re.compile(r"\bhow many\b", re.IGNORECASE),
+    re.compile(r"\bhow much total\b|\bhow much have i\b|\bhow much did i\b", re.IGNORECASE),
     re.compile(r"\bwhich\s+\w[\w\s-]*\s+did i do most\b", re.IGNORECASE),
     re.compile(r"\bmost frequent\b", re.IGNORECASE),
     re.compile(r"\blist all\b", re.IGNORECASE),
     re.compile(r"\bwhat are all\b", re.IGNORECASE),
+    re.compile(r"\bacross our conversations\b|\boverall\b|\bcombining\b", re.IGNORECASE),
 ]
 _FACTUAL_PATTERNS = [
     re.compile(r"\bwhere do i\b|\bwhere did i\b", re.IGNORECASE),
-    re.compile(r"\bwhen did i\b|\bwhat did i\b", re.IGNORECASE),
-    re.compile(r"\bwho is my\b|\bwhat is my\b", re.IGNORECASE),
-    re.compile(r"\bdo i have\b|\bam i\b", re.IGNORECASE),
+    re.compile(r"\bwhat did i\b|\bwhat did i say\b|\bwhat did i tell\b", re.IGNORECASE),
+    re.compile(r"\bwho is my\b|\bwho was my\b", re.IGNORECASE),
+    re.compile(r"\bwhat(?:'s| is) my\b|\bwhat are my\b|\bwhat was my\b", re.IGNORECASE),
+    re.compile(r"\btell me about my\b|\bremind me\b|\bcan you remind me\b", re.IGNORECASE),
+    re.compile(r"\bdo i have\b|\bdid i have\b", re.IGNORECASE),
+    re.compile(r"\bam i\b|\bwas i\b", re.IGNORECASE),
+    re.compile(r"\bwhat size\b|\bwhat color\b", re.IGNORECASE),
+    re.compile(r"\bhow much do i\b|\bhow much did i\b", re.IGNORECASE),
+    re.compile(r"\bwhat is the latest\b|\bmost recent\b", re.IGNORECASE),
+    re.compile(r"\bwhat(?:'s| is) my current\b|\bwhat do i do now\b|\bwhere do i work now\b", re.IGNORECASE),
+    re.compile(r"\bhave i changed\b|\bdid i switch\b", re.IGNORECASE),
+    re.compile(r"\bbased on what i've told you\b|\bbased on our conversations\b", re.IGNORECASE),
+]
+_AGGREGATION_MULTI_HINTS = [
+    re.compile(r"\btimes\b|\bitems\b|\bprojects\b|\bbooks\b|\bmovies\b|\bexpenses\b|\brestaurants\b|\bweeks\b|\bdays\b|\bmonths\b", re.IGNORECASE),
+    re.compile(r"\bacross our conversations\b|\boverall\b|\btotal\b|\ball\b|\bmost\b", re.IGNORECASE),
 ]
 _PREFERENCE_STRENGTH_ORDER = {"strong": 3, "moderate": 2, "weak": 1}
 
@@ -70,9 +98,11 @@ def classify_query(question: str) -> str:
         return "unknown"
     if classify_temporal_query(text) is not None:
         return "temporal"
+    if any(pattern.search(text) for pattern in _TEMPORAL_SINGLE_PATTERNS):
+        return "temporal"
     if any(pattern.search(text) for pattern in _PREFERENCE_PATTERNS):
         return "preference"
-    if any(pattern.search(text) for pattern in _AGGREGATION_PATTERNS):
+    if any(pattern.search(text) for pattern in _AGGREGATION_PATTERNS) and _has_aggregation_plural_intent(text):
         return "aggregation"
     if any(pattern.search(text) for pattern in _FACTUAL_PATTERNS):
         return "factual"
@@ -510,6 +540,10 @@ def _date_key(value: str) -> int:
     except ValueError:
         return 0
     return int(parsed.toordinal())
+
+
+def _has_aggregation_plural_intent(text: str) -> bool:
+    return any(pattern.search(text) for pattern in _AGGREGATION_MULTI_HINTS)
 
 
 def _effective_retrieval_confidence(result: RetrievalResult) -> float:
