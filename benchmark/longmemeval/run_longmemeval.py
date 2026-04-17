@@ -17,6 +17,7 @@ from pathlib import Path
 import sys
 import time
 
+from akashik.executor import execute as execute_query
 from akashik.parse_temporal_scope import parse_temporal_scope
 from akashik.parse_temporal_scope import _parse_question_date
 from akashik.retrieve import retrieve, score_documents
@@ -66,6 +67,11 @@ def main() -> int:
         "--dry-run",
         action="store_true",
         help="Run a single synthetic instance smoke test without writing an output file.",
+    )
+    parser.add_argument(
+        "--use-executor",
+        action="store_true",
+        help="Run the deterministic Executor after retrieval and report additive executor stats.",
     )
     args = parser.parse_args()
 
@@ -119,6 +125,7 @@ def main() -> int:
                     instance,
                     abstention_threshold=args.abstention_threshold,
                     document_gate_n=args.document_gate_n,
+                    use_executor=args.use_executor,
                     needs_ingest=needs_ingest,
                     force_reingest=args.force_reingest,
                 )
@@ -155,6 +162,7 @@ def main() -> int:
                         instance,
                         abstention_threshold=args.abstention_threshold,
                         document_gate_n=args.document_gate_n,
+                        use_executor=args.use_executor,
                     )
                     if line is None:
                         failed_instances += 1
@@ -207,6 +215,7 @@ def _run_dry_run(abstention_threshold: float) -> int:
             SYNTHETIC_INSTANCE,
             abstention_threshold=abstention_threshold,
             document_gate_n=5,
+            use_executor=False,
         )
     print(json.dumps(line, sort_keys=True))
     return 0
@@ -218,6 +227,7 @@ def _process_with_persistent_store(
     *,
     abstention_threshold: float,
     document_gate_n: int,
+    use_executor: bool,
     needs_ingest: bool,
     force_reingest: bool = False,
 ) -> dict[str, object] | None:
@@ -236,6 +246,7 @@ def _process_with_persistent_store(
             instance,
             abstention_threshold=abstention_threshold,
             document_gate_n=document_gate_n,
+            use_executor=use_executor,
         )
     finally:
         store.close()
@@ -247,6 +258,7 @@ def _process_instance(
     *,
     abstention_threshold: float,
     document_gate_n: int,
+    use_executor: bool,
 ) -> dict[str, object] | None:
     question_id = str(instance.get("question_id", ""))
     try:
@@ -324,8 +336,7 @@ def _process_instance(
     abstained = (not results) or (top_confidence < abstention_threshold)
     retrieved_session_ids = _retrieved_session_ids(results[:TOP_K])
     has_answer_hit = any(result.unit.metadata.get("has_answer") == "true" for result in results[:TOP_K])
-
-    return {
+    output = {
         "question_id": question_id,
         "question_type": question_type,
         "retrieved_session_ids": retrieved_session_ids,
@@ -335,6 +346,19 @@ def _process_instance(
         "answer_session_ids": list(instance.get("answer_session_ids", [])),
         "temporal_resolved": response.temporal_answer is not None,
     }
+    if use_executor:
+        executor_result = execute_query(
+            store,
+            question_text,
+            entity_filters=retrieval_filters,
+            query_date=str(instance.get("question_date", "")),
+            top_k=TOP_K,
+            abstention_threshold=abstention_threshold,
+        )
+        output["executor_answer"] = executor_result.answer
+        output["executor_abstained"] = executor_result.abstained
+        output["executor_answer_type"] = executor_result.answer_type
+    return output
 
 
 def _filter_results_by_session_date(results, *, start: str, end: str, question_id: str):
@@ -436,6 +460,20 @@ def _print_report(
             f"turn={turn_metric:.2f}  n={len(subset)}"
         )
     print(f"Temporal deltas resolved: {temporal_delta_resolved}/{len(temporal_delta_rows)} two-event queries")
+    executor_rows = [row for row in rows if "executor_answer_type" in row]
+    if executor_rows:
+        answered = sum(1 for row in executor_rows if not row.get("executor_abstained"))
+        abstained = sum(1 for row in executor_rows if row.get("executor_abstained"))
+        by_answer_type: dict[str, int] = defaultdict(int)
+        for row in executor_rows:
+            by_answer_type[str(row.get("executor_answer_type", "unknown"))] += 1
+        print("")
+        print("=== Executor Results ===")
+        print(f"Answered:    {answered}")
+        print(f"Abstained:   {abstained}")
+        print("By type:")
+        for answer_type in ("factual", "temporal", "preference", "aggregation", "unknown"):
+            print(f"  {answer_type:<11} {by_answer_type.get(answer_type, 0)}")
     print(f"Stores reused:   {stores_reused}")
     print(f"Stores created:  {stores_created}")
     print(f"Failed instances: {failed_instances}")

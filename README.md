@@ -1,4 +1,4 @@
-# Akashik 0.9.3
+# Akashik 0.10.0
 
 Akashik is a local-first deterministic memory layer for text corpora. It stores content as a fixed hierarchy:
 
@@ -16,7 +16,7 @@ Retrieval is structure-first, not embedding-first. The default stack is:
 5. Navigator tie-breaker
 6. semantic fallback only when confidence is low
 
-Facts now support validity windows, reinforcement tracking, additive two-event temporal delta resolution, and ingest-time derived preference facts. By default, retrieval returns only currently valid facts. Historical queries can opt into `as_of=...`.
+Facts now support validity windows, reinforcement tracking, additive two-event temporal delta resolution, ingest-time derived preference facts, and a deterministic Executor layer for cited answers. By default, retrieval returns only currently valid facts. Historical queries can opt into `as_of=...`.
 
 ## Install
 
@@ -33,6 +33,7 @@ Benchmark extras:
 ## Library
 
 ```python
+from akashik.executor import execute
 from akashik.ingest import ingest_text
 from akashik.retrieve import retrieve
 from akashik.store import Store
@@ -50,12 +51,12 @@ ingest_text(
     metadata={"instance_id": "demo", "session_date": "2024-06-01"},
 )
 
-current = retrieve(
-    "where do I live",
+result = execute(
     store,
-    level="fact",
+    "Where do I live?",
     entity_filters={"instance_id": "demo"},
 )
+print(result.answer)
 
 historical = retrieve(
     "where do I live",
@@ -83,6 +84,18 @@ Each `MemoryUnit` stores:
 - nullable `valid_until`
 - `confirmation_count`
 - nullable `last_confirmed_at`
+
+Each `ExecutorResult` stores:
+
+- `answer`
+- `answer_type`
+- `answer_confidence`
+- `coverage_confidence`
+- `requires_reasoning`
+- `abstained`
+- `sources`
+- `raw_facts`
+- nullable `temporal_answer`
 
 `valid_from` is set from `session_date` when present on fact units. `valid_until` is set when a newer contradicting fact supersedes an older one.
 Repeated normalized restatements of the same current-valid fact increment `confirmation_count` and update `last_confirmed_at` instead of creating duplicate fact units.
@@ -147,6 +160,27 @@ For instance-scoped conversational queries, `retrieve()` now also attempts a det
 
 Derived preference facts live in the same FTS index as raw facts. Retrieval, document gating, Navigator scoring, and semantic fallback remain unaware of whether a fact was raw or derived.
 
+## Executor
+
+`execute()` is a deterministic rules engine over retrieved Akashik facts. It never calls an LLM and never invents unsupported claims.
+
+Current query types:
+
+- factual
+- temporal
+- preference
+- aggregation
+- unknown
+
+The Executor always returns:
+
+- a typed answer or an explicit abstention
+- `answer_confidence` and `coverage_confidence`
+- `raw_facts` for the underlying retrieval set
+- source citations with fact UUIDs and session metadata
+
+If evidence is insufficient, the Executor abstains instead of guessing.
+
 ## Where Akashik Sits
 
 Akashik is intended to sit between a local client and an LLM, not inside the model itself.
@@ -172,6 +206,7 @@ repeat
 In that flow, Akashik is effectively invisible. Retrieval latency is small relative to an LLM round trip, but it changes the quality of the prompt materially: the model sees a small, precise, cited context instead of a large haystack.
 
 This is also where the planned Executor layer fits. For simple factual queries, Akashik could answer directly without an LLM call at all, while the LLM remains reserved for reasoning, synthesis, or generation. The intended boundary is strict: Akashik stores and retrieves facts with provenance; the LLM reasons over the returned context but does not act as the system of record.
+The first deterministic Executor now exists inside Akashik itself; future work is about expanding typed operations, not introducing a generative answer layer into the core path.
 
 ## CLI
 
@@ -180,6 +215,7 @@ Default database path: `./akashik.db`
 ```bash
 akashik ingest --file README.md --level document
 akashik query --text "local first memory" --level fact
+akashik execute "Where do I live?"
 akashik show --id <uuid>
 akashik stats
 ```
@@ -258,7 +294,8 @@ Oracle:
 ```bash
 ./.venv/bin/python benchmark/longmemeval/run_longmemeval.py \
   --data benchmark/longmemeval/data/longmemeval_oracle.json \
-  --abstention-threshold 0.3
+  --abstention-threshold 0.3 \
+  --use-executor
 ```
 
 S split:
@@ -294,3 +331,4 @@ Result output behavior:
 - if `--output` is omitted, results go to `/tmp/akashik_lme_{dataset_stem}_{timestamp}.jsonl`
 - the output JSONL is deleted after metrics print unless `--keep-output` is set
 - when `--keep-output` is set, the runner prints the saved path
+- when `--use-executor` is set, the runner prints additive Executor answered/abstained stats and per-type counts

@@ -39,42 +39,42 @@ Open questions:
 - How are entity scopes maintained across nodes?
 - What is the conflict resolution model when the same `(entity, attribute)` fact exists on two nodes with different timestamps?
 
-### Reader/Executor Layer
+### Executor Expansion
 
-Problem: the temporal delta resolver, belief revision system, and preference synthesis all produce value that retrieval-only evaluation cannot measure. No layer exists to reason over retrieved facts and produce cited answers.
+Problem: the first deterministic Executor exists, but it currently covers only factual lookup, two-event temporal deltas, simple preference summaries, and basic aggregations. Richer cited operations are still missing.
 
-Idea: an Executor layer that receives top-N retrieved facts plus provenance and produces a cited, traceable answer. First version: rules engine handling typed operations (compare, chain, flag, compute delta). Future: typed reasoning layer. Never a generative LLM in the core path — cited answers only, every claim traceable to a source fact address.
+Idea: expand the Executor with more typed operations such as compare, chain, contradiction flagging, and conflict-aware answer synthesis. Keep every operation deterministic, cited, and bounded to retrieved top-N facts.
 
-Why it matters: the temporal delta resolver currently computes correct answers the benchmark cannot score. The Executor is the layer that turns retrieved facts into verifiable answers. Also makes preference synthesis measurable — session is retrieved correctly, Executor synthesizes the implicit preference.
+Why it matters: retrieval-only evaluation now leaves value on the table in a different way. The next gain is not "can Akashik answer at all" but "how many structured questions can the Executor answer faithfully without handing off to an LLM."
 
 Constraints:
 - Executor never sees full corpus.
-- Receives top-N facts plus provenance only.
-- Outputs must be cited.
-- No hallucination possible by construction.
+- Outputs remain fully cited and traceable to fact UUIDs.
+- No generative LLM in the core execution path.
+- Raw retrieval results must remain available alongside the executed answer.
 
 Open questions:
-- What typed operations are needed for `v1.0.0`?
-- How does the Executor handle conflicting facts?
-- How does cited answer format interact with downstream LLM consumers?
+- What typed operations are required for `v1.0.0`?
+- How should the Executor represent conflicting but still-valid evidence?
+- What cited answer format is most useful to downstream LLM consumers?
 
-### Ingest-Time Preference Extraction
+### Preference Canonicalization
 
-Problem: single-session-preference session recall is `0.23` on LongMemEval-S. The query-to-evidence keyword gap is structurally unbridgeable with FTS alone. Queries are generic; evidence sessions are specific.
+Problem: ingest-time preference extraction now exists, but semantically identical values such as `"Sony"`, `"Sony camera"`, and `"Sony A7R IV"` still fragment into separate exact-match preference groups.
 
-Idea: at ingest time, extract `(user, prefers, X)` triples from conversational turns using deterministic rule-based patterns. Store as derived fact units alongside raw facts. When a preference query arrives, it matches the derived fact rather than the raw session content. No LLM required for extraction if patterns are constrained to high-frequency preference expressions.
+Idea: add a deterministic canonicalization layer for derived preference values. Normalize surface variants into a stable preference key while preserving the raw extracted value for provenance.
 
-Why it matters: closes the preference gap deterministically. Extends the contradiction system already built in `v0.9.0` — preference triples follow the same `(entity, attribute, value)` model as location and employer facts.
+Why it matters: the current preference extractor closes part of the keyword gap, but ranking still splits reinforcement across near-duplicate values. Canonicalization would make preference summaries and future Executor synthesis materially stronger without introducing embeddings.
 
 Constraints:
-- Rule-based extraction only for `v1.x`.
-- LLM extraction optional later.
-- Derived facts clearly tagged as derived, not raw.
-- Raw facts always preserved.
+- Canonicalization must be deterministic and auditable.
+- Raw extracted values remain preserved in metadata.
+- No LLM or embedding clustering in the core path.
 
 Open questions:
-- What pattern coverage is needed to meaningfully move preference recall?
-- How are implicit preferences ("I've been really into jazz lately") distinguished from explicit ones ("I prefer jazz")?
+- What normalization rules are safe without over-collapsing distinct products?
+- Should canonicalization happen at ingest time or only during Executor grouping?
+- How should model/version relationships like `"Sony"` vs `"Sony A7R IV"` be represented?
 
 ### Aggregation Queries
 
@@ -110,3 +110,41 @@ Open questions:
 - What triggers consolidation (fact count threshold, time-based, manual)?
 - How are summary units invalidated when constituent facts are superseded?
 - Does this require the Rust core first?
+
+### Local QA Judge Via Ollama + Phi-3 Mini
+
+Problem: retrieval-only metrics and deterministic executor outputs still leave an evaluation gap for answer quality, especially on benchmarks where the retrieved evidence is correct but the final phrasing or completeness of the answer matters.
+
+Idea: add a local QA judge using Ollama + Phi-3 Mini with a strict `YES` / `NO` grading prompt. Use it only for evaluation and benchmarking, never in the retrieval or executor pipeline.
+
+Why it matters: this gives Akashik a cheap local answer-quality check without introducing a hosted evaluator or polluting the core architecture with a generative dependency. It is useful for benchmark analysis, not for production inference.
+
+Constraints:
+- Evaluation-only.
+- Never in the retrieval, routing, or executor path.
+- Prompt must be strict `YES` / `NO`, not free-form analysis.
+- Must run fully local through Ollama.
+
+Open questions:
+- What benchmark slices benefit most from a local judge versus exact-match metrics?
+- How should judge disagreement with deterministic metrics be reported?
+- What model/temperature/settings keep grading stable enough to be useful?
+
+### Navigator ML Scorer
+
+Problem: the rule-based Navigator captures useful structural priors, but there is likely still ranking headroom in how those signals are combined and weighted across corpora.
+
+Idea: add a discriminative Navigator ML scorer using logistic regression over structural features. This remains non-generative and explainable. If the model is unavailable or uncertain, fail open to the current rule-based Navigator.
+
+Why it matters: this could improve within-scope fact ranking while preserving the architecture's core boundary: no generative model in retrieval, no semantic model deciding facts, and no opaque end-to-end reranker.
+
+Constraints:
+- Discriminative only, not generative.
+- Feature-based and explainable.
+- Must fail open to the rule-based Navigator.
+- No change to the retrieval priority stack if the scorer is absent or disabled.
+
+Open questions:
+- Which existing Navigator features should become the first regression feature set?
+- How should model calibration interact with the current additive tie-break threshold?
+- Is logistic regression enough, or does the feature space eventually justify a stronger but still interpretable model?

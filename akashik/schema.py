@@ -61,6 +61,29 @@ class RetrievalResponse:
 
 
 @dataclass(slots=True)
+class SourceCitation:
+    fact_id: str
+    content: str
+    session_id: str | None
+    session_date: str | None
+    confidence: float
+    confirmed_count: int
+
+
+@dataclass(slots=True)
+class ExecutorResult:
+    answer: str | None
+    answer_type: str
+    answer_confidence: float
+    coverage_confidence: float
+    requires_reasoning: bool
+    abstained: bool
+    sources: list[SourceCitation]
+    raw_facts: list[RetrievalResult]
+    temporal_answer: dict[str, Any] | None = None
+
+
+@dataclass(slots=True)
 class StoreStats:
     total: int
     by_level: dict[str, int]

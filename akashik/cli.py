@@ -6,6 +6,7 @@ from pathlib import Path
 
 import click
 
+from akashik.executor import execute
 from akashik.ingest import ingest_file
 from akashik.retrieve import retrieve
 from akashik.schema import LEVELS
@@ -71,6 +72,54 @@ def query_command(
         click.echo(f"content: {result.unit.content}")
         click.echo(f"chain: {_format_chain(result)}")
         click.echo("")
+
+
+@cli.command("execute")
+@click.argument("query")
+@click.option(
+    "--store",
+    "store_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+    help="Optional store path override for this command.",
+)
+@click.option("--query-date")
+@click.option("--limit", default=10, show_default=True, type=int)
+@click.option("--abstention-threshold", default=0.3, show_default=True, type=float)
+@click.pass_context
+def execute_command(
+    ctx: click.Context,
+    query: str,
+    store_path: Path | None,
+    query_date: str | None,
+    limit: int,
+    abstention_threshold: float,
+) -> None:
+    db_path = store_path or ctx.obj["db_path"]
+    with Store(db_path) as store:
+        result = execute(
+            store,
+            query,
+            query_date=query_date,
+            top_k=limit,
+            abstention_threshold=abstention_threshold,
+        )
+
+    if result.abstained:
+        click.echo("Answer: No evidence found")
+        click.echo(f"Type: {result.answer_type}")
+        click.echo("Abstained: true")
+        return
+
+    click.echo(f"Answer: {result.answer}")
+    click.echo(f"Type: {result.answer_type}")
+    click.echo(f"Confidence: {result.answer_confidence:.2f} / {result.coverage_confidence:.2f}")
+    click.echo(f"Requires reasoning: {str(result.requires_reasoning).lower()}")
+    for source in result.sources:
+        session_id = source.session_id or "unknown_session"
+        session_date = source.session_date or "unknown_date"
+        click.echo(
+            f'Source: {session_id} ({session_date}) — "{source.content}"'
+        )
 
 
 @cli.command("show")
