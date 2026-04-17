@@ -8,7 +8,7 @@ import logging
 import re
 
 from akashik.identity import content_hash, normalized_hash
-from akashik.ingest import _merge_child_metadata
+from akashik.ingest import _insert_fact_unit, _merge_child_metadata
 from akashik.schema import MemoryUnit
 
 LOGGER = logging.getLogger(__name__)
@@ -84,14 +84,12 @@ def ingest_instance(store, instance: dict) -> int:
                     if has_answer:
                         fact_entities = {"has_answer": "true", "entities": ["true"]}
                     fact_metadata = _merge_child_metadata(section_metadata, fact_entities)
-                    store.insert(
-                        _make_unit(
-                            "fact",
-                            sentence,
-                            parent_id=section.id,
-                            metadata=fact_metadata,
-                            section_heading=section.section_heading,
-                        )
+                    _insert_fact_unit(
+                        store,
+                        sentence,
+                        parent_id=section.id,
+                        metadata=fact_metadata,
+                        section_heading=section.section_heading,
                     )
                     fact_count += 1
 

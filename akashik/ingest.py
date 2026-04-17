@@ -8,6 +8,7 @@ import re
 
 from akashik.contradiction import close_fact, extract_triple, find_contradicting_fact
 from akashik.identity import content_hash, normalized_hash
+from akashik.preference_extractor import extract_preferences
 from akashik.schema import MemoryUnit
 
 _SECTION_SPLIT_RE = re.compile(r"\n\s*\n+")
@@ -349,8 +350,19 @@ def _insert_fact_unit(
         confirmed_at = valid_from or str(unit.metadata.get("session_date", "")).strip() or None
         if confirmed_at:
             store.increment_confirmation(existing.id, confirmed_at)
-        return store.fetch_by_id(existing.id) or existing
-    return store.insert(unit)
+        stored = store.fetch_by_id(existing.id) or existing
+    else:
+        stored = store.insert(unit)
+
+    _insert_preference_derived_facts(
+        store,
+        content=unit.content,
+        parent_id=parent_id,
+        metadata=metadata,
+        section_entities=section_entities,
+        section_heading=section_heading,
+    )
+    return stored
 
 
 def _make_unit(
@@ -395,3 +407,88 @@ def _find_reinforceable_fact(store, unit: MemoryUnit, instance_id: str | None) -
             continue
         return candidate
     return None
+
+
+def _insert_preference_derived_facts(
+    store,
+    *,
+    content: str,
+    parent_id: str,
+    metadata: dict | None,
+    section_entities: dict | None,
+    section_heading: str | None,
+) -> None:
+    merged_metadata = _merge_child_metadata(metadata, section_entities)
+    if str(merged_metadata.get("speaker", "")).strip().lower() != "user":
+        return
+
+    valid_from = str(merged_metadata.get("session_date", "")).strip() or None
+    instance_id = str(merged_metadata.get("instance_id", "")).strip() or None
+    for preference in extract_preferences(content):
+        value = str(preference["value"])
+        polarity = str(preference["polarity"])
+        strength = str(preference["strength"])
+        contradiction = _find_preference_fact(
+            store,
+            instance_id=instance_id,
+            value=value,
+            polarity="like" if polarity == "dislike" else "dislike",
+        )
+        if contradiction is not None and valid_from:
+            close_fact(store, contradiction.id, valid_from)
+
+        reinforcement = _find_preference_fact(
+            store,
+            instance_id=instance_id,
+            value=value,
+            polarity=polarity,
+        )
+        if reinforcement is not None:
+            if valid_from:
+                store.increment_confirmation(reinforcement.id, valid_from)
+            continue
+
+        derived_metadata = dict(merged_metadata)
+        derived_metadata.update(
+            {
+                "derived": "preference",
+                "preference_polarity": polarity,
+                "preference_strength": strength,
+                "preference_value": value,
+            }
+        )
+        derived_unit = MemoryUnit(
+            level="fact",
+            content=f"user preference: {polarity} {value} (strength: {strength})",
+            content_hash=content_hash(f"user preference: {polarity} {value} (strength: {strength})"),
+            normalized_hash=normalized_hash(f"user preference: {polarity} {value} (strength: {strength})"),
+            parent_id=parent_id,
+            metadata=derived_metadata,
+            section_heading=section_heading,
+            valid_from=valid_from,
+            confirmation_count=1,
+            last_confirmed_at=valid_from,
+        )
+        store.insert(derived_unit)
+
+
+def _find_preference_fact(
+    store,
+    *,
+    instance_id: str | None,
+    value: str,
+    polarity: str,
+) -> MemoryUnit | None:
+    filters: dict[str, str] = {
+        "derived": "preference",
+        "preference_value": value,
+        "preference_polarity": polarity,
+    }
+    if instance_id:
+        filters["instance_id"] = instance_id
+    candidates = store.fetch_by_metadata_filters(level="fact", filters=filters)
+    current = [candidate for candidate in candidates if candidate.valid_until is None]
+    if not current:
+        return None
+    current.sort(key=lambda unit: (unit.last_confirmed_at or unit.valid_from or "", unit.id))
+    return current[-1]

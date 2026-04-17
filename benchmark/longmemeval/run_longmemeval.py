@@ -101,6 +101,7 @@ def main() -> int:
     stores_reused = 0
     stores_created = 0
     summary_printed = False
+    verbose_instance_progress = bool(args.question_type or args.force_reingest)
     with output_path.open("w", encoding="utf-8") as handle:
         if args.per_instance_store:
             store_plans = _build_store_plans(
@@ -111,12 +112,15 @@ def main() -> int:
             planned_reused = sum(1 for _instance, _path, needs_ingest in store_plans if not needs_ingest)
             planned_created = len(store_plans) - planned_reused
             for index, (instance, store_path, needs_ingest) in enumerate(store_plans, start=1):
+                instance_started_at = time.monotonic()
+                question_id = str(instance.get("question_id", f"instance_{index}"))
                 line = _process_with_persistent_store(
                     store_path,
                     instance,
                     abstention_threshold=args.abstention_threshold,
                     document_gate_n=args.document_gate_n,
                     needs_ingest=needs_ingest,
+                    force_reingest=args.force_reingest,
                 )
                 if needs_ingest:
                     stores_created += 1
@@ -130,10 +134,22 @@ def main() -> int:
                 if not summary_printed:
                     _print_store_summary(planned_reused, planned_created)
                     summary_printed = True
-                _print_progress(index=index, total=len(instances), started_at=started_at)
+                if verbose_instance_progress:
+                    _print_instance_progress(
+                        index=index,
+                        total=len(instances),
+                        question_id=question_id,
+                        action="ingesting" if needs_ingest else "reusing",
+                        elapsed_seconds=time.monotonic() - instance_started_at,
+                        succeeded=line is not None,
+                    )
+                else:
+                    _print_progress(index=index, total=len(instances), started_at=started_at)
         else:
             with Store(args.store) as store:
                 for index, instance in enumerate(instances, start=1):
+                    instance_started_at = time.monotonic()
+                    question_id = str(instance.get("question_id", f"instance_{index}"))
                     line = _process_instance(
                         store,
                         instance,
@@ -148,7 +164,17 @@ def main() -> int:
                     if not summary_printed:
                         _print_store_summary(0, 0)
                         summary_printed = True
-                    _print_progress(index=index, total=len(instances), started_at=started_at)
+                    if verbose_instance_progress:
+                        _print_instance_progress(
+                            index=index,
+                            total=len(instances),
+                            question_id=question_id,
+                            action="reusing",
+                            elapsed_seconds=time.monotonic() - instance_started_at,
+                            succeeded=line is not None,
+                        )
+                    else:
+                        _print_progress(index=index, total=len(instances), started_at=started_at)
         if instances:
             _finish_progress()
 
@@ -193,10 +219,17 @@ def _process_with_persistent_store(
     abstention_threshold: float,
     document_gate_n: int,
     needs_ingest: bool,
+    force_reingest: bool = False,
 ) -> dict[str, object] | None:
+    if force_reingest and store_path.exists():
+        for suffix in ("", "-wal", "-shm"):
+            path = Path(str(store_path) + suffix)
+            if path.exists():
+                path.unlink()
+                LOGGER.debug("deleted %s for reingest", path)
     store = Store(store_path)
     try:
-        if needs_ingest:
+        if needs_ingest and not force_reingest:
             _reset_store_contents(store)
         return _process_instance(
             store,
@@ -462,6 +495,19 @@ def _print_store_summary(stores_reused: int, stores_created: int) -> None:
         f"Stores: {stores_reused} reused, {stores_created} to create — ingesting missing stores",
         flush=True,
     )
+
+
+def _print_instance_progress(
+    *,
+    index: int,
+    total: int,
+    question_id: str,
+    action: str,
+    elapsed_seconds: float,
+    succeeded: bool,
+) -> None:
+    status = f"done ({elapsed_seconds:.1f}s)" if succeeded else f"failed ({elapsed_seconds:.1f}s)"
+    print(f"[{index}/{total}] {action} {question_id}... {status}", flush=True)
 
 
 def _print_progress(*, index: int, total: int, started_at: float) -> None:

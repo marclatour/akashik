@@ -1,4 +1,4 @@
-# Akashik 0.9.2
+# Akashik 0.9.3
 
 Akashik is a local-first deterministic memory layer for text corpora. It stores content as a fixed hierarchy:
 
@@ -16,7 +16,7 @@ Retrieval is structure-first, not embedding-first. The default stack is:
 5. Navigator tie-breaker
 6. semantic fallback only when confidence is low
 
-Facts now support validity windows, reinforcement tracking, and additive two-event temporal delta resolution. By default, retrieval returns only currently valid facts. Historical queries can opt into `as_of=...`.
+Facts now support validity windows, reinforcement tracking, additive two-event temporal delta resolution, and ingest-time derived preference facts. By default, retrieval returns only currently valid facts. Historical queries can opt into `as_of=...`.
 
 ## Install
 
@@ -114,6 +114,16 @@ Repeated current-valid facts are absorbed as confirmations:
 - `last_confirmed_at` starts at `valid_from`
 - restating the same normalized fact in the same `instance_id` increments the existing fact instead of inserting a duplicate
 
+Preference extraction is additive and deterministic:
+
+- only `speaker="user"` turns are eligible
+- raw facts are always preserved
+- derived preference facts are tagged with `metadata["derived"] = "preference"`
+- derived preference facts also store `preference_polarity`, `preference_strength`, and `preference_value`
+- exact same value + same polarity reinforces the existing derived fact
+- exact same value + opposite polarity closes the older derived fact
+- different preference values coexist
+
 ## Retrieval
 
 `retrieve()` supports:
@@ -134,6 +144,8 @@ The Navigator remains additive-only. In `0.9.1` it can also add a small confiden
 - `confirmation_count` reinforcement, capped at `+0.03`
 
 For instance-scoped conversational queries, `retrieve()` now also attempts a deterministic two-event temporal delta resolution before the standard retrieval stack. When successful, the computed delta is attached to `RetrievalResponse.temporal_answer` while the normal fact retrieval path still runs for provenance.
+
+Derived preference facts live in the same FTS index as raw facts. Retrieval, document gating, Navigator scoring, and semantic fallback remain unaware of whether a fact was raw or derived.
 
 ## Where Akashik Sits
 
@@ -233,15 +245,20 @@ Run Mode B:
 
 ## LongMemEval
 
-The LongMemEval runner uses per-instance SQLite stores by default to keep ingestion and FTS cost flat.
+The LongMemEval runner uses persistent per-instance SQLite stores by default. Stores are cached under:
+
+```text
+~/.akashik/stores/benchmarks/{dataset_stem}/{question_id}.db
+```
+
+Reuse is automatic unless `--force-reingest` is set.
 
 Oracle:
 
 ```bash
 ./.venv/bin/python benchmark/longmemeval/run_longmemeval.py \
   --data benchmark/longmemeval/data/longmemeval_oracle.json \
-  --abstention-threshold 0.3 \
-  --output benchmark/longmemeval/results_oracle.jsonl
+  --abstention-threshold 0.3
 ```
 
 S split:
@@ -250,8 +267,19 @@ S split:
 ./.venv/bin/python benchmark/longmemeval/run_longmemeval.py \
   --data benchmark/longmemeval/data/longmemeval_s_cleaned.json \
   --document-gate-n 5 \
+  --abstention-threshold 0.3
+```
+
+Preference-only rebuild:
+
+```bash
+./.venv/bin/python benchmark/longmemeval/run_longmemeval.py \
+  --data benchmark/longmemeval/data/longmemeval_s_cleaned.json \
+  --document-gate-n 5 \
   --abstention-threshold 0.3 \
-  --output benchmark/longmemeval/results_s.jsonl
+  --question-type single-session-preference \
+  --force-reingest \
+  --keep-output
 ```
 
 Useful diagnostics:
@@ -260,3 +288,9 @@ Useful diagnostics:
 ./.venv/bin/python benchmark/longmemeval/run_longmemeval.py --help
 ./.venv/bin/python benchmark/longmemeval/run_longmemeval.py --dry-run
 ```
+
+Result output behavior:
+
+- if `--output` is omitted, results go to `/tmp/akashik_lme_{dataset_stem}_{timestamp}.jsonl`
+- the output JSONL is deleted after metrics print unless `--keep-output` is set
+- when `--keep-output` is set, the runner prints the saved path
