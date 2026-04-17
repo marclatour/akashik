@@ -53,7 +53,6 @@ SYNONYMS = {
     "open": ["opens"],
     "location": ["sits"],
     "located": ["sits"],
-    "place": ["sits"],
     "access": ["key", "code"],
     "code": ["key", "code"],
     "number": ["key", "code"],
