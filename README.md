@@ -135,6 +135,32 @@ The Navigator remains additive-only. In `0.9.1` it can also add a small confiden
 
 For instance-scoped conversational queries, `retrieve()` now also attempts a deterministic two-event temporal delta resolution before the standard retrieval stack. When successful, the computed delta is attached to `RetrievalResponse.temporal_answer` while the normal fact retrieval path still runs for provenance.
 
+## Where Akashik Sits
+
+Akashik is intended to sit between a local client and an LLM, not inside the model itself.
+
+Typical flow:
+
+```text
+Human types message
+  ↓
+Local client intercepts
+  ↓
+Akashik retrieves relevant facts
+  ↓
+Facts + provenance injected into LLM context
+  ↓
+LLM generates response
+  ↓
+Human reads response
+  ↓
+repeat
+```
+
+In that flow, Akashik is effectively invisible. Retrieval latency is small relative to an LLM round trip, but it changes the quality of the prompt materially: the model sees a small, precise, cited context instead of a large haystack.
+
+This is also where the planned Executor layer fits. For simple factual queries, Akashik could answer directly without an LLM call at all, while the LLM remains reserved for reasoning, synthesis, or generation. The intended boundary is strict: Akashik stores and retrieves facts with provenance; the LLM reasons over the returned context but does not act as the system of record.
+
 ## CLI
 
 Default database path: `./akashik.db`
