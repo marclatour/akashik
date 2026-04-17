@@ -9,6 +9,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import ast
+import argparse
 import csv
 import hashlib
 import json
@@ -18,8 +19,9 @@ import re
 from typing import Any
 
 CUAD_ROOT = Path(__file__).resolve().parent
-MASTER_CLAUSES_PATH = CUAD_ROOT / "master_clauses.csv"
-CUAD_JSON_PATH = CUAD_ROOT / "CUAD_v1.json"
+AKASHIK_DATA_ROOT = Path.home() / ".akashik" / "data" / "benchmarks" / "cuad"
+MASTER_CLAUSES_PATH = AKASHIK_DATA_ROOT / "master_clauses.csv"
+CUAD_JSON_PATH = AKASHIK_DATA_ROOT / "CUAD_v1.json"
 CORPUS_DIR = CUAD_ROOT / "corpus"
 QUERIES_A_PATH = CUAD_ROOT / "queries_cuad.json"
 QUERIES_B_PATH = CUAD_ROOT / "queries_cuad_b.json"
@@ -86,6 +88,7 @@ class PreparedContract:
 
 
 def prepare() -> dict[str, object]:
+    _ensure_source_data_exists()
     contexts = _load_cuad_contexts()
     selected, selection_summary = _select_contracts(contexts)
     CORPUS_DIR.mkdir(parents=True, exist_ok=True)
@@ -115,6 +118,17 @@ def prepare() -> dict[str, object]:
         "queries_cuad_b": str(QUERIES_B_PATH),
         "selection_summary": str(SELECTION_SUMMARY_PATH),
     }
+
+
+def _ensure_source_data_exists() -> None:
+    missing = [path for path in (CUAD_JSON_PATH, MASTER_CLAUSES_PATH) if not path.exists()]
+    if not missing:
+        return
+    print("Error: CUAD source data not found at ~/.akashik/data/benchmarks/cuad/")
+    print("Download CUAD_v1.json and master_clauses.csv from:")
+    print("  https://www.atticusprojectai.org/cuad")
+    print("Then place them at ~/.akashik/data/benchmarks/cuad/")
+    raise SystemExit(1)
 
 
 def _load_cuad_contexts() -> dict[str, str]:
@@ -493,6 +507,7 @@ def _truncate_expected_fact(clause: str) -> str:
 
 
 def main() -> int:
+    argparse.ArgumentParser(description="Prepare the CUAD benchmark corpus and query sets.").parse_args()
     summary = prepare()
     print(f"contracts: {summary['contracts']}")
     print(f"mode_a_queries: {summary['mode_a_queries']}")

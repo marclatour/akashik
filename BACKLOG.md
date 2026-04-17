@@ -129,3 +129,54 @@ Open questions:
 - Which existing Navigator features should become the first regression feature set?
 - How should model calibration interact with the current additive tie-break threshold?
 - Is logistic regression enough, or does the feature space eventually justify a stronger but still interpretable model?
+
+### Corpus Store Layout + `akashik setup` Command
+
+Problem: the default store path (`./akashik.db`) is a flat single file that does not scale and conflicts with the per-instance store pattern proven by LongMemEval. There is no concept of named corpora or a canonical store location for production use.
+
+Idea: adopt a per-corpus, per-document store layout under `~/.akashik/`:
+
+```text
+~/.akashik/
+  stores/
+    corpora/
+      my_conversations/
+        {session_id}.db
+      legal_corpus/
+        {document_id}.db
+    benchmarks/
+      cuad/
+        benchmark_cuad_50.db
+      longmemeval_s_cleaned/
+        {question_id}.db
+  data/
+    benchmarks/
+      cuad/
+        queries_cuad.json
+        queries_cuad_b.json
+      longmemeval/
+        longmemeval_oracle.json
+        longmemeval_s_cleaned.json
+  config/
+    defaults.toml
+  logs/
+    benchmark.log
+```
+
+Add an `akashik setup` CLI command that creates the `~/.akashik/` directory structure, sets the default store root, and optionally downloads benchmark data.
+
+Change the default store path in `store.py` and `cli.py` from `./akashik.db` to `~/.akashik/stores/corpora/default.db`.
+
+Why it matters: makes Akashik usable as a production tool, not just a benchmark runner. A user importing their AI conversation history needs a named corpus with per-session stores, not a flat `.db` file in whatever directory they ran the CLI from. It is consistent with the local-first, user-owns-their-data philosophy.
+
+Constraints:
+- Backward compatible — existing `./akashik.db` files still openable.
+- Per-document store pattern already proven by LongMemEval.
+- No cloud sync or remote paths.
+- Setup command must work offline.
+
+Open questions:
+- How does `akashik ingest` know which corpus to write to: named corpus flag (`--corpus my_conversations`) or interactive selection?
+- Should corpus names be user-defined or derived from source path?
+- How does `akashik query` scope to a specific corpus?
+- What is the migration path for users with existing `./akashik.db` files?

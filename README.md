@@ -283,6 +283,13 @@ akashik --db results/benchmark.db query --text "..." --level fact
 
 ## CUAD Benchmark
 
+CUAD has two modes over the same 50-contract corpus and the same shared store. The difference is the query formulation:
+
+- Mode A: clause-style benchmark queries
+- Mode B: natural-language paraphrases of those same queries
+
+This is a query robustness test, not a corpus-noise test.
+
 Prepare the CUAD corpus and queries:
 
 ```bash
@@ -295,11 +302,25 @@ Run Mode A:
 ./.venv/bin/python benchmark/run_cuad.py
 ```
 
+Current Mode A baseline:
+
+- Precision@1: `0.84`
+
 Run Mode B:
 
 ```bash
 ./.venv/bin/python benchmark/run_cuad_b.py
 ```
+
+Current Mode B baseline:
+
+- Precision@1: `0.05`
+
+Interpretation:
+
+- Mode A asks whether Akashik can retrieve the right clause when the query is close to the benchmark label
+- Mode B asks whether Akashik survives informal legal paraphrasing against the same store
+- the Mode A/B gap is a query normalization and paraphrase robustness problem, not a store-structure problem
 
 Keep the executor JSONL for local judging:
 
@@ -330,6 +351,13 @@ Judge CUAD outputs after a kept run:
 ```
 
 ## LongMemEval
+
+LongMemEval uses one runner with two dataset regimes over the same question set:
+
+- Oracle: only evidence sessions are provided
+- S: full noisy haystack, roughly 53 sessions per instance
+
+This is a noise robustness test, not a query paraphrase test.
 
 The LongMemEval runner uses persistent per-instance SQLite stores by default. Stores are cached under:
 
@@ -366,6 +394,16 @@ S split:
   --document-gate-n 5 \
   --abstention-threshold 0.3
 ```
+
+Current S baseline:
+
+- Session Recall @10: `0.79`
+
+Interpretation:
+
+- Oracle measures retrieval quality when the evidence sessions are already isolated
+- S measures retrieval quality under realistic haystack noise
+- the Oracle/S gap is a routing and noise-management problem, not a query paraphrase problem
 
 Preference-only rebuild:
 

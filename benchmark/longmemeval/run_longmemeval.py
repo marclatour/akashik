@@ -27,11 +27,16 @@ from benchmark.longmemeval.ingest_adapter import ingest_instance
 
 LOGGER = logging.getLogger(__name__)
 TOP_K = 10
+LONGMEMEVAL_DATA_ROOT = Path.home() / ".akashik" / "data" / "benchmarks" / "longmemeval"
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run LongMemEval retrieval evaluation.")
-    parser.add_argument("--data", help="Path to LongMemEval JSON dataset.")
+    parser.add_argument(
+        "--data",
+        default=str(LONGMEMEVAL_DATA_ROOT / "longmemeval_s_cleaned.json"),
+        help="Path to LongMemEval JSON dataset.",
+    )
     parser.add_argument("--store", default="/tmp/longmemeval.db", help="SQLite store path.")
     parser.add_argument("--abstention-threshold", default=0.3, type=float)
     parser.add_argument("--output", help="JSONL output path.")
@@ -81,13 +86,12 @@ def main() -> int:
     if args.dry_run:
         return _run_dry_run(args.abstention_threshold)
 
-    if not args.data:
-        parser.error("--data is required unless --dry-run is set")
-
     data_path = Path(args.data)
     if not data_path.exists():
-        print(f"Error: data file not found: {args.data}")
+        expected_path = LONGMEMEVAL_DATA_ROOT / data_path.name
+        print(f"Error: data file not found: {expected_path}")
         print("Download from: https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned")
+        print(f"Place at: {LONGMEMEVAL_DATA_ROOT}/")
         return 1
 
     instances = json.loads(data_path.read_text(encoding="utf-8"))
