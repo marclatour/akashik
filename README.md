@@ -33,6 +33,20 @@ Akashik's deterministic ingest takes milliseconds. It is not a tradeoff. It is a
 
 Mem0's LLM extraction produces richer semantic consolidation but is unsuitable for real-time conversational interception. Akashik's deterministic approach is designed for the 87ms intercept window — invisible to the user, always current, never blocking.
 
+## ACMB benchmark — six-way comparison
+
+| Capability | BM25 | RAG | Full-ctx | bm25_akashik | rag_akashik | Akashik |
+|---|---|---|---|---|---|---|
+| Retrieval | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Persistence | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ |
+| Commitment detection | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+| Belief revision | ✗ | ✗ | ✗ | 0.500 | 0.550 | **0.950** |
+| Distractor suppression | 0.500 | 0.500 | 0.000 | 0.500 | 0.500 | **0.000** |
+| Provenance | ✗ | ✗ | ✗ | ✗ | ✗ | **1.00** |
+| Latency p50 (query) | 0.41ms | 37ms | 0.81ms | 0.44ms | 34.61ms | 2.17ms |
+
+BM25, RAG, and full-context are retrieval baselines with no persistence. They reset between runs and lose all state when the process ends. Akashik is the only system in the comparison that provides persistent, versioned, provenance-preserving memory. The hybrids (bm25_akashik, rag_akashik) show that commitment detection alone improves recall but does not deliver Akashik's belief revision or distractor control.
+
 Akashik stores content as a fixed hierarchy:
 
 - `corpus`
