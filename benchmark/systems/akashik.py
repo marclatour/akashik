@@ -19,10 +19,12 @@ class AkashikSystem:
         *,
         db_path: str | Path | None = None,
         ingest_documents: bool = True,
+        use_expression: bool = False,
     ) -> None:
         db_path = Path(db_path or "results/benchmark.db")
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self._store = Store(db_path)
+        self._use_expression = use_expression
         if ingest_documents:
             for document in documents:
                 ingest_file(document.path, self._store)
@@ -44,6 +46,7 @@ class AkashikSystem:
             entity_filter=entity_filter,
             clause_type=clause_type,
             debug_label=debug_label,
+            use_expression=self._use_expression,
         )
         results: list[RetrievedItem] = []
         for index, result in enumerate(response.results, start=1):
@@ -84,6 +87,7 @@ class AkashikSystem:
             clause_type=clause_type,
             top_k=limit,
             abstention_threshold=abstention_threshold,
+            use_expression=self._use_expression,
         )
 
 

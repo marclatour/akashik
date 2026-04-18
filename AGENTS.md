@@ -42,6 +42,7 @@ Run tests with:
 - SQLite FTS5 uses an internal integer `fts_rowid` only for `content_rowid` addressing.
 - The internal integer row ID is an implementation detail and must never be exposed in the public API.
 - Every insert into `memory_units` must also write the matching FTS row in the same transaction.
+- Any table with a foreign key referencing `memory_units` must be cleared before deleting from `memory_units` in reset or reingest paths.
 - Retrieval order must remain:
   1. exact `content_hash`
   2. exact `normalized_hash`
@@ -72,6 +73,7 @@ Default database path is `./akashik.db`.
 ## Notes For Changes
 
 - If you modify `store.py`, preserve transactional consistency between `memory_units` and `memory_units_fts`.
+- For tables that depend on `memory_units`, reset ordering must be child tables first and `memory_units` last; insert ordering remains the inverse within the same transaction.
 - If you change ingestion splitting, keep it deterministic and update retrieval tests accordingly.
 - If you touch retrieval ranking, exact and normalized matches must always outrank FTS.
 - If a change affects output shape, update both CLI behavior and tests.

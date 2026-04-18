@@ -13,6 +13,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 import json
+import os
 from pathlib import Path
 import re
 
@@ -93,6 +94,7 @@ def run_cuad(
     with_embeddings: bool = False,
     use_executor: bool = True,
     force_reingest: bool = False,
+    use_expression: bool = False,
 ) -> dict[str, object]:
     documents = load_cuad_corpus(corpus_dir or CUAD_CORPUS_DIR)
     queries = load_cuad_queries(
@@ -118,6 +120,7 @@ def run_cuad(
                 documents,
                 db_path=CUAD_BENCHMARK_DB_PATH,
                 ingest_documents=needs_ingest,
+                use_expression=use_expression,
             ),
         ),
     ]
@@ -721,6 +724,12 @@ def main() -> int:
         help="Rebuild the shared CUAD benchmark store even if it already exists and matches schema.",
     )
     parser.add_argument(
+        "--use-expression",
+        action="store_true",
+        default=os.getenv("AKASHIK_USE_EXPRESSION") == "1",
+        help="Enable the opt-in expression engine before the retrieval stack.",
+    )
+    parser.add_argument(
         "--use-executor",
         action=argparse.BooleanOptionalAction,
         default=True,
@@ -740,6 +749,7 @@ def main() -> int:
         with_embeddings=args.with_embeddings,
         use_executor=args.use_executor,
         force_reingest=args.force_reingest,
+        use_expression=args.use_expression,
     )
     _print_executor_report(summary["executor_rows"])
     print(f"results: {summary['results_path']}")

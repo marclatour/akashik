@@ -7,7 +7,7 @@ import json
 import logging
 import re
 
-from akashik.expression import express
+from akashik.expression import express, extract_context
 from akashik.identity import content_hash, normalized_hash
 from akashik.navigator import rank_facts
 from akashik.parse_temporal_scope import _parse_question_date
@@ -76,12 +76,13 @@ def retrieve(
     entity_filters: dict[str, str | list[str]] | None = None,
     clause_type: str | None = None,
     debug_label: str | None = None,
+    metadata: dict | None = None,
     use_navigator: bool = True,
     use_semantic: bool = True,
+    use_expression: bool = False,
     document_gate_n: int = 0,
     as_of: str | None = None,
     query_date: str | None = None,
-    context: dict | None = None,
     _enable_temporal_resolver: bool = True,
 ) -> RetrievalResponse:
     text = query.strip()
@@ -91,14 +92,30 @@ def retrieve(
     if level is not None:
         validate_level(level)
 
-    LOGGER.debug("Expression engine: no-op stub, falling through to retrieval stack")
-    expressed = express(store, text, context=context)
-    if expressed:
-        if isinstance(expressed, RetrievalResponse):
-            return _finalize_response(store, expressed)
-        return _finalize_response(
+    if use_expression:
+        context = extract_context(text, metadata=metadata)
+        expressed = express(store, text, context=context)
+        if expressed:
+            LOGGER.debug("Expression engine: returned %s facts, skipping retrieval stack", len(expressed))
+            response = _build_response(
+                expressed,
+                store,
+                level=level,
+                limit=limit,
+                base_confidence=1.0,
+            )
+            return _finalize_response(store, response)
+        LOGGER.debug("Expression engine: fell through to retrieval stack")
+    else:
+        setattr(
             store,
-            RetrievalResponse(results=list(expressed), confidence=1.0),
+            "_last_expression_stats",
+            {
+                "candidate_pool": 0,
+                "above_threshold": 0,
+                "expressed": 0,
+                "bypassed_retrieval": False,
+            },
         )
 
     valid_at = _normalize_as_of(as_of)

@@ -13,6 +13,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 import json
 import logging
+import os
 from pathlib import Path
 import sys
 import time
@@ -79,6 +80,12 @@ def main() -> int:
         default=True,
         help="Run the deterministic Executor after retrieval and report additive executor stats. Disable with --no-executor.",
     )
+    parser.add_argument(
+        "--use-expression",
+        action="store_true",
+        default=os.getenv("AKASHIK_USE_EXPRESSION") == "1",
+        help="Enable the opt-in expression engine before the retrieval stack.",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -131,6 +138,7 @@ def main() -> int:
                     abstention_threshold=args.abstention_threshold,
                     document_gate_n=args.document_gate_n,
                     use_executor=args.use_executor,
+                    use_expression=args.use_expression,
                     needs_ingest=needs_ingest,
                     force_reingest=args.force_reingest,
                 )
@@ -168,6 +176,7 @@ def main() -> int:
                         abstention_threshold=args.abstention_threshold,
                         document_gate_n=args.document_gate_n,
                         use_executor=args.use_executor,
+                        use_expression=args.use_expression,
                     )
                     if line is None:
                         failed_instances += 1
@@ -221,6 +230,7 @@ def _run_dry_run(abstention_threshold: float) -> int:
             abstention_threshold=abstention_threshold,
             document_gate_n=5,
             use_executor=False,
+            use_expression=False,
         )
     print(json.dumps(line, sort_keys=True))
     return 0
@@ -233,6 +243,7 @@ def _process_with_persistent_store(
     abstention_threshold: float,
     document_gate_n: int,
     use_executor: bool,
+    use_expression: bool,
     needs_ingest: bool,
     force_reingest: bool = False,
 ) -> dict[str, object] | None:
@@ -252,6 +263,7 @@ def _process_with_persistent_store(
             abstention_threshold=abstention_threshold,
             document_gate_n=document_gate_n,
             use_executor=use_executor,
+            use_expression=use_expression,
         )
     finally:
         store.close()
@@ -264,6 +276,7 @@ def _process_instance(
     abstention_threshold: float,
     document_gate_n: int,
     use_executor: bool,
+    use_expression: bool,
 ) -> dict[str, object] | None:
     question_id = str(instance.get("question_id", ""))
     try:
@@ -318,6 +331,7 @@ def _process_instance(
             entity_filters=retrieval_filters,
             document_gate_n=document_gate_n,
             query_date=str(instance.get("question_date", "")),
+            use_expression=use_expression,
         )
     except Exception:
         LOGGER.exception("Failed to retrieve for instance %s", question_id)
@@ -359,10 +373,19 @@ def _process_instance(
             query_date=str(instance.get("question_date", "")),
             top_k=TOP_K,
             abstention_threshold=abstention_threshold,
+            use_expression=use_expression,
         )
         output["executor_answer"] = executor_result.answer
         output["executor_abstained"] = executor_result.abstained
         output["executor_answer_type"] = executor_result.answer_type
+    expression_stats = getattr(
+        store,
+        "_last_expression_stats",
+        {"candidate_pool": 0, "expressed": 0, "bypassed_retrieval": False},
+    )
+    output["expression_candidate_pool"] = int(expression_stats.get("candidate_pool", 0))
+    output["expression_expressed"] = int(expression_stats.get("expressed", 0))
+    output["expression_hit"] = bool(expression_stats.get("bypassed_retrieval", False))
     return output
 
 
@@ -427,6 +450,7 @@ def _print_report(
         row for row in non_abstention_rows if str(row.get("question_type", "")) == "temporal-reasoning"
     ]
     temporal_delta_resolved = sum(1 for row in temporal_delta_rows if row.get("temporal_resolved"))
+    expression_rows = [row for row in rows if "expression_hit" in row]
 
     print("=== LongMemEval Results ===")
     print(f"Dataset:   {dataset_name}   N={total}")
@@ -465,6 +489,24 @@ def _print_report(
             f"turn={turn_metric:.2f}  n={len(subset)}"
         )
     print(f"Temporal deltas resolved: {temporal_delta_resolved}/{len(temporal_delta_rows)} two-event queries")
+    if expression_rows:
+        expression_hits = sum(1 for row in expression_rows if row.get("expression_hit"))
+        average_pool = _safe_divide(
+            sum(int(row.get("expression_candidate_pool", 0)) for row in expression_rows),
+            len(expression_rows),
+        )
+        average_expressed = _safe_divide(
+            sum(int(row.get("expression_expressed", 0)) for row in expression_rows),
+            len(expression_rows),
+        )
+        print("")
+        print("=== Expression Engine Stats ===")
+        print(
+            f"Expression hits (bypassed retrieval): {expression_hits} / {len(expression_rows)} "
+            f"({_safe_divide(expression_hits, len(expression_rows)):.2%})"
+        )
+        print(f"Average candidate pool size: {average_pool:.2f}")
+        print(f"Average expressed facts returned: {average_expressed:.2f}")
     executor_rows = [row for row in rows if "executor_answer_type" in row]
     if executor_rows:
         answered = sum(1 for row in executor_rows if not row.get("executor_abstained"))
@@ -523,6 +565,8 @@ def _store_needs_ingest(store_path: Path, *, force_reingest: bool) -> bool:
 def _reset_store_contents(store: Store) -> None:
     with store.transaction():
         store._conn.execute("INSERT INTO memory_units_fts(memory_units_fts) VALUES('delete-all')")
+        store._conn.execute("DELETE FROM fact_context_index")
+        store._conn.execute("DELETE FROM epigenetic_state")
         for level in ("fact", "section", "document", "corpus"):
             store._conn.execute("DELETE FROM memory_units WHERE level = ?", (level,))
 

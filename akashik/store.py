@@ -323,6 +323,31 @@ class Store:
         ).fetchone()
         return self._row_to_unit(row) if row else None
 
+    def get_facts_by_ids(self, fact_ids: list[str]) -> list[MemoryUnit]:
+        if not fact_ids:
+            return []
+        placeholders = ", ".join("?" for _ in fact_ids)
+        rows = self._conn.execute(
+            f"{_SELECT_COLUMNS} WHERE id IN ({placeholders}) ORDER BY fts_rowid",
+            tuple(fact_ids),
+        ).fetchall()
+        by_id = {str(row["id"]): self._row_to_unit(row) for row in rows}
+        return [by_id[fact_id] for fact_id in fact_ids if fact_id in by_id]
+
+    def get_epigenetic(self, fact_id: str) -> dict[str, object] | None:
+        row = self._conn.execute(
+            """
+            SELECT fact_id, activation_weight, consolidation_tier, promoter_conditions,
+                   repressor_conditions, decay_rate, reinforcement_count,
+                   soft_reinforcement_count, silenced, silence_until,
+                   last_expressed_at, association_edges
+            FROM epigenetic_state
+            WHERE fact_id = ?
+            """,
+            (fact_id,),
+        ).fetchone()
+        return dict(row) if row else None
+
     def fetch_by_content_hash(
         self,
         hash_value: str,

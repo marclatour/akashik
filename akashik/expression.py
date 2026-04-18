@@ -1,16 +1,16 @@
-"""Expression helpers — Addressed Cognition v0.20.x.
-
-Currently a no-op: always returns empty, falling through to
-the existing retrieval stack. Full implementation in v0.20.0.
-"""
+"""Expression helpers — Addressed Cognition v0.20.x."""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
 import math
+import logging
+import os
 from typing import Optional
 
+from akashik.ingest import MIN_TOKEN_LENGTH
 from akashik.query_normalize import normalize_query
+from akashik.schema import MemoryUnit
 
 TIER_DECAY_RATES = {
     "episodic": 0.01,
@@ -18,6 +18,12 @@ TIER_DECAY_RATES = {
     "procedural": 0.001,
 }
 MAX_RAW_CANDIDATES = 1000
+EXPRESSION_THRESHOLD = float(os.getenv("AKASHIK_EXPRESSION_THRESHOLD", "2.0"))
+MAX_EXPRESSED_FACTS = int(os.getenv("AKASHIK_MAX_EXPRESSED_FACTS", "20"))
+MAX_CANDIDATE_POOL = 150
+MIN_CONTEXT_TERMS = 2
+
+LOGGER = logging.getLogger(__name__)
 
 
 def decay_rate_for_tier(tier: str) -> float:
@@ -132,10 +138,11 @@ def get_candidate_pool(store, context: dict, limit: int = 200) -> list[str]:
 
 def _context_filters(context: dict) -> dict[str, list[str]]:
     filters: dict[str, list[str]] = {}
+    plural_map = {"entities": "entity", "topics": "topic"}
     for key in ("entities", "topics"):
         value = context.get(key, [])
         if isinstance(value, list):
-            filters[key[:-1]] = [
+            filters[plural_map[key]] = [
                 normalized
                 for item in value
                 for normalized in [_normalize_index_value(str(item))]
@@ -158,11 +165,125 @@ def _normalize_index_value(value: str) -> str:
     return " ".join(value.lower().split())
 
 
-def express(store, query: str, context: Optional[dict] = None) -> list:
+def extract_context(query: str, metadata: dict | None = None) -> dict:
     """
-    Context-driven fact expression.
-    v0.20.0-alpha: no-op stub, returns empty list.
-    Retrieval falls through to existing stack.
+    Extracts a context dict from a query string.
+    Deterministic, no LLM, no embeddings.
+    Symmetric with ingest-time fact_context_index population.
     """
-    del store, query, context
-    return []
+    normalized = normalize_query(query)
+    tokens = [token for token in normalized.split() if len(token) >= MIN_TOKEN_LENGTH]
+    metadata = dict(metadata or {})
+    entities = [_normalize_index_value(str(item)) for item in metadata.get("entities", []) if str(item).strip()]
+    domain_value = metadata.get("domain", [])
+    thread_value = metadata.get("thread", [])
+    domain = domain_value if isinstance(domain_value, list) else [domain_value] if domain_value else []
+    thread = thread_value if isinstance(thread_value, list) else [thread_value] if thread_value else []
+    return {
+        "entities": [value for value in entities if value],
+        "topics": tokens,
+        "domain": [_normalize_index_value(str(item)) for item in domain if str(item).strip()],
+        "thread": [_normalize_index_value(str(item)) for item in thread if str(item).strip()],
+    }
+
+
+def express(store, query: str, context: Optional[dict] = None) -> list[MemoryUnit]:
+    """
+    Context-driven fact expression — Addressed Cognition v0.20.2.
+    """
+    _set_expression_stats(store, candidate_pool=0, above_threshold=0, expressed=0, bypassed=False)
+    if not context:
+        LOGGER.debug("Expression engine: no context, falling through")
+        return []
+
+    total_terms = len(context.get("topics", [])) + len(context.get("entities", []))
+    if total_terms < MIN_CONTEXT_TERMS:
+        LOGGER.debug("Expression engine: context too sparse (%s terms), falling through", total_terms)
+        return []
+
+    candidate_ids = get_candidate_pool(store, context, limit=MAX_CANDIDATE_POOL + 1)
+    if not candidate_ids:
+        LOGGER.debug("Expression engine: empty candidate pool, falling through")
+        return []
+    if len(candidate_ids) > MAX_CANDIDATE_POOL:
+        LOGGER.debug(
+            "Expression engine: candidate pool too large (>%s), falling through",
+            MAX_CANDIDATE_POOL,
+        )
+        _set_expression_stats(store, candidate_pool=len(candidate_ids), above_threshold=0, expressed=0, bypassed=False)
+        return []
+
+    effective_weights = get_effective_activations(store, candidate_ids)
+    scored: list[tuple[str, float]] = []
+    utc_now = datetime.now(UTC)
+    for fact_id, weight in effective_weights.items():
+        if weight < EXPRESSION_THRESHOLD:
+            continue
+        epig = store.get_epigenetic(fact_id)
+        if epig is None:
+            continue
+        if epig.get("silenced"):
+            continue
+        silence_until = epig.get("silence_until")
+        if silence_until:
+            parsed_silence_until = datetime.fromisoformat(str(silence_until))
+            if parsed_silence_until.tzinfo is None:
+                parsed_silence_until = parsed_silence_until.replace(tzinfo=UTC)
+            if parsed_silence_until > utc_now:
+                continue
+        recency_bonus = 0.2 if epig.get("last_expressed_at") else 0.0
+        reinforcement_bonus = min(int(epig.get("reinforcement_count", 0)) * 0.1, 0.5)
+        composite = weight + recency_bonus + reinforcement_bonus
+        scored.append((fact_id, composite))
+
+    if not scored:
+        LOGGER.debug("Expression engine: no candidates above threshold, falling through")
+        _set_expression_stats(
+            store,
+            candidate_pool=len(candidate_ids),
+            above_threshold=0,
+            expressed=0,
+            bypassed=False,
+        )
+        return []
+
+    scored.sort(key=lambda item: item[1], reverse=True)
+    top_ids = [fact_id for fact_id, _score in scored[:MAX_EXPRESSED_FACTS]]
+    facts = store.get_facts_by_ids(top_ids)
+    for fact in facts:
+        fact.metadata["retrieval_tier"] = "expression"
+
+    LOGGER.info(
+        "Expression engine: pool=%s, above_threshold=%s, expressed=%s",
+        len(candidate_ids),
+        len(scored),
+        len(facts),
+    )
+    _set_expression_stats(
+        store,
+        candidate_pool=len(candidate_ids),
+        above_threshold=len(scored),
+        expressed=len(facts),
+        bypassed=bool(facts),
+    )
+    return facts
+
+
+def _set_expression_stats(
+    store,
+    *,
+    candidate_pool: int,
+    above_threshold: int,
+    expressed: int,
+    bypassed: bool,
+) -> None:
+    setattr(
+        store,
+        "_last_expression_stats",
+        {
+            "candidate_pool": candidate_pool,
+            "above_threshold": above_threshold,
+            "expressed": expressed,
+            "bypassed_retrieval": bypassed,
+        },
+    )

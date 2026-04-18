@@ -12,6 +12,7 @@ import argparse
 from dataclasses import dataclass
 from datetime import datetime
 import json
+import os
 from pathlib import Path
 
 from akashik.executor import execute as execute_query
@@ -62,13 +63,14 @@ class CuadModeBQuery:
 class ExistingCuadAkashikSystem:
     display_name = "Akashik"
 
-    def __init__(self, db_path: str | Path = CUAD_BENCHMARK_DB_PATH) -> None:
+    def __init__(self, db_path: str | Path = CUAD_BENCHMARK_DB_PATH, *, use_expression: bool = False) -> None:
         db_path = Path(db_path)
         if not db_path.exists():
             raise FileNotFoundError(
                 f"{db_path} does not exist. Run benchmark/run_cuad.py before benchmark/run_cuad_b.py."
             )
         self._store = Store(db_path)
+        self._use_expression = use_expression
 
     def search(
         self,
@@ -77,7 +79,14 @@ class ExistingCuadAkashikSystem:
         limit: int = 5,
         entity_filter: list[str] | None = None,
     ) -> list[RetrievedItem]:
-        response = retrieve(query, self._store, level="fact", limit=limit, entity_filter=entity_filter)
+        response = retrieve(
+            query,
+            self._store,
+            level="fact",
+            limit=limit,
+            entity_filter=entity_filter,
+            use_expression=self._use_expression,
+        )
         results: list[RetrievedItem] = []
         for index, result in enumerate(response.results, start=1):
             results.append(
@@ -117,6 +126,7 @@ class ExistingCuadAkashikSystem:
             clause_type=clause_type,
             top_k=limit,
             abstention_threshold=abstention_threshold,
+            use_expression=self._use_expression,
         )
 
 
@@ -126,6 +136,7 @@ def run_cuad_b(
     queries_path: str | Path | None = None,
     results_dir: str | Path | None = None,
     use_executor: bool = True,
+    use_expression: bool = False,
 ) -> dict[str, object]:
     documents = load_cuad_corpus(corpus_dir or CUAD_CORPUS_DIR)
     queries = load_cuad_b_queries(
@@ -136,7 +147,7 @@ def run_cuad_b(
     systems = [
         ("system_a", "RAG", RagSystem(documents)),
         ("system_b", "GraphRAG", GraphRagSystem(documents)),
-        ("system_c", "Akashik", ExistingCuadAkashikSystem(CUAD_BENCHMARK_DB_PATH)),
+        ("system_c", "Akashik", ExistingCuadAkashikSystem(CUAD_BENCHMARK_DB_PATH, use_expression=use_expression)),
     ]
 
     try:
@@ -348,6 +359,12 @@ def main() -> int:
         action="store_true",
         help="Keep the JSONL output file after the run.",
     )
+    parser.add_argument(
+        "--use-expression",
+        action="store_true",
+        default=os.getenv("AKASHIK_USE_EXPRESSION") == "1",
+        help="Enable the opt-in expression engine before the retrieval stack.",
+    )
     args = parser.parse_args()
 
     if not CUAD_BENCHMARK_DB_PATH.exists():
@@ -360,6 +377,7 @@ def main() -> int:
         queries_path=args.queries_path,
         results_dir=args.results_dir,
         use_executor=args.use_executor,
+        use_expression=args.use_expression,
     )
     _print_executor_report(summary["executor_rows"])
     print(f"results: {summary['results_path']}")

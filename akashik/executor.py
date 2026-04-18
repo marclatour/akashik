@@ -118,6 +118,7 @@ def execute(
     query_date: str | None = None,
     top_k: int = 10,
     abstention_threshold: float = 0.3,
+    use_expression: bool = False,
 ) -> ExecutorResult:
     answer_type = classify_query(query)
     try:
@@ -132,6 +133,7 @@ def execute(
                 top_k=top_k,
                 abstention_threshold=abstention_threshold,
                 answer_type=answer_type,
+                use_expression=use_expression,
             )
         if answer_type == "preference":
             return _execute_preference(
@@ -144,6 +146,7 @@ def execute(
                 top_k=top_k,
                 abstention_threshold=abstention_threshold,
                 answer_type=answer_type,
+                use_expression=use_expression,
             )
         if answer_type == "aggregation":
             return _execute_aggregation(
@@ -156,6 +159,7 @@ def execute(
                 top_k=max(top_k, 50),
                 abstention_threshold=abstention_threshold,
                 answer_type=answer_type,
+                use_expression=use_expression,
             )
         return _execute_factual(
             store,
@@ -167,6 +171,7 @@ def execute(
             top_k=top_k,
             abstention_threshold=abstention_threshold,
             answer_type=answer_type,
+            use_expression=use_expression,
         )
     except Exception:
         return _abstained_result(
@@ -188,6 +193,7 @@ def _execute_factual(
     abstention_threshold: float,
     answer_type: str,
     requires_reasoning: bool = False,
+    use_expression: bool = False,
 ) -> ExecutorResult:
     response = retrieve(
         query,
@@ -198,6 +204,7 @@ def _execute_factual(
         entity_filter=entity_filter,
         clause_type=clause_type,
         query_date=query_date,
+        use_expression=use_expression,
     )
     results = response.results
     if not results or results[0].confidence < abstention_threshold:
@@ -251,6 +258,7 @@ def _execute_temporal(
     top_k: int,
     abstention_threshold: float,
     answer_type: str,
+    use_expression: bool,
 ) -> ExecutorResult:
     response = retrieve(
         query,
@@ -261,6 +269,7 @@ def _execute_temporal(
         entity_filter=entity_filter,
         clause_type=clause_type,
         query_date=query_date,
+        use_expression=use_expression,
     )
     results = response.results
     temporal_answer = resolve_two_event_temporal(
@@ -304,6 +313,7 @@ def _execute_temporal(
         abstention_threshold=abstention_threshold,
         answer_type=answer_type,
         requires_reasoning=True,
+        use_expression=use_expression,
     )
     return factual
 
@@ -319,6 +329,7 @@ def _execute_preference(
     top_k: int,
     abstention_threshold: float,
     answer_type: str,
+    use_expression: bool,
 ) -> ExecutorResult:
     response = retrieve(
         query,
@@ -329,6 +340,7 @@ def _execute_preference(
         entity_filter=entity_filter,
         clause_type=clause_type,
         query_date=query_date,
+        use_expression=use_expression,
     )
     results = response.results
     candidates = _scoped_preference_candidates(store, entity_filters)
@@ -344,6 +356,7 @@ def _execute_preference(
             abstention_threshold=abstention_threshold,
             answer_type=answer_type,
             requires_reasoning=True,
+            use_expression=use_expression,
         )
 
     grouped: dict[str, list[RetrievalResult]] = defaultdict(list)
@@ -364,6 +377,7 @@ def _execute_preference(
             abstention_threshold=abstention_threshold,
             answer_type=answer_type,
             requires_reasoning=True,
+            use_expression=use_expression,
         )
 
     ranked_groups = sorted(
@@ -416,6 +430,7 @@ def _execute_aggregation(
     top_k: int,
     abstention_threshold: float,
     answer_type: str,
+    use_expression: bool,
 ) -> ExecutorResult:
     response = retrieve(
         query,
@@ -426,6 +441,7 @@ def _execute_aggregation(
         entity_filter=entity_filter,
         clause_type=clause_type,
         query_date=query_date,
+        use_expression=use_expression,
     )
     results = response.results
     candidates = _scoped_fact_candidates(store, entity_filters)

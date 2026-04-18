@@ -1,13 +1,23 @@
-# Akashik 0.10.2
+# Akashik 0.20.2
 
-Akashik is a local-first deterministic memory layer for text corpora. It stores content as a fixed hierarchy:
+Addressed Cognition — deterministic memory OS for long-lived human–AI relationships.
+
+Akashik stores content as a fixed hierarchy:
 
 - `corpus`
 - `document`
 - `section`
 - `fact`
 
-Retrieval is structure-first, not embedding-first. The default stack is:
+The active architecture is the five-layer Addressed Cognition model:
+
+1. Sequence: immutable ground truth
+2. Lineage: canonical evolution chains
+3. Epigenetic: mutable activation state
+4. Expression: context-driven selective readout
+5. Consolidation: background semantic/procedural compression
+
+The cold-path retrieval stack remains:
 
 1. exact `content_hash`
 2. exact `normalized_hash`
@@ -16,9 +26,16 @@ Retrieval is structure-first, not embedding-first. The default stack is:
 5. Navigator tie-breaker
 6. semantic fallback only when confidence is low
 
-Facts now support validity windows, reinforcement tracking, additive two-event temporal delta resolution, ingest-time derived preference facts, a deterministic Executor layer for cited answers, and a fully local QA judge for evaluation-only answer scoring. In `0.10.1`, the Executor classifier gained broader LongMemEval-style pattern coverage for factual, temporal, preference, and aggregation phrasings. In `0.10.2`, answer judging can run locally through Ollama + `qwen2.5:1.5b` without entering the retrieval pipeline. By default, retrieval returns only currently valid facts. Historical queries can opt into `as_of=...`.
+Addressed Cognition `v0.20.2` is the active development branch. The north-star design document is [Architecture_Specification_v0.20.0.md](Architecture_Specification_v0.20.0.md). Existing stores are migrated automatically on first open. `v0.20.2` keeps the existing retrieval stack intact and adds an opt-in expression engine that can fire before retrieval when explicitly enabled.
 
-Addressed Cognition `v0.20.1` is the active development branch for the next architecture step. The north-star design document is [Architecture_Specification_v0.20.0.md](Architecture_Specification_v0.20.0.md). Existing stores are migrated automatically on first open. `v0.20.1` adds lazy decay read helpers, activation read APIs, and ingest-time population of the `fact_context_index` candidate-pool table. Active decay defaults are `0.01/day` for episodic facts, `0.005/day` for semantic facts, and `0.001/day` for procedural facts.
+Expression engine controls:
+
+- `--use-expression` on supported benchmark runners
+- `AKASHIK_USE_EXPRESSION=1` to enable expression in those runners by default
+- `AKASHIK_EXPRESSION_THRESHOLD` default `2.0`
+- `AKASHIK_MAX_EXPRESSED_FACTS` default `20`
+
+Benchmark results below still reflect the cold path unless noted otherwise. Expression-engine benchmark deltas are pending.
 
 ## Install
 
