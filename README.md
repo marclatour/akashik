@@ -18,7 +18,7 @@ Retrieval is structure-first, not embedding-first. The default stack is:
 
 Facts now support validity windows, reinforcement tracking, additive two-event temporal delta resolution, ingest-time derived preference facts, a deterministic Executor layer for cited answers, and a fully local QA judge for evaluation-only answer scoring. In `0.10.1`, the Executor classifier gained broader LongMemEval-style pattern coverage for factual, temporal, preference, and aggregation phrasings. In `0.10.2`, answer judging can run locally through Ollama + `qwen2.5:1.5b` without entering the retrieval pipeline. By default, retrieval returns only currently valid facts. Historical queries can opt into `as_of=...`.
 
-Addressed Cognition `v0.20.0-alpha` is the active development branch for the next architecture step. The north-star design document is [Architecture_Specification_v0.20.0.md](Architecture_Specification_v0.20.0.md). This alpha slice adds the schema foundation only; existing stores are migrated automatically on first open.
+Addressed Cognition `v0.20.1` is the active development branch for the next architecture step. The north-star design document is [Architecture_Specification_v0.20.0.md](Architecture_Specification_v0.20.0.md). Existing stores are migrated automatically on first open. `v0.20.1` adds lazy decay read helpers, activation read APIs, and ingest-time population of the `fact_context_index` candidate-pool table. Active decay defaults are `0.01/day` for episodic facts, `0.005/day` for semantic facts, and `0.001/day` for procedural facts.
 
 ## Install
 

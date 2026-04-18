@@ -13,7 +13,8 @@ from typing import Iterator
 from akashik.schema import LEVELS, LEVEL_INDEX, MemoryUnit, StoreStats, validate_level
 
 # FTS5 row addressing must stay integer-based. UUID ids remain the only public identifiers.
-AKASHIK_SCHEMA_VERSION = 6
+AKASHIK_SCHEMA_VERSION = 7
+BACKFILL_BATCH_SIZE = 100
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS memory_units (
@@ -68,6 +69,14 @@ CREATE TABLE IF NOT EXISTS interaction_log (
     user_correction INTEGER DEFAULT NULL,
     user_confirmed INTEGER DEFAULT NULL
 );
+
+CREATE TABLE IF NOT EXISTS fact_context_index (
+    fact_id TEXT NOT NULL REFERENCES memory_units(id),
+    index_type TEXT NOT NULL,
+    index_value TEXT NOT NULL,
+    PRIMARY KEY (fact_id, index_type, index_value)
+);
+CREATE INDEX IF NOT EXISTS idx_fact_context ON fact_context_index(index_type, index_value);
 
 CREATE VIRTUAL TABLE IF NOT EXISTS memory_units_fts USING fts5(
     content,
@@ -163,9 +172,22 @@ class Store:
             )
             """
         )
+        self._conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS fact_context_index (
+                fact_id TEXT NOT NULL REFERENCES memory_units(id),
+                index_type TEXT NOT NULL,
+                index_value TEXT NOT NULL,
+                PRIMARY KEY (fact_id, index_type, index_value)
+            )
+            """
+        )
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_validity ON memory_units(valid_until)")
         self._conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_memory_units_lineage_parent_id ON memory_units(lineage_parent_id)"
+        )
+        self._conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_fact_context ON fact_context_index(index_type, index_value)"
         )
         self._conn.execute(
             """
@@ -177,6 +199,7 @@ class Store:
               AND epigenetic_state.fact_id IS NULL
             """
         )
+        self._backfill_fact_context_index()
 
     def close(self) -> None:
         self._conn.close()
@@ -259,12 +282,29 @@ class Store:
     def _insert_epigenetic_row(self, unit: MemoryUnit) -> None:
         if unit.level != "fact":
             return
+        from akashik.expression import decay_rate_for_tier
+
         self._conn.execute(
             """
-            INSERT INTO epigenetic_state (fact_id)
-            VALUES (?)
+            INSERT INTO epigenetic_state (fact_id, decay_rate)
+            VALUES (?, ?)
             """,
-            (unit.id,),
+            (unit.id, decay_rate_for_tier("episodic")),
+        )
+
+    def insert_fact_context_entries(
+        self,
+        entries: list[tuple[str, str]],
+        fact_id: str,
+    ) -> None:
+        if not entries:
+            return
+        self.executemany(
+            """
+            INSERT OR IGNORE INTO fact_context_index (fact_id, index_type, index_value)
+            VALUES (?, ?, ?)
+            """,
+            [(fact_id, index_type, index_value) for index_type, index_value in entries],
         )
 
     def _insert_fts_row(self, fts_rowid: int, unit: MemoryUnit) -> None:
@@ -584,6 +624,44 @@ class Store:
             stored,
             AKASHIK_SCHEMA_VERSION,
         )
+
+    def _backfill_fact_context_index(self) -> None:
+        rows = self._conn.execute(
+            """
+            SELECT id, content, metadata
+            FROM memory_units
+            WHERE level = 'fact'
+            ORDER BY fts_rowid
+            """
+        ).fetchall()
+        total = len(rows)
+        if total == 0:
+            return
+        from akashik.ingest import build_fact_context_entries
+
+        for offset in range(0, total, BACKFILL_BATCH_SIZE):
+            batch = rows[offset : offset + BACKFILL_BATCH_SIZE]
+            insert_rows: list[tuple[str, str, str]] = []
+            for row in batch:
+                metadata = json.loads(row["metadata"]) if row["metadata"] else {}
+                entries = build_fact_context_entries(row["content"], metadata)
+                insert_rows.extend(
+                    (str(row["id"]), index_type, index_value)
+                    for index_type, index_value in entries
+                )
+            if insert_rows:
+                self._conn.executemany(
+                    """
+                    INSERT OR IGNORE INTO fact_context_index (fact_id, index_type, index_value)
+                    VALUES (?, ?, ?)
+                    """,
+                    insert_rows,
+                )
+            LOGGER.info(
+                "Backfilling fact_context_index: %s / %s",
+                min(offset + BACKFILL_BATCH_SIZE, total),
+                total,
+            )
 
 
 def _token_coverage(query_tokens: list[str], content: str) -> float:

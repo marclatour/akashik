@@ -9,6 +9,7 @@ import re
 from akashik.contradiction import close_fact, extract_triple, find_contradicting_fact
 from akashik.identity import content_hash, normalized_hash
 from akashik.preference_extractor import extract_preferences
+from akashik.query_normalize import normalize_query
 from akashik.schema import MemoryUnit
 
 _SECTION_SPLIT_RE = re.compile(r"\n\s*\n+")
@@ -33,6 +34,35 @@ _ANCHOR_SKIP_TOKENS = {
     "the",
     "this",
 }
+_CONTEXT_INDEX_STOPWORDS = {
+    "about",
+    "after",
+    "before",
+    "being",
+    "during",
+    "first",
+    "have",
+    "into",
+    "just",
+    "last",
+    "many",
+    "most",
+    "next",
+    "over",
+    "some",
+    "than",
+    "that",
+    "them",
+    "then",
+    "there",
+    "they",
+    "very",
+    "want",
+    "week",
+    "with",
+    "would",
+}
+MIN_TOKEN_LENGTH = 4
 
 
 def ingest_file(
@@ -353,6 +383,7 @@ def _insert_fact_unit(
         stored = store.fetch_by_id(existing.id) or existing
     else:
         stored = store.insert(unit)
+        store.insert_fact_context_entries(build_fact_context_entries(stored.content, stored.metadata), stored.id)
 
     _insert_preference_derived_facts(
         store,
@@ -363,6 +394,53 @@ def _insert_fact_unit(
         section_heading=section_heading,
     )
     return stored
+
+
+def build_fact_context_entries(content: str, metadata: dict | None) -> list[tuple[str, str]]:
+    entries: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    normalized_content = normalize_query(content)
+    for token in normalized_content.split():
+        if token in _CONTEXT_INDEX_STOPWORDS or len(token) < MIN_TOKEN_LENGTH:
+            continue
+        entry = ("topic", token)
+        if entry not in seen:
+            seen.add(entry)
+            entries.append(entry)
+
+    metadata = dict(metadata or {})
+    entities = metadata.get("entities")
+    if isinstance(entities, list):
+        for entity in entities:
+            if not isinstance(entity, str):
+                continue
+            normalized = _normalize_index_value(entity)
+            if not normalized:
+                continue
+            entry = ("entity", normalized)
+            if entry not in seen:
+                seen.add(entry)
+                entries.append(entry)
+
+    for key in ("domain", "thread"):
+        value = metadata.get(key)
+        if not isinstance(value, str):
+            continue
+        normalized = _normalize_index_value(value)
+        if not normalized:
+            continue
+        entry = (key, normalized)
+        if entry not in seen:
+            seen.add(entry)
+            entries.append(entry)
+    return entries
+
+
+def _normalize_index_value(value: str) -> str:
+    normalized = normalize_query(value)
+    if normalized:
+        return normalized
+    return " ".join(value.lower().split())
 
 
 def _make_unit(
