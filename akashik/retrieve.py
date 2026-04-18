@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 import json
 import logging
 import re
 
+from akashik.expression import express
 from akashik.identity import content_hash, normalized_hash
 from akashik.navigator import rank_facts
 from akashik.parse_temporal_scope import _parse_question_date
@@ -79,6 +81,7 @@ def retrieve(
     document_gate_n: int = 0,
     as_of: str | None = None,
     query_date: str | None = None,
+    context: dict | None = None,
     _enable_temporal_resolver: bool = True,
 ) -> RetrievalResponse:
     text = query.strip()
@@ -87,6 +90,16 @@ def retrieve(
 
     if level is not None:
         validate_level(level)
+
+    LOGGER.debug("Expression engine: no-op stub, falling through to retrieval stack")
+    expressed = express(store, text, context=context)
+    if expressed:
+        if isinstance(expressed, RetrievalResponse):
+            return _finalize_response(store, expressed)
+        return _finalize_response(
+            store,
+            RetrievalResponse(results=list(expressed), confidence=1.0),
+        )
 
     valid_at = _normalize_as_of(as_of)
     parsed_query_date = _normalize_query_date(query_date)
@@ -116,7 +129,7 @@ def retrieve(
         temporal_answer=temporal_answer,
     )
     if response.results:
-        return response
+        return _finalize_response(store, response)
 
     normalized_matches = store.fetch_by_normalized_hash(
         normalized_hash(text),
@@ -132,7 +145,7 @@ def retrieve(
         temporal_answer=temporal_answer,
     )
     if response.results:
-        return response
+        return _finalize_response(store, response)
 
     fts_query = normalize_query(text)
     fts_limit = max(limit * 5, 20)
@@ -171,7 +184,7 @@ def retrieve(
         temporal_answer=temporal_answer,
     )
     if response.results:
-        return response
+        return _finalize_response(store, response)
 
     return RetrievalResponse(results=[], confidence=0.0, temporal_answer=temporal_answer)
 
@@ -244,7 +257,7 @@ def _search_fts_with_entity_scope(
     rows = store._conn.execute(
         f"""
         SELECT fact.id, fact.level, fact.content, fact.content_hash, fact.normalized_hash,
-               fact.parent_id, fact.metadata, fact.embedding,
+               fact.lineage_parent_id, fact.parent_id, fact.metadata, fact.embedding,
                fact.section_heading,
                fact.valid_from, fact.valid_until,
                fact.fts_rowid,
@@ -913,6 +926,105 @@ def _build_response(
         )
     top_confidence = results[0].confidence if results else 0.0
     return RetrievalResponse(results=results, confidence=top_confidence, temporal_answer=temporal_answer)
+
+
+def _finalize_response(store, response: RetrievalResponse) -> RetrievalResponse:
+    fact_ids = _returned_fact_ids(response)
+    if not fact_ids:
+        return response
+    with store.transaction():
+        update_activation_on_retrieval(store, fact_ids)
+        if len(fact_ids) > 1:
+            update_association_edges(store, fact_ids)
+    return response
+
+
+def _returned_fact_ids(response: RetrievalResponse) -> list[str]:
+    seen: set[str] = set()
+    fact_ids: list[str] = []
+    for result in response.results:
+        if result.unit.level != "fact":
+            continue
+        if result.unit.id in seen:
+            continue
+        seen.add(result.unit.id)
+        fact_ids.append(result.unit.id)
+    return fact_ids
+
+
+def update_activation_on_retrieval(store, fact_ids: list[str]) -> None:
+    now = datetime.now(UTC).isoformat()
+    store.executemany(
+        """
+        UPDATE epigenetic_state
+        SET activation_weight = MIN(
+                activation_weight + (0.1 * (1.0 - activation_weight / 10.0)),
+                10.0),
+            soft_reinforcement_count = soft_reinforcement_count + 1,
+            last_expressed_at = ?
+        WHERE fact_id = ?
+        """,
+        [(now, fact_id) for fact_id in fact_ids],
+    )
+    # NOTE: decay_rate exists but decay is not applied in v0.20.0-alpha.
+    # Decay will be applied lazily on read or via background worker later.
+
+
+def update_association_edges(store, fact_ids: list[str], weight_increment: float = 0.1) -> None:
+    fact_ids = fact_ids[:20]
+    for index, fact_id_a in enumerate(fact_ids):
+        for fact_id_b in fact_ids[index + 1 :]:
+            _increment_edge(store, fact_id_a, fact_id_b, weight_increment)
+            _increment_edge(store, fact_id_b, fact_id_a, weight_increment)
+    # NOTE: JSON association_edges are a temporary storage format.
+    # A dedicated edge table is the long-term design.
+
+
+def _increment_edge(store, source_fact_id: str, target_fact_id: str, weight_increment: float) -> None:
+    row = store.execute(
+        "SELECT association_edges FROM epigenetic_state WHERE fact_id = ?",
+        (source_fact_id,),
+    ).fetchone()
+    edges = _parse_association_edges(row["association_edges"] if row else None)
+    for edge in edges:
+        if edge["fact_id"] == target_fact_id:
+            edge["weight"] = min(float(edge["weight"]) + weight_increment, 5.0)
+            break
+    else:
+        edges.append({"fact_id": target_fact_id, "weight": min(weight_increment, 5.0)})
+    trimmed_edges = sorted(
+        edges,
+        key=lambda edge: (-float(edge["weight"]), str(edge["fact_id"])),
+    )[:50]
+    store.execute(
+        "UPDATE epigenetic_state SET association_edges = ? WHERE fact_id = ?",
+        (json.dumps(trimmed_edges, sort_keys=True), source_fact_id),
+    )
+
+
+def _parse_association_edges(raw_edges: str | None) -> list[dict[str, object]]:
+    if not raw_edges:
+        return []
+    try:
+        parsed = json.loads(raw_edges)
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(parsed, list):
+        return []
+    edges: list[dict[str, object]] = []
+    for edge in parsed:
+        if not isinstance(edge, dict):
+            continue
+        fact_id = edge.get("fact_id")
+        weight = edge.get("weight")
+        if not isinstance(fact_id, str):
+            continue
+        try:
+            numeric_weight = float(weight)
+        except (TypeError, ValueError):
+            continue
+        edges.append({"fact_id": fact_id, "weight": min(max(numeric_weight, 0.0), 5.0)})
+    return edges
 
 
 def _rerank_fts_matches(candidates: list[MemoryUnit]) -> list[MemoryUnit]:

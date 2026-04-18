@@ -13,7 +13,7 @@ from typing import Iterator
 from akashik.schema import LEVELS, LEVEL_INDEX, MemoryUnit, StoreStats, validate_level
 
 # FTS5 row addressing must stay integer-based. UUID ids remain the only public identifiers.
-AKASHIK_SCHEMA_VERSION = 5
+AKASHIK_SCHEMA_VERSION = 6
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS memory_units (
@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS memory_units (
     content TEXT NOT NULL,
     content_hash TEXT NOT NULL,
     normalized_hash TEXT NOT NULL,
+    lineage_parent_id TEXT REFERENCES memory_units(id),
     parent_id TEXT REFERENCES memory_units(id),
     metadata TEXT NOT NULL DEFAULT '{}',
     embedding BLOB,
@@ -39,6 +40,35 @@ CREATE INDEX IF NOT EXISTS idx_memory_units_normalized_hash ON memory_units(norm
 CREATE INDEX IF NOT EXISTS idx_memory_units_parent_id ON memory_units(parent_id);
 CREATE INDEX IF NOT EXISTS idx_validity ON memory_units(valid_until);
 
+CREATE TABLE IF NOT EXISTS epigenetic_state (
+    fact_id TEXT PRIMARY KEY REFERENCES memory_units(id),
+    activation_weight REAL DEFAULT 1.0,
+    consolidation_tier TEXT NOT NULL DEFAULT 'episodic'
+        CHECK(consolidation_tier IN ('episodic', 'semantic', 'procedural')),
+    promoter_conditions TEXT DEFAULT NULL,
+    repressor_conditions TEXT DEFAULT NULL,
+    decay_rate REAL DEFAULT 0.01,
+    reinforcement_count INTEGER DEFAULT 0,
+    soft_reinforcement_count INTEGER DEFAULT 0,
+    silenced INTEGER DEFAULT 0,
+    silence_until TEXT DEFAULT NULL,
+    last_expressed_at TEXT DEFAULT NULL,
+    association_edges TEXT DEFAULT NULL
+);
+
+CREATE TABLE IF NOT EXISTS interaction_log (
+    id TEXT PRIMARY KEY,
+    turn_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    timestamp TEXT NOT NULL,
+    actor TEXT NOT NULL CHECK(actor IN ('user', 'assistant', 'tool')),
+    raw_content TEXT NOT NULL,
+    retrieved_fact_ids TEXT DEFAULT NULL,
+    context_packet_hash TEXT DEFAULT NULL,
+    user_correction INTEGER DEFAULT NULL,
+    user_confirmed INTEGER DEFAULT NULL
+);
+
 CREATE VIRTUAL TABLE IF NOT EXISTS memory_units_fts USING fts5(
     content,
     content='memory_units',
@@ -48,7 +78,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS memory_units_fts USING fts5(
 """
 
 _SELECT_COLUMNS = """
-SELECT id, level, content, content_hash, normalized_hash, parent_id, metadata, embedding
+SELECT id, level, content, content_hash, normalized_hash, lineage_parent_id, parent_id, metadata, embedding
        , section_heading
        , valid_from, valid_until
        , confirmation_count, last_confirmed_at
@@ -84,6 +114,8 @@ class Store:
             row["name"]
             for row in self._conn.execute("PRAGMA table_info(memory_units)").fetchall()
         }
+        if "lineage_parent_id" not in columns:
+            self._conn.execute("ALTER TABLE memory_units ADD COLUMN lineage_parent_id TEXT REFERENCES memory_units(id)")
         if "section_heading" not in columns:
             self._conn.execute("ALTER TABLE memory_units ADD COLUMN section_heading TEXT")
         if "valid_from" not in columns:
@@ -96,7 +128,55 @@ class Store:
             )
         if "last_confirmed_at" not in columns:
             self._conn.execute("ALTER TABLE memory_units ADD COLUMN last_confirmed_at TEXT")
+        self._conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS epigenetic_state (
+                fact_id TEXT PRIMARY KEY REFERENCES memory_units(id),
+                activation_weight REAL DEFAULT 1.0,
+                consolidation_tier TEXT NOT NULL DEFAULT 'episodic'
+                    CHECK(consolidation_tier IN ('episodic', 'semantic', 'procedural')),
+                promoter_conditions TEXT DEFAULT NULL,
+                repressor_conditions TEXT DEFAULT NULL,
+                decay_rate REAL DEFAULT 0.01,
+                reinforcement_count INTEGER DEFAULT 0,
+                soft_reinforcement_count INTEGER DEFAULT 0,
+                silenced INTEGER DEFAULT 0,
+                silence_until TEXT DEFAULT NULL,
+                last_expressed_at TEXT DEFAULT NULL,
+                association_edges TEXT DEFAULT NULL
+            )
+            """
+        )
+        self._conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS interaction_log (
+                id TEXT PRIMARY KEY,
+                turn_id TEXT NOT NULL,
+                session_id TEXT NOT NULL,
+                timestamp TEXT NOT NULL,
+                actor TEXT NOT NULL CHECK(actor IN ('user', 'assistant', 'tool')),
+                raw_content TEXT NOT NULL,
+                retrieved_fact_ids TEXT DEFAULT NULL,
+                context_packet_hash TEXT DEFAULT NULL,
+                user_correction INTEGER DEFAULT NULL,
+                user_confirmed INTEGER DEFAULT NULL
+            )
+            """
+        )
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_validity ON memory_units(valid_until)")
+        self._conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_memory_units_lineage_parent_id ON memory_units(lineage_parent_id)"
+        )
+        self._conn.execute(
+            """
+            INSERT INTO epigenetic_state (fact_id)
+            SELECT memory_units.id
+            FROM memory_units
+            LEFT JOIN epigenetic_state ON epigenetic_state.fact_id = memory_units.id
+            WHERE memory_units.level = 'fact'
+              AND epigenetic_state.fact_id IS NULL
+            """
+        )
 
     def close(self) -> None:
         self._conn.close()
@@ -146,15 +226,16 @@ class Store:
     def _insert_unit(self, unit: MemoryUnit) -> None:
         fts_rowid = self._insert_main_row(unit)
         self._insert_fts_row(fts_rowid, unit)
+        self._insert_epigenetic_row(unit)
 
     def _insert_main_row(self, unit: MemoryUnit) -> int:
         cursor = self._conn.execute(
             """
             INSERT INTO memory_units (
-                id, level, content, content_hash, normalized_hash, parent_id, metadata,
+                id, level, content, content_hash, normalized_hash, lineage_parent_id, parent_id, metadata,
                 embedding, section_heading, valid_from, valid_until,
                 confirmation_count, last_confirmed_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 unit.id,
@@ -162,6 +243,7 @@ class Store:
                 unit.content,
                 unit.content_hash,
                 unit.normalized_hash,
+                unit.lineage_parent_id,
                 unit.parent_id,
                 json.dumps(unit.metadata, sort_keys=True),
                 unit.embedding,
@@ -173,6 +255,17 @@ class Store:
             ),
         )
         return int(cursor.lastrowid)
+
+    def _insert_epigenetic_row(self, unit: MemoryUnit) -> None:
+        if unit.level != "fact":
+            return
+        self._conn.execute(
+            """
+            INSERT INTO epigenetic_state (fact_id)
+            VALUES (?)
+            """,
+            (unit.id,),
+        )
 
     def _insert_fts_row(self, fts_rowid: int, unit: MemoryUnit) -> None:
         self._conn.execute(
@@ -307,7 +400,7 @@ class Store:
         rows = self._conn.execute(
             """
             SELECT m.id, m.level, m.content, m.content_hash, m.normalized_hash,
-                   m.parent_id, m.metadata, m.embedding,
+                   m.lineage_parent_id, m.parent_id, m.metadata, m.embedding,
                    m.section_heading,
                    m.valid_from, m.valid_until,
                    m.confirmation_count, m.last_confirmed_at,
@@ -429,6 +522,21 @@ class Store:
             (confirmed_at, fact_id),
         )
 
+    def execute(self, sql: str, params: tuple[object, ...] = ()) -> sqlite3.Cursor:
+        if self._conn.in_transaction:
+            return self._conn.execute(sql, params)
+        with self._conn:
+            return self._conn.execute(sql, params)
+
+    def executemany(self, sql: str, seq_of_params) -> sqlite3.Cursor:
+        params = list(seq_of_params)
+        if not params:
+            return self._conn.executemany(sql, [])
+        if self._conn.in_transaction:
+            return self._conn.executemany(sql, params)
+        with self._conn:
+            return self._conn.executemany(sql, params)
+
     def _validity_sql(
         self,
         *,
@@ -456,6 +564,7 @@ class Store:
             content=row["content"],
             content_hash=row["content_hash"],
             normalized_hash=row["normalized_hash"],
+            lineage_parent_id=row["lineage_parent_id"] if "lineage_parent_id" in keys else None,
             parent_id=row["parent_id"],
             metadata=json.loads(row["metadata"]) if row["metadata"] else {},
             embedding=row["embedding"],

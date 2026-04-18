@@ -22,6 +22,7 @@ class MemoryUnit:
     content: str
     content_hash: str
     normalized_hash: str
+    lineage_parent_id: str | None = None
     parent_id: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
     embedding: bytes | None = None
