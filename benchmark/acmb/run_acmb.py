@@ -15,7 +15,6 @@ import argparse
 import glob
 import json
 import os
-import statistics
 import time
 from pathlib import Path
 
@@ -49,11 +48,11 @@ def ensure_acmb_data(personas_dir: str, queries_dir: str) -> None:
     generate_personas_main()
 
 
-def get_adapter(name: str, stores_dir: str):
+def get_adapter(name: str, store_path: str):
     if name == "akashik":
         from benchmark.acmb.adapters.akashik_adapter import AkashikAdapter
 
-        return AkashikAdapter(store_path=os.path.join(stores_dir, "akashik_acmb.db"))
+        return AkashikAdapter(store_path=store_path)
     raise ValueError(f"Unknown adapter: {name}")
 
 
@@ -78,8 +77,6 @@ def main() -> int:
     ensure_acmb_data(args.personas_dir, args.queries_dir)
     personas = load_personas(args.personas_dir)
     queries = load_queries(args.queries_dir)
-    adapter = get_adapter(args.adapter, args.stores_dir)
-
     print(f"ACMB v0.1 | adapter={args.adapter} | k={args.k} | personas={len(personas)}")
 
     all_results = []
@@ -89,7 +86,10 @@ def main() -> int:
         persona_queries = queries.get(persona_id, [])
         pending = {query["query_id"]: query for query in persona_queries}
         returned_by_query: dict[str, list[str]] = {}
+        store_path = os.path.join(args.stores_dir, f"{persona_id}.db")
+        adapter = get_adapter(args.adapter, store_path)
         adapter.reset()
+        query_latencies: list[float] = []
 
         for session in persona["sessions"]:
             for turn in session["turns"]:
@@ -101,13 +101,17 @@ def main() -> int:
                         continue
                     started = time.perf_counter()
                     returned_by_query[query["query_id"]] = adapter.query(query["query_text"], k=args.k)
-                    latency_ms.append((time.perf_counter() - started) * 1000)
+                    elapsed_ms = (time.perf_counter() - started) * 1000
+                    latency_ms.append(elapsed_ms)
+                    query_latencies.append(elapsed_ms)
                     pending.pop(query["query_id"], None)
 
         for query in pending.values():
             started = time.perf_counter()
             returned_by_query[query["query_id"]] = adapter.query(query["query_text"], k=args.k)
-            latency_ms.append((time.perf_counter() - started) * 1000)
+            elapsed_ms = (time.perf_counter() - started) * 1000
+            latency_ms.append(elapsed_ms)
+            query_latencies.append(elapsed_ms)
 
         result = evaluate_persona(returned_by_query, persona_queries, k=args.k)
         result["persona_id"] = persona_id

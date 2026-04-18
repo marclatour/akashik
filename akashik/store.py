@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import sqlite3
 from typing import Iterator
+import uuid
 
 from akashik.schema import LEVELS, LEVEL_INDEX, MemoryUnit, StoreStats, validate_level
 
@@ -601,6 +602,29 @@ class Store:
             return self._conn.executemany(sql, params)
         with self._conn:
             return self._conn.executemany(sql, params)
+
+    def log_interaction(self, record: dict) -> None:
+        """Write one record to interaction_log. Best-effort."""
+        self.execute(
+            """
+            INSERT OR IGNORE INTO interaction_log
+            (id, turn_id, session_id, timestamp, actor, raw_content,
+             retrieved_fact_ids, context_packet_hash, user_correction, user_confirmed)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(uuid.uuid4()),
+                record.get("turn_id"),
+                record.get("session_id"),
+                record.get("timestamp"),
+                record.get("actor"),
+                record.get("raw_content"),
+                record.get("retrieved_fact_ids"),
+                record.get("context_packet_hash"),
+                record.get("user_correction"),
+                record.get("user_confirmed"),
+            ),
+        )
 
     def _validity_sql(
         self,

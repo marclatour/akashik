@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from benchmark.acmb.adapters.akashik_adapter import AkashikAdapter
+from benchmark.acmb.adapters.base import ACMBAdapter
 from benchmark.acmb.evaluate_acmb import evaluate_benchmark, evaluate_persona, evaluate_query
 from benchmark.acmb.run_acmb import DEFAULT_PERSONAS_DIR, DEFAULT_QUERIES_DIR, load_personas, load_queries, main
 
@@ -92,7 +93,10 @@ def test_adapter_stub_reset_does_not_raise() -> None:
 
 
 def test_query_with_scores_default_returns_uniform_scores() -> None:
-    class DummyAdapter(AkashikAdapter):
+    class DummyAdapter(ACMBAdapter):
+        def ingest_turn(self, turn: dict) -> None:
+            return None
+
         def query(self, query_text: str, k: int = 10) -> list[str]:
             return ["f1", "f2"]
 
@@ -153,7 +157,7 @@ def test_runner_queries_fire_at_turn_before(tmp_path, monkeypatch, capsys) -> No
             events.append("query")
             return []
 
-    monkeypatch.setattr("benchmark.acmb.run_acmb.get_adapter", lambda name, stores_dir: RecordingAdapter())
+    monkeypatch.setattr("benchmark.acmb.run_acmb.get_adapter", lambda name, store_path: RecordingAdapter())
     monkeypatch.setattr("sys.argv", ["run_acmb.py", "--personas-dir", str(personas_dir), "--queries-dir", str(queries_dir), "--stores-dir", str(stores_dir)])
 
     assert main() == 0
