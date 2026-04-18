@@ -54,6 +54,14 @@ def get_adapter(name: str, store_path: str):
         from benchmark.acmb.adapters.akashik_adapter import AkashikAdapter
 
         return AkashikAdapter(store_path=store_path)
+    if name == "bm25":
+        from benchmark.acmb.adapters.bm25_adapter import BM25Adapter
+
+        return BM25Adapter()
+    if name == "bm25_akashik":
+        from benchmark.acmb.adapters.bm25_akashik_adapter import BM25AkashikAdapter
+
+        return BM25AkashikAdapter()
     if name == "rag_akashik":
         from benchmark.acmb.adapters.rag_akashik_adapter import RagAkashikAdapter
 
