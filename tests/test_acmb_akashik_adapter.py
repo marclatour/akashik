@@ -177,4 +177,4 @@ def test_runner_queries_fire_at_turn_before_not_after_full_ingestion(tmp_path, m
     )
     assert main() == 0
     assert events == ["reset", "ingest:t001", "query", "ingest:t002"]
-    assert "ACMB v0.1" in capsys.readouterr().out
+    assert "ACMB v0.3" in capsys.readouterr().out

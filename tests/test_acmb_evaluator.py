@@ -162,7 +162,7 @@ def test_runner_queries_fire_at_turn_before(tmp_path, monkeypatch, capsys) -> No
 
     assert main() == 0
     assert events == ["reset", "ingest:t001", "query", "ingest:t002"]
-    assert "ACMB v0.1" in capsys.readouterr().out
+    assert "ACMB v0.3" in capsys.readouterr().out
 
 
 def test_generated_personas_include_noise_session() -> None:

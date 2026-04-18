@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 """
-ACMB v0.1 benchmark runner.
+ACMB v0.3 benchmark runner.
 Usage: ./.venv/bin/python benchmark/acmb/run_acmb.py --adapter akashik
 """
 
@@ -139,7 +139,7 @@ def main() -> int:
     ensure_acmb_data(args.personas_dir, args.queries_dir)
     personas = load_personas(args.personas_dir)
     queries = load_queries(args.queries_dir)
-    print(f"ACMB v0.1 | adapter={args.adapter} | k={args.k} | personas={len(personas)}")
+    print(f"ACMB v0.3 | adapter={args.adapter} | k={args.k} | personas={len(personas)}")
 
     all_results = []
     latency_ms: list[float] = []
@@ -166,12 +166,13 @@ def main() -> int:
                         continue
                     if turn["turn_id"] != query["turn_before"]:
                         continue
+                    as_of = query.get("as_of") or current_date
                     started = time.perf_counter()
                     returned_texts = _query_adapter(
                         adapter,
                         query["query_text"],
                         k=args.k,
-                        as_of=current_date,
+                        as_of=as_of,
                     )
                     all_facts = persona.get("facts", []) + [
                         {
@@ -199,12 +200,13 @@ def main() -> int:
                     pending.pop(query["query_id"], None)
 
         for query in pending.values():
+            as_of = query.get("as_of") or persona["sessions"][-1]["simulated_date"]
             started = time.perf_counter()
             returned_texts = _query_adapter(
                 adapter,
                 query["query_text"],
                 k=args.k,
-                as_of=persona["sessions"][-1]["simulated_date"],
+                as_of=as_of,
             )
             all_facts = persona.get("facts", []) + [
                 {
@@ -242,7 +244,7 @@ def main() -> int:
         )
 
     summary = evaluate_benchmark(all_results)
-    print("\n=== ACMB v0.1 Results ===")
+    print("\n=== ACMB v0.3 Results ===")
     print(f"Adapter:               {args.adapter}")
     print(f"Personas:              {summary['n_personas']}")
     print(f"Fact Recall @k:        {summary['fact_recall']:.3f}")
