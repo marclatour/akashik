@@ -65,7 +65,7 @@ def test_query_returns_list_of_strings(tmp_path, monkeypatch) -> None:
     adapter = AkashikAdapter(store_path=str(tmp_path / "acmb.db"))
     unit = MemoryUnit(
         level="fact",
-        content="x",
+        content="I live in Denver.",
         content_hash="a",
         normalized_hash="b",
         metadata={"ground_truth_facts": ["f001"]},
@@ -73,14 +73,14 @@ def test_query_returns_list_of_strings(tmp_path, monkeypatch) -> None:
     response = RetrievalResponse(results=[RetrievalResult(unit=unit, confidence=0.9, parent_chain=[])], confidence=0.9)
     monkeypatch.setattr(retrieve_module, "retrieve", lambda *args, **kwargs: response)
     result = adapter.query("x")
-    assert result == ["f001"]
+    assert result == ["I live in Denver."]
     assert all(isinstance(item, str) for item in result)
 
 
-def test_query_returns_fact_ids_in_rank_order(tmp_path, monkeypatch) -> None:
+def test_query_returns_text_in_rank_order(tmp_path, monkeypatch) -> None:
     adapter = AkashikAdapter(store_path=str(tmp_path / "acmb.db"))
-    first = MemoryUnit(level="fact", content="x", content_hash="1", normalized_hash="1", metadata={"ground_truth_facts": ["f001"]})
-    second = MemoryUnit(level="fact", content="y", content_hash="2", normalized_hash="2", metadata={"ground_truth_facts": ["f002"]})
+    first = MemoryUnit(level="fact", content="I live in Denver.", content_hash="1", normalized_hash="1", metadata={"ground_truth_facts": ["f001"]})
+    second = MemoryUnit(level="fact", content="I do trail running on weekends.", content_hash="2", normalized_hash="2", metadata={"ground_truth_facts": ["f002"]})
     response = RetrievalResponse(
         results=[
             RetrievalResult(unit=first, confidence=0.9, parent_chain=[]),
@@ -89,13 +89,13 @@ def test_query_returns_fact_ids_in_rank_order(tmp_path, monkeypatch) -> None:
         confidence=0.9,
     )
     monkeypatch.setattr(retrieve_module, "retrieve", lambda *args, **kwargs: response)
-    assert adapter.query("x") == ["f001", "f002"]
+    assert adapter.query("x") == ["I live in Denver.", "I do trail running on weekends."]
 
 
 def test_query_with_scores_returns_ranked_tuples(tmp_path, monkeypatch) -> None:
     adapter = AkashikAdapter(store_path=str(tmp_path / "acmb.db"))
-    first = MemoryUnit(level="fact", content="x", content_hash="1", normalized_hash="1", metadata={"ground_truth_facts": ["f001"]})
-    second = MemoryUnit(level="fact", content="y", content_hash="2", normalized_hash="2", metadata={"ground_truth_facts": ["f002"]})
+    first = MemoryUnit(level="fact", content="I live in Denver.", content_hash="1", normalized_hash="1", metadata={"ground_truth_facts": ["f001"]})
+    second = MemoryUnit(level="fact", content="I do trail running on weekends.", content_hash="2", normalized_hash="2", metadata={"ground_truth_facts": ["f002"]})
     response = RetrievalResponse(
         results=[
             RetrievalResult(unit=first, confidence=0.9, parent_chain=[]),
@@ -105,7 +105,7 @@ def test_query_with_scores_returns_ranked_tuples(tmp_path, monkeypatch) -> None:
     )
     monkeypatch.setattr(retrieve_module, "retrieve", lambda *args, **kwargs: response)
     scored = adapter.query_with_scores("x")
-    assert scored == [("f001", 0.9), ("f002", 0.4)]
+    assert scored == [("I live in Denver.", 0.9), ("I do trail running on weekends.", 0.4)]
     assert scored[0][1] > scored[1][1]
 
 
@@ -127,7 +127,7 @@ def test_reset_recreates_store_cleanly(tmp_path) -> None:
     assert adapter.query("I live in Denver.") == []
 
 
-def test_end_to_end_matching_query_returns_ground_truth_fact_id(tmp_path) -> None:
+def test_end_to_end_matching_query_returns_text(tmp_path) -> None:
     adapter = AkashikAdapter(store_path=str(tmp_path / "acmb.db"))
     adapter.ingest_turn(
         {
@@ -138,7 +138,7 @@ def test_end_to_end_matching_query_returns_ground_truth_fact_id(tmp_path) -> Non
             "simulated_date": "2026-01-01",
         }
     )
-    assert "f001" in adapter.query("I live in Denver.")
+    assert "I live in Denver." in adapter.query("I live in Denver.")
 
 
 def test_runner_queries_fire_at_turn_before_not_after_full_ingestion(tmp_path, monkeypatch, capsys) -> None:

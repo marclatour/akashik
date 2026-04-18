@@ -20,16 +20,18 @@ class ACMBAdapter(ABC):
     @abstractmethod
     def query(self, query_text: str, k: int = 10) -> list[str]:
         """
-        Return up to k fact_ids relevant to query_text.
-        fact_ids must match those defined in the persona file.
+        Return up to k retrieved text snippets relevant to the query.
+        Snippets are raw text — not fact_ids.
+        The evaluator resolves fact_ids from text via natural_language matching.
         """
 
     def query_with_scores(self, query_text: str, k: int = 10) -> list[tuple[str, float]]:
         """
-        Optional scored query interface. Falls back to uniform scores.
+        Return up to k (text_snippet, score) pairs.
+        Default implementation calls query() with score 1.0 for all results.
         """
 
-        return [(fact_id, 1.0) for fact_id in self.query(query_text, k)]
+        return [(text, 1.0) for text in self.query(query_text, k)]
 
     def reset(self) -> None:
         """

@@ -197,7 +197,7 @@ def test_end_to_end_revision_excludes_old_fact_and_includes_new_fact(tmp_path) -
         }
     )
     assert "f001" not in adapter.query("I live in Chicago.", as_of="2026-02-01T00:00:00")
-    assert "f002" in adapter.query("I moved to Denver.", as_of="2026-02-01T00:00:00")
+    assert "I moved to Denver." in adapter.query("I moved to Denver.", as_of="2026-02-01T00:00:00")
 
 
 def test_reset_store_contents_clears_acmb_fact_id_index_before_memory_units(tmp_path) -> None:

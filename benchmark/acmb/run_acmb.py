@@ -19,7 +19,7 @@ import os
 import time
 from pathlib import Path
 
-from benchmark.acmb.evaluate_acmb import evaluate_benchmark, evaluate_persona
+from benchmark.acmb.evaluate_acmb import evaluate_benchmark, evaluate_persona, resolve_fact_ids
 from benchmark.acmb.generate_personas import main as generate_personas_main
 
 DEFAULT_PERSONAS_DIR = os.path.expanduser("~/.akashik/data/benchmarks/acmb/personas")
@@ -54,6 +54,14 @@ def get_adapter(name: str, store_path: str):
         from benchmark.acmb.adapters.akashik_adapter import AkashikAdapter
 
         return AkashikAdapter(store_path=store_path)
+    if name == "rag":
+        from benchmark.acmb.adapters.rag_adapter import RagAdapter
+
+        return RagAdapter()
+    if name == "full_context":
+        from benchmark.acmb.adapters.full_context_adapter import FullContextAdapter
+
+        return FullContextAdapter()
     raise ValueError(f"Unknown adapter: {name}")
 
 
@@ -75,6 +83,35 @@ def _query_adapter(adapter, query_text: str, *, k: int, as_of: str) -> list[str]
     return adapter.query(query_text, k=k)
 
 
+def _ingest_turn(adapter, turn: dict, *, commitments: list[dict]) -> None:
+    try:
+        signature = inspect.signature(adapter.ingest_turn)
+    except (TypeError, ValueError):
+        signature = None
+    if signature is not None and "commitments" in signature.parameters:
+        adapter.ingest_turn(turn, commitments=commitments)
+        return
+    adapter.ingest_turn(turn)
+
+
+def _verbose_query_output(
+    *,
+    enabled: bool,
+    persona_id: str,
+    query: dict,
+    returned_texts: list[str],
+    matched_fact_ids: list[str],
+) -> None:
+    if not enabled:
+        return
+    must_include = query.get("must_include", [])
+    missed = [fact_id for fact_id in must_include if fact_id not in matched_fact_ids]
+    print(f"\n[{persona_id}::{query['query_id']}] {query['query_text']}")
+    print(f"  returned_texts={returned_texts}")
+    print(f"  matched_fact_ids={matched_fact_ids}")
+    print(f"  missed_must_include={missed}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--adapter", default="akashik")
@@ -82,6 +119,8 @@ def main() -> int:
     parser.add_argument("--personas-dir", default=DEFAULT_PERSONAS_DIR)
     parser.add_argument("--queries-dir", default=DEFAULT_QUERIES_DIR)
     parser.add_argument("--stores-dir", default=DEFAULT_STORES_DIR)
+    parser.add_argument("--match-threshold", type=float, default=0.5)
+    parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--keep-output", action="store_true")
     args = parser.parse_args()
 
@@ -105,35 +144,79 @@ def main() -> int:
         for session in persona["sessions"]:
             current_date = session["simulated_date"]
             for turn in session["turns"]:
-                adapter.ingest_turn({**turn, "simulated_date": current_date})
+                _ingest_turn(
+                    adapter,
+                    {**turn, "simulated_date": current_date},
+                    commitments=persona.get("commitments", []),
+                )
                 for query in persona_queries:
                     if query["query_id"] in returned_by_query:
                         continue
                     if turn["turn_id"] != query["turn_before"]:
                         continue
                     started = time.perf_counter()
-                    returned_by_query[query["query_id"]] = _query_adapter(
+                    returned_texts = _query_adapter(
                         adapter,
                         query["query_text"],
                         k=args.k,
                         as_of=current_date,
                     )
+                    all_facts = persona.get("facts", []) + [
+                        {
+                            "fact_id": commitment["commitment_id"],
+                            "natural_language": commitment["description"],
+                        }
+                        for commitment in persona.get("commitments", [])
+                    ]
+                    matched_fact_ids = resolve_fact_ids(
+                        returned_texts,
+                        all_facts,
+                        threshold=args.match_threshold,
+                    )
                     elapsed_ms = (time.perf_counter() - started) * 1000
                     latency_ms.append(elapsed_ms)
                     query_latencies.append(elapsed_ms)
+                    returned_by_query[query["query_id"]] = matched_fact_ids
+                    _verbose_query_output(
+                        enabled=args.verbose,
+                        persona_id=persona_id,
+                        query=query,
+                        returned_texts=returned_texts,
+                        matched_fact_ids=matched_fact_ids,
+                    )
                     pending.pop(query["query_id"], None)
 
         for query in pending.values():
             started = time.perf_counter()
-            returned_by_query[query["query_id"]] = _query_adapter(
+            returned_texts = _query_adapter(
                 adapter,
                 query["query_text"],
                 k=args.k,
                 as_of=persona["sessions"][-1]["simulated_date"],
             )
+            all_facts = persona.get("facts", []) + [
+                {
+                    "fact_id": commitment["commitment_id"],
+                    "natural_language": commitment["description"],
+                }
+                for commitment in persona.get("commitments", [])
+            ]
+            matched_fact_ids = resolve_fact_ids(
+                returned_texts,
+                all_facts,
+                threshold=args.match_threshold,
+            )
             elapsed_ms = (time.perf_counter() - started) * 1000
             latency_ms.append(elapsed_ms)
             query_latencies.append(elapsed_ms)
+            returned_by_query[query["query_id"]] = matched_fact_ids
+            _verbose_query_output(
+                enabled=args.verbose,
+                persona_id=persona_id,
+                query=query,
+                returned_texts=returned_texts,
+                matched_fact_ids=matched_fact_ids,
+            )
 
         result = evaluate_persona(returned_by_query, persona_queries, k=args.k)
         result["persona_id"] = persona_id

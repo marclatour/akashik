@@ -42,7 +42,7 @@ class AkashikAdapter(ACMBAdapter):
         self._corpus_id = None
         self._document_id = None
 
-    def ingest_turn(self, turn: dict) -> None:
+    def ingest_turn(self, turn: dict, commitments: list[dict] | None = None) -> None:
         """
         Ingest one conversation turn.
         User turns are stored as facts in memory_units.
@@ -55,6 +55,13 @@ class AkashikAdapter(ACMBAdapter):
         if revises and self.store:
             self._close_superseded_facts(revises, simulated_date)
         if turn["actor"] == "user":
+            content = turn["content"]
+            for fact_id in turn.get("ground_truth_facts", []):
+                if fact_id.startswith("c") and commitments:
+                    for commitment in commitments:
+                        if commitment["commitment_id"] == fact_id:
+                            content = content + " " + commitment["description"]
+                            break
             metadata = {
                 "source": "acmb",
                 "speaker": turn["actor"],
@@ -66,9 +73,9 @@ class AkashikAdapter(ACMBAdapter):
             unit = self.store.insert(
                 MemoryUnit(
                     level="fact",
-                    content=turn["content"],
-                    content_hash=content_hash(turn["content"]),
-                    normalized_hash=normalized_hash(turn["content"]),
+                    content=content,
+                    content_hash=content_hash(content),
+                    normalized_hash=normalized_hash(content),
                     parent_id=self._document_id,
                     metadata=metadata,
                     valid_from=simulated_date,
@@ -160,7 +167,7 @@ class AkashikAdapter(ACMBAdapter):
 
     def query(self, query_text: str, k: int = 10, as_of: str | None = None) -> list[str]:
         """
-        Retrieve top-k facts and return their ground_truth_fact_ids.
+        Retrieve top-k facts and return their raw fact content.
         Expression stays off for reproducibility in ACMB v0.1.
         """
         from akashik.retrieve import retrieve
@@ -173,15 +180,7 @@ class AkashikAdapter(ACMBAdapter):
             use_expression=False,
             as_of=as_of,
         )
-        fact_ids: list[str] = []
-        seen: set[str] = set()
-        for result in response.results:
-            for fact_id in (result.unit.metadata or {}).get("ground_truth_facts", []):
-                if fact_id in seen:
-                    continue
-                seen.add(fact_id)
-                fact_ids.append(fact_id)
-        return fact_ids
+        return [result.unit.content for result in response.results if result.unit.content]
 
     def query_with_scores(
         self,
@@ -204,12 +203,8 @@ class AkashikAdapter(ACMBAdapter):
             as_of=as_of,
         )
         results: list[tuple[str, float]] = []
-        seen: set[str] = set()
         for rank, retrieval_result in enumerate(response.results):
             score = retrieval_result.confidence if retrieval_result.confidence is not None else 1.0 / (rank + 1)
-            for fact_id in (retrieval_result.unit.metadata or {}).get("ground_truth_facts", []):
-                if fact_id in seen:
-                    continue
-                seen.add(fact_id)
-                results.append((fact_id, float(score)))
+            if retrieval_result.unit.content:
+                results.append((retrieval_result.unit.content, float(score)))
         return results

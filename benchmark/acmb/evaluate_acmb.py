@@ -5,6 +5,100 @@ ACMB evaluator — system-agnostic.
 Given returned fact_ids and a query spec, computes all ACMB metrics.
 """
 
+from akashik.query_normalize import normalize_query
+
+STOPWORDS = {
+    "the",
+    "a",
+    "an",
+    "is",
+    "to",
+    "in",
+    "on",
+    "at",
+    "of",
+    "and",
+    "or",
+    "but",
+    "i",
+    "my",
+    "me",
+    "we",
+    "it",
+    "its",
+    "this",
+    "that",
+    "was",
+    "are",
+    "be",
+    "been",
+    "have",
+    "has",
+    "do",
+    "did",
+    "for",
+    "with",
+    "now",
+    "just",
+    "so",
+    "not",
+    "no",
+    "if",
+    "as",
+    "by",
+}
+
+
+def tokenize(text: str) -> set[str]:
+    tokens = set(normalize_query(text).split())
+    return tokens - STOPWORDS
+
+
+def jaccard(a: set[str], b: set[str]) -> float:
+    if not a or not b:
+        return 0.0
+    return len(a & b) / len(a | b)
+
+
+def resolve_fact_ids(
+    returned_texts: list[str],
+    persona_facts: list[dict],
+    threshold: float = 0.5,
+) -> list[str]:
+    """
+    Resolve returned text snippets to persona fact_ids by matching
+    against each fact's natural_language field using normalized
+    Jaccard similarity.
+
+    For each returned text, finds the best-matching fact above threshold.
+    Preserves retrieval order. Deduplicates fact_ids.
+    Returns list of matched fact_ids in retrieval order.
+    """
+
+    matched: list[str] = []
+    seen: set[str] = set()
+
+    for text in returned_texts:
+        text_tokens = tokenize(text)
+        best_fid: str | None = None
+        best_score = 0.0
+
+        for fact in persona_facts:
+            fact_id = fact["fact_id"]
+            if fact_id in seen:
+                continue
+            nl_tokens = tokenize(fact.get("natural_language", ""))
+            score = jaccard(text_tokens, nl_tokens)
+            if score > best_score:
+                best_score = score
+                best_fid = fact_id
+
+        if best_fid and best_score >= threshold:
+            matched.append(best_fid)
+            seen.add(best_fid)
+
+    return matched
+
 
 def evaluate_query(returned_ids: list[str], query: dict, k: int = 10) -> dict:
     returned_set = set(returned_ids[:k])
