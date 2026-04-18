@@ -13,6 +13,7 @@ if __package__ in (None, ""):
 
 import argparse
 import glob
+import inspect
 import json
 import os
 import time
@@ -64,6 +65,16 @@ def _percentile(values: list[float], percentile: float) -> float:
     return ordered[index]
 
 
+def _query_adapter(adapter, query_text: str, *, k: int, as_of: str) -> list[str]:
+    try:
+        signature = inspect.signature(adapter.query)
+    except (TypeError, ValueError):
+        signature = None
+    if signature is not None and "as_of" in signature.parameters:
+        return adapter.query(query_text, k=k, as_of=as_of)
+    return adapter.query(query_text, k=k)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--adapter", default="akashik")
@@ -92,15 +103,21 @@ def main() -> int:
         query_latencies: list[float] = []
 
         for session in persona["sessions"]:
+            current_date = session["simulated_date"]
             for turn in session["turns"]:
-                adapter.ingest_turn({**turn, "simulated_date": session["simulated_date"]})
+                adapter.ingest_turn({**turn, "simulated_date": current_date})
                 for query in persona_queries:
                     if query["query_id"] in returned_by_query:
                         continue
                     if turn["turn_id"] != query["turn_before"]:
                         continue
                     started = time.perf_counter()
-                    returned_by_query[query["query_id"]] = adapter.query(query["query_text"], k=args.k)
+                    returned_by_query[query["query_id"]] = _query_adapter(
+                        adapter,
+                        query["query_text"],
+                        k=args.k,
+                        as_of=current_date,
+                    )
                     elapsed_ms = (time.perf_counter() - started) * 1000
                     latency_ms.append(elapsed_ms)
                     query_latencies.append(elapsed_ms)
@@ -108,7 +125,12 @@ def main() -> int:
 
         for query in pending.values():
             started = time.perf_counter()
-            returned_by_query[query["query_id"]] = adapter.query(query["query_text"], k=args.k)
+            returned_by_query[query["query_id"]] = _query_adapter(
+                adapter,
+                query["query_text"],
+                k=args.k,
+                as_of=persona["sessions"][-1]["simulated_date"],
+            )
             elapsed_ms = (time.perf_counter() - started) * 1000
             latency_ms.append(elapsed_ms)
             query_latencies.append(elapsed_ms)

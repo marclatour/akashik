@@ -66,6 +66,23 @@ _SEMANTIC_FALLBACK_THRESHOLD = _SEMANTIC_RANKER.config.confidence_threshold
 _FACT_METADATA_ONLY_KEYS = {"speaker", "has_answer"}
 
 
+def _is_valid(unit, as_of: str | None = None) -> bool:
+    """
+    Returns True if the fact is currently valid.
+    A fact is invalid if valid_until is set and as_of >= valid_until.
+    Fails open on malformed dates — never suppresses on error.
+    """
+
+    if not unit.valid_until:
+        return True
+    try:
+        check = datetime.fromisoformat(as_of) if as_of else datetime.utcnow()
+        until = datetime.fromisoformat(unit.valid_until)
+        return check < until
+    except (ValueError, TypeError):
+        return True
+
+
 def retrieve(
     query: str,
     store,
@@ -92,6 +109,9 @@ def retrieve(
     if level is not None:
         validate_level(level)
 
+    valid_at = _normalize_as_of(as_of)
+    parsed_query_date = _normalize_query_date(query_date)
+
     if use_expression:
         context = extract_context(text, metadata=metadata)
         expressed = express(store, text, context=context)
@@ -104,7 +124,7 @@ def retrieve(
                 limit=limit,
                 base_confidence=1.0,
             )
-            return _finalize_response(store, response)
+            return _finalize_response(store, response, as_of=valid_at)
         LOGGER.debug("Expression engine: fell through to retrieval stack")
     else:
         setattr(
@@ -118,8 +138,6 @@ def retrieve(
             },
         )
 
-    valid_at = _normalize_as_of(as_of)
-    parsed_query_date = _normalize_query_date(query_date)
     temporal_answer = None
     if (
         _enable_temporal_resolver
@@ -146,7 +164,7 @@ def retrieve(
         temporal_answer=temporal_answer,
     )
     if response.results:
-        return _finalize_response(store, response)
+        return _finalize_response(store, response, as_of=valid_at)
 
     normalized_matches = store.fetch_by_normalized_hash(
         normalized_hash(text),
@@ -162,7 +180,7 @@ def retrieve(
         temporal_answer=temporal_answer,
     )
     if response.results:
-        return _finalize_response(store, response)
+        return _finalize_response(store, response, as_of=valid_at)
 
     fts_query = normalize_query(text)
     fts_limit = max(limit * 5, 20)
@@ -201,7 +219,7 @@ def retrieve(
         temporal_answer=temporal_answer,
     )
     if response.results:
-        return _finalize_response(store, response)
+        return _finalize_response(store, response, as_of=valid_at)
 
     return RetrievalResponse(results=[], confidence=0.0, temporal_answer=temporal_answer)
 
@@ -613,6 +631,11 @@ def _build_fts_query(tokens: list[str]) -> str:
 def _normalize_as_of(as_of: str | None) -> str | None:
     if not as_of:
         return None
+    try:
+        if "T" in as_of:
+            return datetime.fromisoformat(as_of).isoformat()
+    except ValueError:
+        return as_of
     return _parse_question_date(as_of).isoformat()
 
 
@@ -945,7 +968,13 @@ def _build_response(
     return RetrievalResponse(results=results, confidence=top_confidence, temporal_answer=temporal_answer)
 
 
-def _finalize_response(store, response: RetrievalResponse) -> RetrievalResponse:
+def _finalize_response(store, response: RetrievalResponse, *, as_of: str | None = None) -> RetrievalResponse:
+    results = [result for result in response.results if _is_valid(result.unit, as_of)]
+    response = RetrievalResponse(
+        results=results,
+        confidence=results[0].confidence if results else 0.0,
+        temporal_answer=response.temporal_answer,
+    )
     fact_ids = _returned_fact_ids(response)
     if not fact_ids:
         return response

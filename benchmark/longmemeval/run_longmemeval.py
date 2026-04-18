@@ -565,6 +565,7 @@ def _store_needs_ingest(store_path: Path, *, force_reingest: bool) -> bool:
 def _reset_store_contents(store: Store) -> None:
     with store.transaction():
         store._conn.execute("INSERT INTO memory_units_fts(memory_units_fts) VALUES('delete-all')")
+        store._conn.execute("DELETE FROM acmb_fact_id_index")
         store._conn.execute("DELETE FROM fact_context_index")
         store._conn.execute("DELETE FROM epigenetic_state")
         for level in ("fact", "section", "document", "corpus"):

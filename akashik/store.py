@@ -14,7 +14,7 @@ import uuid
 from akashik.schema import LEVELS, LEVEL_INDEX, MemoryUnit, StoreStats, validate_level
 
 # FTS5 row addressing must stay integer-based. UUID ids remain the only public identifiers.
-AKASHIK_SCHEMA_VERSION = 7
+AKASHIK_SCHEMA_VERSION = 8
 BACKFILL_BATCH_SIZE = 100
 
 _SCHEMA_SQL = """
@@ -78,6 +78,13 @@ CREATE TABLE IF NOT EXISTS fact_context_index (
     PRIMARY KEY (fact_id, index_type, index_value)
 );
 CREATE INDEX IF NOT EXISTS idx_fact_context ON fact_context_index(index_type, index_value);
+
+CREATE TABLE IF NOT EXISTS acmb_fact_id_index (
+    ground_truth_fact_id TEXT NOT NULL,
+    memory_unit_id TEXT NOT NULL,
+    PRIMARY KEY (ground_truth_fact_id, memory_unit_id)
+);
+CREATE INDEX IF NOT EXISTS idx_acmb_fact_id ON acmb_fact_id_index(ground_truth_fact_id);
 
 CREATE VIRTUAL TABLE IF NOT EXISTS memory_units_fts USING fts5(
     content,
@@ -183,12 +190,24 @@ class Store:
             )
             """
         )
+        self._conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS acmb_fact_id_index (
+                ground_truth_fact_id TEXT NOT NULL,
+                memory_unit_id TEXT NOT NULL,
+                PRIMARY KEY (ground_truth_fact_id, memory_unit_id)
+            )
+            """
+        )
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_validity ON memory_units(valid_until)")
         self._conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_memory_units_lineage_parent_id ON memory_units(lineage_parent_id)"
         )
         self._conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_fact_context ON fact_context_index(index_type, index_value)"
+        )
+        self._conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_acmb_fact_id ON acmb_fact_id_index(ground_truth_fact_id)"
         )
         self._conn.execute(
             """

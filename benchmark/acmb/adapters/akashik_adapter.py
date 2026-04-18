@@ -50,16 +50,20 @@ class AkashikAdapter(ACMBAdapter):
         """
 
         self._ensure_roots()
+        simulated_date = turn.get("simulated_date")
+        revises = list(turn.get("revises_facts", []))
+        if revises and self.store:
+            self._close_superseded_facts(revises, simulated_date)
         if turn["actor"] == "user":
             metadata = {
                 "source": "acmb",
                 "speaker": turn["actor"],
                 "turn_id": turn["turn_id"],
                 "ground_truth_facts": list(turn.get("ground_truth_facts", [])),
-                "simulated_date": turn.get("simulated_date"),
+                "simulated_date": simulated_date,
                 "tags": [],
             }
-            self.store.insert(
+            unit = self.store.insert(
                 MemoryUnit(
                     level="fact",
                     content=turn["content"],
@@ -67,9 +71,17 @@ class AkashikAdapter(ACMBAdapter):
                     normalized_hash=normalized_hash(turn["content"]),
                     parent_id=self._document_id,
                     metadata=metadata,
-                    valid_from=turn.get("simulated_date"),
+                    valid_from=simulated_date,
                 )
             )
+            for fact_id in turn.get("ground_truth_facts", []):
+                self.store.execute(
+                    """
+                    INSERT OR IGNORE INTO acmb_fact_id_index (ground_truth_fact_id, memory_unit_id)
+                    VALUES (?, ?)
+                    """,
+                    (fact_id, unit.id),
+                )
         elif turn["actor"] == "assistant":
             self._log_interaction(turn)
 
@@ -117,14 +129,50 @@ class AkashikAdapter(ACMBAdapter):
         except Exception:
             pass
 
-    def query(self, query_text: str, k: int = 10) -> list[str]:
+    def _close_superseded_facts(self, fact_ids: list[str], valid_until: str | None) -> None:
+        """
+        Set valid_until on memory_units whose ground_truth_facts overlap
+        with fact_ids. Uses acmb_fact_id_index — no full table scan.
+
+        TODO: this models linear supersession only (fact A replaced by fact B).
+        Future: support lineage branching for partial updates and conflicting facts.
+        See Architecture_Specification_v0.20.0.md lineage layer.
+        """
+
+        if not fact_ids or not valid_until:
+            return
+        placeholders = ",".join("?" for _ in fact_ids)
+        rows = self.store._conn.execute(
+            f"""
+            SELECT memory_unit_id
+            FROM acmb_fact_id_index
+            WHERE ground_truth_fact_id IN ({placeholders})
+            """,
+            tuple(fact_ids),
+        ).fetchall()
+        with self.store.transaction():
+            for row in rows:
+                memory_unit_id = row[0] if not isinstance(row, tuple) else row[0]
+                self.store._conn.execute(
+                    "UPDATE memory_units SET valid_until = ? WHERE id = ?",
+                    (valid_until, memory_unit_id),
+                )
+
+    def query(self, query_text: str, k: int = 10, as_of: str | None = None) -> list[str]:
         """
         Retrieve top-k facts and return their ground_truth_fact_ids.
         Expression stays off for reproducibility in ACMB v0.1.
         """
         from akashik.retrieve import retrieve
 
-        response = retrieve(query_text, self.store, level="fact", limit=k, use_expression=False)
+        response = retrieve(
+            query_text,
+            self.store,
+            level="fact",
+            limit=k,
+            use_expression=False,
+            as_of=as_of,
+        )
         fact_ids: list[str] = []
         seen: set[str] = set()
         for result in response.results:
@@ -135,14 +183,26 @@ class AkashikAdapter(ACMBAdapter):
                 fact_ids.append(fact_id)
         return fact_ids
 
-    def query_with_scores(self, query_text: str, k: int = 10) -> list[tuple[str, float]]:
+    def query_with_scores(
+        self,
+        query_text: str,
+        k: int = 10,
+        as_of: str | None = None,
+    ) -> list[tuple[str, float]]:
         """
         Retrieve top-k facts with scores.
         Score uses RetrievalResult confidence, otherwise rank proxy.
         """
         from akashik.retrieve import retrieve
 
-        response = retrieve(query_text, self.store, level="fact", limit=k, use_expression=False)
+        response = retrieve(
+            query_text,
+            self.store,
+            level="fact",
+            limit=k,
+            use_expression=False,
+            as_of=as_of,
+        )
         results: list[tuple[str, float]] = []
         seen: set[str] = set()
         for rank, retrieval_result in enumerate(response.results):
