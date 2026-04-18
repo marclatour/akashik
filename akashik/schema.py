@@ -44,6 +44,19 @@ class MemoryUnit:
 
 
 @dataclass(slots=True)
+class Commitment:
+    id: str
+    description: str
+    source_turn_id: str | None
+    session_id: str | None
+    opened_at: str
+    closed_at: str | None
+    status: str
+    related_facts: list[str]
+    metadata: dict[str, Any]
+
+
+@dataclass(slots=True)
 class RetrievalResult:
     unit: MemoryUnit
     confidence: float

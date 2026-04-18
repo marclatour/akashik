@@ -8,9 +8,11 @@ from __future__ import annotations
 from datetime import UTC, datetime
 import os
 from pathlib import Path
+import uuid
 
+from akashik.commitment_detector import detect_commitment, is_closure
 from akashik.identity import content_hash, normalized_hash
-from akashik.schema import MemoryUnit
+from akashik.schema import Commitment, MemoryUnit
 from akashik.store import Store
 from benchmark.acmb.adapters.base import ACMBAdapter
 
@@ -89,7 +91,37 @@ class AkashikAdapter(ACMBAdapter):
                     """,
                     (fact_id, unit.id),
                 )
+            if is_closure(turn["content"]):
+                open_commitments = self.store.get_open_commitments()
+                if open_commitments:
+                    most_recent = sorted(
+                        open_commitments,
+                        key=lambda commitment: commitment.opened_at,
+                        reverse=True,
+                    )[0]
+                    self.store.close_commitment(most_recent.id, datetime.utcnow().isoformat())
         elif turn["actor"] == "assistant":
+            description = detect_commitment(turn["content"])
+            if description:
+                commitment_description = description
+                if commitments:
+                    for commitment in commitments:
+                        if commitment_description in commitment["description"] or commitment["description"] in commitment_description:
+                            commitment_description = commitment["description"]
+                            break
+                self.store.insert_commitment(
+                    Commitment(
+                        id=str(uuid.uuid4()),
+                        description=commitment_description,
+                        source_turn_id=turn["turn_id"],
+                        session_id=self._document_id,
+                        opened_at=turn.get("simulated_date", datetime.now(UTC).isoformat()),
+                        closed_at=None,
+                        status="open",
+                        related_facts=list(turn.get("ground_truth_facts", [])),
+                        metadata={},
+                    )
+                )
             self._log_interaction(turn)
 
     def _ensure_roots(self) -> None:
@@ -170,7 +202,7 @@ class AkashikAdapter(ACMBAdapter):
         Retrieve top-k facts and return their raw fact content.
         Expression stays off for reproducibility in ACMB v0.1.
         """
-        from akashik.retrieve import retrieve
+        from akashik.retrieve import retrieve, retrieve_commitments
 
         response = retrieve(
             query_text,
@@ -180,7 +212,11 @@ class AkashikAdapter(ACMBAdapter):
             use_expression=False,
             as_of=as_of,
         )
-        return [result.unit.content for result in response.results if result.unit.content]
+        texts = [result.unit.content for result in response.results if result.unit.content]
+        commitments = retrieve_commitments(self.store, query_text)
+        for commitment in commitments:
+            texts.append(f"[COMMITMENT] {commitment.description}")
+        return texts
 
     def query_with_scores(
         self,

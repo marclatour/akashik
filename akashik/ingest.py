@@ -5,12 +5,14 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 import re
+import uuid
 
+from akashik.commitment_detector import detect_commitment, is_closure
 from akashik.contradiction import close_fact, extract_triple, find_contradicting_fact
 from akashik.identity import content_hash, normalized_hash
 from akashik.preference_extractor import extract_preferences
 from akashik.query_normalize import normalize_query
-from akashik.schema import MemoryUnit
+from akashik.schema import Commitment, MemoryUnit
 
 _SECTION_SPLIT_RE = re.compile(r"\n\s*\n+")
 _SENTENCE_SPLIT_RE = re.compile(r'(?<=[.!?])(?:["\')\]]+)?\s+')
@@ -63,6 +65,42 @@ _CONTEXT_INDEX_STOPWORDS = {
     "would",
 }
 MIN_TOKEN_LENGTH = 4
+
+
+def process_turn_commitments(store, turn: dict, *, session_id: str | None = None) -> None:
+    """
+    Apply commitment-layer side effects for conversational turns.
+    Assistant turns may open commitments. User turns may close the most
+    recent open commitment when the message clearly indicates completion.
+    """
+
+    actor = str(turn.get("actor", ""))
+    content = str(turn.get("content", ""))
+    timestamp = turn.get("timestamp") or turn.get("simulated_date") or datetime.utcnow().isoformat()
+    if actor == "assistant":
+        description = detect_commitment(content)
+        if not description:
+            return
+        store.insert_commitment(
+            Commitment(
+                id=str(uuid.uuid4()),
+                description=description,
+                source_turn_id=turn.get("turn_id"),
+                session_id=session_id,
+                opened_at=timestamp,
+                closed_at=None,
+                status="open",
+                related_facts=list(turn.get("ground_truth_facts", [])),
+                metadata={},
+            )
+        )
+        return
+    if actor == "user" and is_closure(content):
+        open_commitments = store.get_open_commitments()
+        if not open_commitments:
+            return
+        most_recent = sorted(open_commitments, key=lambda commitment: commitment.opened_at, reverse=True)[0]
+        store.close_commitment(most_recent.id, datetime.utcnow().isoformat())
 
 
 def ingest_file(

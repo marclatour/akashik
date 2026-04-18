@@ -11,10 +11,10 @@ import sqlite3
 from typing import Iterator
 import uuid
 
-from akashik.schema import LEVELS, LEVEL_INDEX, MemoryUnit, StoreStats, validate_level
+from akashik.schema import Commitment, LEVELS, LEVEL_INDEX, MemoryUnit, StoreStats, validate_level
 
 # FTS5 row addressing must stay integer-based. UUID ids remain the only public identifiers.
-AKASHIK_SCHEMA_VERSION = 8
+AKASHIK_SCHEMA_VERSION = 9
 BACKFILL_BATCH_SIZE = 100
 
 _SCHEMA_SQL = """
@@ -85,6 +85,20 @@ CREATE TABLE IF NOT EXISTS acmb_fact_id_index (
     PRIMARY KEY (ground_truth_fact_id, memory_unit_id)
 );
 CREATE INDEX IF NOT EXISTS idx_acmb_fact_id ON acmb_fact_id_index(ground_truth_fact_id);
+
+CREATE TABLE IF NOT EXISTS commitments (
+    id TEXT PRIMARY KEY,
+    description TEXT NOT NULL,
+    source_turn_id TEXT,
+    session_id TEXT,
+    opened_at TEXT NOT NULL,
+    closed_at TEXT,
+    status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open', 'closed')),
+    related_facts TEXT,
+    metadata TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_commitments_status ON commitments(status);
+CREATE INDEX IF NOT EXISTS idx_commitments_session ON commitments(session_id);
 
 CREATE VIRTUAL TABLE IF NOT EXISTS memory_units_fts USING fts5(
     content,
@@ -208,6 +222,27 @@ class Store:
         )
         self._conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_acmb_fact_id ON acmb_fact_id_index(ground_truth_fact_id)"
+        )
+        self._conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS commitments (
+                id TEXT PRIMARY KEY,
+                description TEXT NOT NULL,
+                source_turn_id TEXT,
+                session_id TEXT,
+                opened_at TEXT NOT NULL,
+                closed_at TEXT,
+                status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open', 'closed')),
+                related_facts TEXT,
+                metadata TEXT
+            )
+            """
+        )
+        self._conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_commitments_status ON commitments(status)"
+        )
+        self._conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_commitments_session ON commitments(session_id)"
         )
         self._conn.execute(
             """
@@ -367,6 +402,64 @@ class Store:
             (fact_id,),
         ).fetchone()
         return dict(row) if row else None
+
+    def insert_commitment(self, commitment: Commitment) -> str:
+        self.execute(
+            """
+            INSERT INTO commitments (
+                id, description, source_turn_id, session_id, opened_at,
+                closed_at, status, related_facts, metadata
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                commitment.id,
+                commitment.description,
+                commitment.source_turn_id,
+                commitment.session_id,
+                commitment.opened_at,
+                commitment.closed_at,
+                commitment.status,
+                json.dumps(commitment.related_facts),
+                json.dumps(commitment.metadata, sort_keys=True),
+            ),
+        )
+        return commitment.id
+
+    def get_open_commitments(self) -> list[Commitment]:
+        rows = self._conn.execute(
+            """
+            SELECT id, description, source_turn_id, session_id, opened_at,
+                   closed_at, status, related_facts, metadata
+            FROM commitments
+            WHERE status = 'open'
+            ORDER BY opened_at DESC, id DESC
+            """
+        ).fetchall()
+        return [self._row_to_commitment(row) for row in rows]
+
+    def close_commitment(self, commitment_id: str, closed_at: str) -> None:
+        self.execute(
+            """
+            UPDATE commitments
+            SET status = 'closed',
+                closed_at = ?
+            WHERE id = ?
+            """,
+            (closed_at, commitment_id),
+        )
+
+    def get_commitments_by_session(self, session_id: str) -> list[Commitment]:
+        rows = self._conn.execute(
+            """
+            SELECT id, description, source_turn_id, session_id, opened_at,
+                   closed_at, status, related_facts, metadata
+            FROM commitments
+            WHERE session_id = ?
+            ORDER BY opened_at DESC, id DESC
+            """,
+            (session_id,),
+        ).fetchall()
+        return [self._row_to_commitment(row) for row in rows]
 
     def fetch_by_content_hash(
         self,
@@ -681,6 +774,19 @@ class Store:
             valid_until=row["valid_until"],
             confirmation_count=int(row["confirmation_count"] or 1) if "confirmation_count" in keys else 1,
             last_confirmed_at=row["last_confirmed_at"] if "last_confirmed_at" in keys else None,
+        )
+
+    def _row_to_commitment(self, row: sqlite3.Row) -> Commitment:
+        return Commitment(
+            id=str(row["id"]),
+            description=str(row["description"]),
+            source_turn_id=row["source_turn_id"],
+            session_id=row["session_id"],
+            opened_at=str(row["opened_at"]),
+            closed_at=row["closed_at"],
+            status=str(row["status"]),
+            related_facts=json.loads(row["related_facts"]) if row["related_facts"] else [],
+            metadata=json.loads(row["metadata"]) if row["metadata"] else {},
         )
 
     def _warn_schema_mismatch(self, stored: int) -> None:

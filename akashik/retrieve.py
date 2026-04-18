@@ -11,6 +11,7 @@ from akashik.expression import express, extract_context
 from akashik.identity import content_hash, normalized_hash
 from akashik.navigator import rank_facts
 from akashik.parse_temporal_scope import _parse_question_date
+from akashik.commitment_detector import COMMITMENT_META_QUERIES
 from akashik.query_normalize import normalize_query
 from akashik.semantic import SemanticRanker
 from akashik.schema import LEVEL_INDEX, MemoryUnit, RetrievalResponse, RetrievalResult, validate_level
@@ -64,6 +65,7 @@ _MAX_SCORE_ADJUSTMENT = 0.3
 _SEMANTIC_RANKER = SemanticRanker()
 _SEMANTIC_FALLBACK_THRESHOLD = _SEMANTIC_RANKER.config.confidence_threshold
 _FACT_METADATA_ONLY_KEYS = {"speaker", "has_answer"}
+MAX_COMMITMENTS = 5
 
 
 def _is_valid(unit, as_of: str | None = None) -> bool:
@@ -222,6 +224,35 @@ def retrieve(
         return _finalize_response(store, response, as_of=valid_at)
 
     return RetrievalResponse(results=[], confidence=0.0, temporal_answer=temporal_answer)
+
+
+def retrieve_commitments(store, query: str) -> list:
+    """
+    Retrieve open commitments relevant to the query.
+    Returns all open commitments when query contains commitment
+    meta-language. Otherwise filters by description token overlap.
+    Sorted by recency, capped at MAX_COMMITMENTS.
+    Does NOT modify retrieve() — called separately by the adapter.
+    """
+
+    commitments = store.get_open_commitments()
+    if not commitments:
+        return []
+
+    commitments = sorted(commitments, key=lambda commitment: commitment.opened_at, reverse=True)
+    query_lower = query.lower()
+    if any(phrase in query_lower for phrase in COMMITMENT_META_QUERIES):
+        return commitments[:MAX_COMMITMENTS]
+
+    query_tokens = set(normalize_query(query).split())
+    if not query_tokens:
+        return []
+    result = [
+        commitment
+        for commitment in commitments
+        if query_tokens & set(normalize_query(commitment.description).split())
+    ]
+    return result[:MAX_COMMITMENTS]
 
 
 def _search_fts_with_entity_scope(
