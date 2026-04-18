@@ -2,6 +2,23 @@
 
 Addressed Cognition — deterministic memory OS for long-lived human–AI relationships.
 
+## What Akashik is for
+
+OpenClaw is essentially a high-performance CPU that currently suffers from Volatile RAM — it clears its head the moment you close the terminal. Akashik provides the Non-Volatile Semantic Storage (the SSD) and the MMU (the Memory Management Unit) to make that data accessible in 87ms.
+
+Akashik turns any local AI assistant from a session-based tool into a lifelong personal AI that actually remembers and evolves with you.
+
+The mental model:
+
+| Component | Role |
+|---|---|
+| OpenClaw / local LLM | CPU — high-performance local reasoning |
+| Akashik fact store | SSD — non-volatile semantic storage, persists forever |
+| Akashik expression engine | MMU — memory management unit, right facts in 87ms |
+| LLM context window | CPU cache — small, fast, only what's needed right now |
+
+The LLM never stores facts. Akashik never reasons. Hard boundary between them.
+
 Akashik stores content as a fixed hierarchy:
 
 - `corpus`
