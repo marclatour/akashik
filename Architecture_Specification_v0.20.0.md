@@ -19,6 +19,8 @@ Current AI memory systems fail in one of four ways:
 3. Summarization loses detail and provenance. A summary of a decade of conversation is not a memory system. It is a lossy compression with no reconstruction path.
 4. Fine-tuning mixes truth into model weights. Correction becomes retraining. Hallucination and ground truth are indistinguishable.
 
+**LLM-in-memory-path** systems extract facts using an LLM call per conversation turn. This produces richer semantic consolidation but at 5-15 seconds per turn on consumer hardware — architecturally incompatible with real-time conversational interception. The memory system must be invisible in the conversation flow. That requires deterministic extraction, not generative extraction.
+
 The real problem is not "find similar text." It is: what was true then, what is true now, what changed, what did the user commit to, what should be injected into this specific conversation moment, and how do you answer all of that in under 100ms regardless of how large the corpus has grown?
 
 That is a versioned state reconstruction problem, not a retrieval problem.
@@ -343,6 +345,8 @@ OpenClaw is essentially a high-performance CPU that currently suffers from Volat
 Akashik turns any local AI assistant from a session-based tool into a lifelong personal AI that actually remembers and evolves with you.
 
 The primary use case is local AI assistants and agents. Akashik gives them memory that persists across sessions, evolves with the user over years, and injects only the right context at the right moment — without cloud dependency, without hallucinated memory, and without the context window explosion that makes long-term local AI impractical today.
+
+Akashik's deterministic approach is not a philosophical stance — it is an engineering requirement. The 87ms intercept window leaves no room for LLM inference in the memory path. Determinism is what makes the architecture viable for the primary use case.
 
 | Component | Role |
 |---|---|

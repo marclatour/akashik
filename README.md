@@ -19,6 +19,20 @@ The mental model:
 
 The LLM never stores facts. Akashik never reasons. Hard boundary between them.
 
+## Why deterministic
+
+LLM-based memory systems like Mem0 extract and consolidate facts using an LLM call per conversation turn. On consumer hardware this takes 5-15 seconds per turn. For a system intercepting live conversations, that is architecturally incompatible — you cannot block a conversation waiting for memory extraction.
+
+Akashik's deterministic ingest takes milliseconds. It is not a tradeoff. It is a requirement for the use case.
+
+| Approach | Ingest per turn | Query latency | Belief revision |
+|---|---|---|---|
+| Akashik (deterministic) | <10ms | 1.99ms p50 | 0.950 |
+| RAG (embedding) | <10ms | 23ms p50 | 0.300 |
+| Mem0 (LLM-assisted) | 5-15 seconds | — | — |
+
+Mem0's LLM extraction produces richer semantic consolidation but is unsuitable for real-time conversational interception. Akashik's deterministic approach is designed for the 87ms intercept window — invisible to the user, always current, never blocking.
+
 Akashik stores content as a fixed hierarchy:
 
 - `corpus`
