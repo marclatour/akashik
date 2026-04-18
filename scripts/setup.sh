@@ -49,6 +49,9 @@ ensure_dir ~/.akashik/stores/benchmarks/longmemeval_oracle
 ensure_dir ~/.akashik/stores/corpora
 ensure_dir ~/.akashik/data/benchmarks/cuad
 ensure_dir ~/.akashik/data/benchmarks/longmemeval
+ensure_dir ~/.akashik/data/benchmarks/acmb/personas
+ensure_dir ~/.akashik/data/benchmarks/acmb/queries
+ensure_dir ~/.akashik/stores/benchmarks/acmb
 ensure_dir ~/.akashik/results/benchmarks
 ensure_dir ~/.akashik/config
 ensure_dir ~/.akashik/logs
@@ -72,6 +75,14 @@ EOF
     ok "~/.akashik/config/defaults.toml created"
 else
     ok "~/.akashik/config/defaults.toml already exists"
+fi
+
+if [ -z "$(ls -A ~/.akashik/data/benchmarks/acmb/personas 2>/dev/null)" ]; then
+    info "Generating ACMB personas..."
+    ./.venv/bin/python benchmark/acmb/generate_personas.py
+    ok "ACMB personas generated"
+else
+    ok "ACMB personas already present"
 fi
 
 # ── 3. Set up Python venv ─────────────────────────────────────────────
