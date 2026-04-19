@@ -8,15 +8,16 @@ revision, no validity windows. Pure embedding retrieval baseline.
 from __future__ import annotations
 
 import numpy as np
+from sentence_transformers import SentenceTransformer
 
 from benchmark.acmb.adapters.base import ACMBAdapter
+
+_MODEL = SentenceTransformer("multi-qa-mpnet-base-dot-v1")
 
 
 class RagAdapter(ACMBAdapter):
     def __init__(self, model_name: str = "multi-qa-mpnet-base-dot-v1"):
-        from sentence_transformers import SentenceTransformer
-
-        self.model = SentenceTransformer(model_name)
+        self.model = _MODEL
         self.chunks: list[str] = []
         self.embeddings: list[np.ndarray] = []
 

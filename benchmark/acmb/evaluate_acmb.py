@@ -112,7 +112,7 @@ def evaluate_query(returned_ids: list[str], query: dict, k: int = 10) -> dict:
     belief_revision = 1.0 if (not (must_exclude & returned_set) and must_include.issubset(returned_set)) else 0.0
     precision_numerator = len((must_include | should_include) & returned_set)
     fact_precision = precision_numerator / len(returned_set) if returned_set else 0.0
-    distractor_penalty = float(len(hard_distractors & returned_set))
+    distractor_penalty = min(float(len(hard_distractors & returned_set)), 1.0)
     current_state_correct = 1.0 if expected_current and expected_current.issubset(returned_set) else 0.0
 
     return {
