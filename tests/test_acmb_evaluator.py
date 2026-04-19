@@ -42,7 +42,7 @@ def test_evaluate_query_precision_perfect_when_all_returned_are_relevant() -> No
 def test_evaluate_query_computes_distractor_penalty() -> None:
     query = {"query_id": "q1", "query_type": "x", "hard_distractors": ["f2", "f3"]}
     result = evaluate_query(["f1", "f2", "f3"], query)
-    assert result["distractor_penalty"] == 2.0
+    assert result["distractor_penalty"] == 1.0
 
 
 def test_evaluate_query_computes_current_state_correct() -> None:

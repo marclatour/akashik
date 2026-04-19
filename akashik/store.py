@@ -800,6 +800,21 @@ class Store:
         )
 
     def _backfill_fact_context_index(self) -> None:
+        missing = self._conn.execute(
+            """
+            SELECT 1
+            FROM memory_units m
+            WHERE m.level = 'fact'
+              AND NOT EXISTS (
+                SELECT 1
+                FROM fact_context_index fci
+                WHERE fci.fact_id = m.id
+              )
+            LIMIT 1
+            """
+        ).fetchone()
+        if missing is None:
+            return
         rows = self._conn.execute(
             """
             SELECT id, content, metadata
