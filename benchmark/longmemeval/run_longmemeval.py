@@ -354,14 +354,12 @@ def _process_instance(
     top_confidence = results[0].confidence if results else 0.0
     abstained = (not results) or (top_confidence < abstention_threshold)
     retrieved_session_ids = _retrieved_session_ids(results[:TOP_K])
-    has_answer_hit = any(result.unit.metadata.get("has_answer") == "true" for result in results[:TOP_K])
     output = {
         "question_id": question_id,
         "question_type": question_type,
         "retrieved_session_ids": retrieved_session_ids,
         "top_confidence": top_confidence,
         "abstained": abstained,
-        "has_answer_hit": has_answer_hit,
         "answer_session_ids": list(instance.get("answer_session_ids", [])),
         "temporal_resolved": response.temporal_answer is not None,
     }
@@ -444,7 +442,6 @@ def _print_report(
         ),
         total,
     )
-    turn_recall = _safe_divide(sum(1 for row in non_abstention_rows if row["has_answer_hit"]), total)
     abstention_rows = [row for row in rows if str(row["question_id"]).endswith("_abs")]
     temporal_delta_rows = [
         row for row in non_abstention_rows if str(row.get("question_type", "")) == "temporal-reasoning"
@@ -457,7 +454,6 @@ def _print_report(
     print(f"Threshold: {threshold}")
     print("")
     print(f"Session Recall @10:     {session_recall:.2f}")
-    print(f"Turn Recall:            {turn_recall:.2f}")
     print(
         f"Abstention:             N={len(abstention_rows)} instances excluded from metrics "
         "(reader-layer concern, no generator in pipeline)"
@@ -483,10 +479,8 @@ def _print_report(
             sum(1 for row in subset if set(row["answer_session_ids"]) & set(row["retrieved_session_ids"])),
             len(subset),
         )
-        turn_metric = _safe_divide(sum(1 for row in subset if row["has_answer_hit"]), len(subset))
         print(
-            f"{question_type:<28} session={session_metric:.2f}  "
-            f"turn={turn_metric:.2f}  n={len(subset)}"
+            f"{question_type:<28} session={session_metric:.2f}  n={len(subset)}"
         )
     print(f"Temporal deltas resolved: {temporal_delta_resolved}/{len(temporal_delta_rows)} two-event queries")
     if expression_rows:
