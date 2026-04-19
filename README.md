@@ -35,17 +35,16 @@ Mem0's LLM extraction produces richer semantic consolidation but is unsuitable f
 
 ## ACMB benchmark — six-way comparison
 
-| Capability | BM25 | RAG | Full-ctx | bm25_akashik | rag_akashik | Akashik |
+| Metric | Akashik | bm25_akashik | rag_akashik | BM25 | RAG | Full-ctx |
 |---|---|---|---|---|---|---|
-| Retrieval | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Persistence | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ |
-| Commitment detection | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
-| Belief revision | ✗ | ✗ | ✗ | 0.500 | 0.550 | **0.950** |
-| Distractor suppression | 0.500 | 0.500 | 0.000 | 0.500 | 0.500 | **0.000** |
-| Provenance | ✗ | ✗ | ✗ | ✗ | ✗ | **1.00** |
-| Latency p50 (query) | 0.41ms | 37ms | 0.81ms | 0.44ms | 34.61ms | 2.17ms |
+| Fact Recall | **0.801** | 0.679 | 0.752 | 0.541 | 0.614 | 0.560 |
+| Belief Revision | **0.735** | 0.251 | 0.249 | 0.113 | 0.111 | 0.340 |
+| Fact Precision | **0.335** | 0.257 | 0.214 | 0.171 | 0.183 | 0.255 |
+| Temporal Correctness | **0.751** | 0.629 | 0.702 | 0.541 | 0.614 | 0.520 |
+| Distractor Penalty | **0.087** | 0.588 | 0.675 | 0.588 | 0.675 | 0.433 |
+| Latency p50 | 22ms | **0.74ms** | 22ms | **0.73ms** | 22ms | 1.36ms |
 
-BM25, RAG, and full-context are retrieval baselines with no persistence. They reset between runs and lose all state when the process ends. Akashik is the only system in the comparison that provides persistent, versioned, provenance-preserving memory. The hybrids (bm25_akashik, rag_akashik) show that commitment detection alone improves recall but does not deliver Akashik's belief revision or distractor control.
+These are the current clean ACMB six-way comparison numbers. Akashik now leads the field on fact recall, belief revision, fact precision, and temporal correctness, while keeping distractor penalty far below the retrieval-only baselines. The hybrids (`bm25_akashik`, `rag_akashik`) show that commitment detection helps, but structured memory is still what drives the large gap in belief revision and distractor control.
 
 Akashik stores content as a fixed hierarchy:
 

@@ -54,6 +54,10 @@ def get_adapter(name: str, store_path: str):
         from benchmark.acmb.adapters.akashik_adapter import AkashikAdapter
 
         return AkashikAdapter(store_path=store_path)
+    if name == "tfidf":
+        from benchmark.acmb.adapters.tfidf_adapter import TfidfAdapter
+
+        return TfidfAdapter()
     if name == "bm25":
         from benchmark.acmb.adapters.bm25_adapter import BM25Adapter
 
