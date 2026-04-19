@@ -28,7 +28,7 @@ def test_ingest_user_turn_stores_fact_in_memory_units(tmp_path) -> None:
     )
     facts = adapter.store.fetch_by_metadata_filters(level="fact", filters={"turn_id": "t001"})
     assert len(facts) == 1
-    assert facts[0].metadata["ground_truth_facts"] == ["f001"]
+    assert "ground_truth_facts" not in facts[0].metadata
 
 
 def test_ingest_assistant_turn_does_not_store_fact_in_memory_units(tmp_path) -> None:
