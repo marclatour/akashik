@@ -8,7 +8,7 @@ import logging
 import re
 
 from akashik.identity import content_hash, normalized_hash
-from akashik.ingest import _insert_fact_unit, _merge_child_metadata
+from akashik.ingest import _merge_child_metadata, ingest_turn_fact
 from akashik.schema import MemoryUnit
 
 LOGGER = logging.getLogger(__name__)
@@ -80,12 +80,15 @@ def ingest_instance(store, instance: dict) -> int:
                 )
                 for sentence in _split_sentences(content):
                     fact_metadata = _merge_child_metadata(section_metadata, {})
-                    _insert_fact_unit(
+                    ingest_turn_fact(
                         store,
                         sentence,
                         parent_id=section.id,
+                        role=role,
+                        turn_id=f"{session_id}_{turn_index}",
+                        session_date=session_date,
                         metadata=fact_metadata,
-                        section_heading=section.section_heading,
+                        split=False,
                     )
                     fact_count += 1
 
