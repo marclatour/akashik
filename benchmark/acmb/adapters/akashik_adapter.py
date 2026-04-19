@@ -12,7 +12,7 @@ import uuid
 
 from akashik.commitment_detector import detect_commitment, is_closure
 from akashik.identity import content_hash, normalized_hash
-from akashik.ingest import ingest_text
+from akashik.ingest import ingest_turn_fact
 from akashik.schema import Commitment, MemoryUnit
 from akashik.store import Store
 from benchmark.acmb.adapters.base import ACMBAdapter
@@ -27,6 +27,7 @@ class AkashikAdapter(ACMBAdapter):
         self.store = Store(self.store_path)
         self._corpus_id: str | None = None
         self._document_id: str | None = None
+        self._section_id: str | None = None
 
     def reset(self) -> None:
         """
@@ -44,6 +45,7 @@ class AkashikAdapter(ACMBAdapter):
         self.store = Store(self.store_path)
         self._corpus_id = None
         self._document_id = None
+        self._section_id = None
 
     def ingest_turn(self, turn: dict, commitments: list[dict] | None = None) -> None:
         """
@@ -61,15 +63,15 @@ class AkashikAdapter(ACMBAdapter):
         simulated_date = turn.get("simulated_date")
         if turn["actor"] == "user":
             content = turn["content"]
-            metadata = {
-                "source": "acmb",
-                "speaker": turn["actor"],
-                "turn_id": turn["turn_id"],
-                "simulated_date": simulated_date,
-                "session_date": simulated_date,
-                "tags": [],
-            }
-            ingest_text(self.store, content, metadata=metadata)
+            ingest_turn_fact(
+                self.store,
+                content,
+                parent_id=self._section_id,
+                role=turn["actor"],
+                turn_id=turn["turn_id"],
+                session_date=simulated_date,
+                metadata={"source": "acmb"},
+            )
             if is_closure(turn["content"]):
                 open_commitments = self.store.get_open_commitments()
                 if open_commitments:
@@ -121,6 +123,18 @@ class AkashikAdapter(ACMBAdapter):
                 )
             )
             self._document_id = document.id
+        if self._section_id is None:
+            section = self.store.insert(
+                MemoryUnit(
+                    level="section",
+                    content="ACMB persona session",
+                    content_hash=content_hash("ACMB persona session"),
+                    normalized_hash=normalized_hash("ACMB persona session"),
+                    parent_id=self._document_id,
+                    metadata={"source": "acmb", "tags": []},
+                )
+            )
+            self._section_id = section.id
 
     def _log_interaction(self, turn: dict) -> None:
         """Write assistant turn to interaction_log. Never to memory_units."""

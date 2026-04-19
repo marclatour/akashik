@@ -206,6 +206,73 @@ def ingest_text(
     return document
 
 
+def ingest_turn_fact(
+    store,
+    content: str,
+    *,
+    parent_id: str,
+    role: str,
+    turn_id: str | None = None,
+    session_date: str | None = None,
+    metadata: dict | None = None,
+    split: bool = True,
+) -> list[MemoryUnit]:
+    """Insert one conversation turn's content as fact unit(s) under a caller-owned section.
+
+    Unlike ``ingest_text`` this does not create document/section scaffolding —
+    the caller supplies ``parent_id`` (a section) and this function only emits
+    facts. Contradiction detection, reinforcement, and preference-derived facts
+    run through the shared ``_insert_fact_unit`` path.
+    """
+    raw = str(content or "")
+    if not raw.strip():
+        return []
+
+    base_metadata: dict = {
+        "source": "turn",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "tags": [],
+        "speaker": role,
+    }
+    if turn_id is not None:
+        base_metadata["turn_id"] = turn_id
+    if session_date is not None:
+        base_metadata["session_date"] = session_date
+        base_metadata["simulated_date"] = session_date
+    base_metadata["entities"] = _merge_entity_lists(extract_entities(raw))
+
+    if metadata:
+        caller = dict(metadata)
+        caller_entities = caller.pop("entities", None)
+        base_metadata.update(caller)
+        if caller_entities is not None:
+            base_metadata["entities"] = _merge_entity_lists(
+                list(caller_entities) if isinstance(caller_entities, list) else [],
+                base_metadata.get("entities", []),
+            )
+    base_metadata["speaker"] = role
+    base_metadata["tags"] = list(base_metadata.get("tags", []))
+
+    if split:
+        fact_texts = split_facts(raw)
+    else:
+        stripped = raw.strip()
+        fact_texts = [stripped] if stripped else []
+
+    inserted: list[MemoryUnit] = []
+    with store.transaction():
+        for fact_text in fact_texts:
+            unit = _insert_fact_unit(
+                store,
+                fact_text,
+                parent_id=parent_id,
+                metadata=base_metadata,
+                section_heading=None,
+            )
+            inserted.append(unit)
+    return inserted
+
+
 def split_sections(text: str) -> list[str]:
     stripped = text.strip()
     if not stripped:
