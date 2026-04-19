@@ -13,11 +13,17 @@ _PATTERNS: list[tuple[re.Pattern[str], str]] = [
         "location",
     ),
     (
-        re.compile(r"^(?:i work at|i work for|i(?: am|'m) working at)\s+(.+)$", re.IGNORECASE),
+        re.compile(
+            r"^(?:i work at|i work for|i(?: am|'m) working at|i(?: just)? joined|i left .+? and)\s+(.+)$",
+            re.IGNORECASE,
+        ),
         "employer",
     ),
     (
-        re.compile(r"^(?:i work as|i(?: am|'m) a|my job is)\s+(.+)$", re.IGNORECASE),
+        re.compile(
+            r"^(?:i work as|i(?: am|'m) a|my job is|i(?: just|'ve| have)? stepped into)\s+(.+)$",
+            re.IGNORECASE,
+        ),
         "role",
     ),
     (
@@ -29,11 +35,17 @@ _PATTERNS: list[tuple[re.Pattern[str], str]] = [
         "age",
     ),
     (
-        re.compile(r"^(?:i drive a|i own a|i bought a)\s+(.+)$", re.IGNORECASE),
+        re.compile(
+            r"^(?:i drive a|i own a|i bought a new|i bought a|i upgraded to|i replaced .+? with)\s+(.+)$",
+            re.IGNORECASE,
+        ),
         "vehicle",
     ),
     (
-        re.compile(r"^(?:i use|i switched to|i prefer)\s+(.+)$", re.IGNORECASE),
+        re.compile(
+            r"^(?:i use|i switched to|i prefer|i finally switched to|i switched and now|these days i use)\s+(.+)$",
+            re.IGNORECASE,
+        ),
         "preference",
     ),
     (
