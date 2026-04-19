@@ -13,20 +13,26 @@ _OLLAMA_URL = "http://localhost:11434/api/generate"
 _MODEL = "qwen2.5:1.5b"
 _MIN_CONFIDENCE = 0.85
 
-_PROMPT_TEMPLATE = """You are extracting persistent facts about a user from a conversational message.
+_PROMPT_TEMPLATE = """You are extracting a persistent fact about a user from a conversational message.
 
-Rules:
-- Extract only facts that describe the user's stable, ongoing state: where they live, who they are, what they own, who they know, what they do for work, regular habits.
-- Extract only facts explicitly stated or very strongly entailed by the message.
-- Do NOT extract transient activities, one-time events, brief situations, or weak implications.
-- If multiple persistent facts are present, return the single most durable one.
-- The fact must be about the user themselves, not about other people, entities, or third parties mentioned in the message.
-- If there is no persistent fact about the user, return null for fact.
-- Do not infer job titles, professions, or roles from organization names alone.
-- If the message contains negation (e.g. "I don't", "I no longer", "I'm not"), return null for fact — do not store negated states as positive facts.
-- Return JSON only, no explanation.
+A persistent fact is something stable and ongoing about the user: where they live, their job, their relationships, their regular habits, things they own.
 
-Format: {{"fact": "<canonical persistent fact about the user, or null>", "topic": "<broad topic or null>", "confidence": <0.0-1.0>}}
+Do not extract transient activities, one-time events, or facts about other people.
+Do not copy words from these instructions into your output.
+If the message contains negation or there is no persistent fact, return null for fact.
+Return JSON only, no explanation.
+
+Example:
+Message: "I just moved to Denver from Chicago."
+Output: {{"fact": "User lives in Denver", "topic": "location", "confidence": 0.95}}
+
+Message: "I work as a data engineer at a startup called Helio."
+Output: {{"fact": "User works as a data engineer at Helio", "topic": "occupation", "confidence": 0.95}}
+
+Message: "I spent the weekend hiking."
+Output: {{"fact": null, "topic": null, "confidence": 0.0}}
+
+Format: {{"fact": "<specific fact about the user, or null>", "topic": "<broad topic or null>", "confidence": <0.0-1.0>}}
 
 Message: "{text}"
 """
