@@ -33,18 +33,18 @@ Akashik's deterministic ingest takes milliseconds. It is not a tradeoff. It is a
 
 Mem0's LLM extraction produces richer semantic consolidation but is unsuitable for real-time conversational interception. Akashik's deterministic approach is designed for the 87ms intercept window — invisible to the user, always current, never blocking.
 
-## ACMB benchmark — six-way comparison
+## ACMB benchmark — blind, 25 personas, v0.25.6
 
-| Metric | Akashik | bm25_akashik | rag_akashik | BM25 | RAG | Full-ctx |
-|---|---|---|---|---|---|---|
-| Fact Recall | **0.801** | 0.679 | 0.752 | 0.541 | 0.614 | 0.560 |
-| Belief Revision | **0.735** | 0.251 | 0.249 | 0.113 | 0.111 | 0.340 |
-| Fact Precision | **0.335** | 0.257 | 0.214 | 0.171 | 0.183 | 0.255 |
-| Temporal Correctness | **0.751** | 0.629 | 0.702 | 0.541 | 0.614 | 0.520 |
-| Distractor Penalty | **0.087** | 0.588 | 0.675 | 0.588 | 0.675 | 0.433 |
-| Latency p50 | 22ms | **0.74ms** | 22ms | **0.73ms** | 22ms | 1.36ms |
+| Metric | Akashik | BM25 | Notes |
+|---|---|---|---|
+| Fact Recall @k | **0.648** | 0.541 | Akashik leads |
+| Belief Revision | **0.281** | ~0.11 | Narrow lead; rule-based contradiction detector limits the ceiling |
+| Fact Precision | **0.219** | 0.171 | Slight lead |
+| Temporal Correctness | **0.598** | 0.541 | Structural — baselines have no `valid_from` / `as_of` equivalent |
+| Distractor Penalty | 0.554 | 0.588 | Mid-pack; lower is better |
+| Latency p50 | 3.74ms | 0.73ms | Faster than semantic baselines (RAG ~22ms); slower than pure lexical |
 
-These are the current clean ACMB six-way comparison numbers. Akashik now leads the field on fact recall, belief revision, fact precision, and temporal correctness, while keeping distractor penalty far below the retrieval-only baselines. The hybrids (`bm25_akashik`, `rag_akashik`) show that commitment detection helps, but structured memory is still what drives the large gap in belief revision and distractor control.
+These are blind numbers, run after a fairness audit removed an oracle leak in the Akashik adapter (ground-truth fact IDs and revision signals are no longer consumed). The leak is documented; pre-audit numbers are not cited. Akashik leads fact recall, belief revision, precision, and temporal correctness; distractor penalty is mid-pack. Hybrid adapters (`bm25_akashik`, `rag_akashik`) used the same leaky path pre-audit and are pending blind reruns before they rejoin the table.
 
 Akashik stores content as a fixed hierarchy:
 
