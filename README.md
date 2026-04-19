@@ -1,4 +1,4 @@
-# Akashik 0.20.2
+# Akashik 0.25.9
 
 Addressed Cognition — deterministic memory OS for long-lived human–AI relationships.
 
@@ -25,15 +25,15 @@ LLM-based memory systems like Mem0 extract and consolidate facts using an LLM ca
 
 Akashik's deterministic ingest takes milliseconds. It is not a tradeoff. It is a requirement for the use case.
 
-| Approach | Ingest per turn | Query latency | Belief revision |
-|---|---|---|---|
-| Akashik (deterministic) | <10ms | 1.99ms p50 | 0.950 |
-| RAG (embedding) | <10ms | 23ms p50 | 0.300 |
-| Mem0 (LLM-assisted) | 5-15 seconds | — | — |
+| Approach | Ingest per turn | Query latency |
+|---|---|---|
+| Akashik (deterministic) | <10ms | 3.98ms p50 |
+| RAG (embedding) | <10ms | ~22ms p50 |
+| Mem0 (LLM-assisted) | 5–15 seconds | — |
 
-Mem0's LLM extraction produces richer semantic consolidation but is unsuitable for real-time conversational interception. Akashik's deterministic approach is designed for the 87ms intercept window — invisible to the user, always current, never blocking.
+Mem0's LLM extraction produces richer semantic consolidation but is unsuitable for real-time conversational interception. Akashik's deterministic approach is designed for the 87ms intercept window — invisible to the user, always current, never blocking. See the ACMB table below for comparative quality metrics.
 
-## ACMB benchmark — blind, 25 personas, v0.25.6
+## ACMB benchmark — blind, 25 personas, v0.25.9
 
 | Metric | Akashik | BM25 | Notes |
 |---|---|---|---|
@@ -42,7 +42,7 @@ Mem0's LLM extraction produces richer semantic consolidation but is unsuitable f
 | Fact Precision | **0.219** | 0.171 | Slight lead |
 | Temporal Correctness | **0.598** | 0.541 | Structural — baselines have no `valid_from` / `as_of` equivalent |
 | Distractor Penalty | 0.554 | 0.588 | Mid-pack; lower is better |
-| Latency p50 | 3.74ms | 0.73ms | Faster than semantic baselines (RAG ~22ms); slower than pure lexical |
+| Latency p50 | 3.98ms | 0.73ms | Faster than semantic baselines (RAG ~22ms); slower than pure lexical |
 
 These are blind numbers, run after a fairness audit removed an oracle leak in the Akashik adapter (ground-truth fact IDs and revision signals are no longer consumed). The leak is documented; pre-audit numbers are not cited. Akashik leads fact recall, belief revision, precision, and temporal correctness; distractor penalty is mid-pack. Hybrid adapters (`bm25_akashik`, `rag_akashik`) used the same leaky path pre-audit and are pending blind reruns before they rejoin the table.
 
@@ -70,7 +70,7 @@ The cold-path retrieval stack remains:
 5. Navigator tie-breaker
 6. semantic fallback only when confidence is low
 
-Addressed Cognition `v0.20.2` is the active development branch. The north-star design document is [Architecture_Specification_v0.20.0.md](Architecture_Specification_v0.20.0.md). Existing stores are migrated automatically on first open. `v0.20.2` keeps the existing retrieval stack intact and adds an opt-in expression engine that can fire before retrieval when explicitly enabled.
+Addressed Cognition `v0.25.9` is the active development branch. The north-star design document is [Architecture_Specification_v0.20.0.md](Architecture_Specification_v0.20.0.md). Existing stores are migrated automatically on first open. `v0.25.9` keeps the existing retrieval stack intact and adds an opt-in expression engine that can fire before retrieval when explicitly enabled.
 
 Expression engine controls:
 
@@ -365,9 +365,11 @@ Run Mode A:
 ./.venv/bin/python benchmark/run_cuad.py
 ```
 
-Current Mode A baseline:
+Current blind baseline (4-way, no oracle hints, v0.25.4+):
 
-- Precision@1: `0.84`
+- Precision@1: `0.06` (Akashik), `0.14` (GraphRAG), `0.08` (RAG)
+- Context Efficiency: `0.230` (Akashik) — structurally 2–8× ahead of baselines
+- Note: query set is keyword-only stems; P@1 leadership requires natural queries (open work)
 
 Run Mode B:
 
@@ -375,9 +377,7 @@ Run Mode B:
 ./.venv/bin/python benchmark/run_cuad_b.py
 ```
 
-Current Mode B baseline:
-
-- Precision@1: `0.05`
+Mode B numbers pending blind rerun.
 
 Interpretation:
 
