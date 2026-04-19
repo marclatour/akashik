@@ -66,6 +66,8 @@ _SEMANTIC_RANKER = SemanticRanker()
 _SEMANTIC_FALLBACK_THRESHOLD = _SEMANTIC_RANKER.config.confidence_threshold
 _FACT_METADATA_ONLY_KEYS = {"speaker", "has_answer"}
 MAX_COMMITMENTS = 5
+SEMANTIC_TRIGGER_THRESHOLD = 0.72
+SEMANTIC_TRIGGER_MAX_FTS_CANDIDATES = 5
 
 
 def _is_valid(unit, as_of: str | None = None) -> bool:
@@ -202,14 +204,24 @@ def retrieve(
             query_date=parsed_query_date,
         )
     else:
-        fts_matches = _rerank_fts_matches(
-            store.search_fts(
-                fts_query,
-                limit=fts_limit,
-                current_only=valid_at is None,
+        raw_fts_matches = store.search_fts(
+            fts_query,
+            limit=fts_limit,
+            current_only=valid_at is None,
+            as_of=valid_at,
+        )
+        if _should_trigger_semantic(raw_fts_matches):
+            semantic_candidates = _semantic_candidate_search(
+                store,
+                text,
+                k=20,
                 as_of=valid_at,
             )
-        )
+            fts_matches = _rerank_fts_matches(
+                _merge_candidates(raw_fts_matches, semantic_candidates)
+            )
+        else:
+            fts_matches = _rerank_fts_matches(raw_fts_matches)
         scoped_confidence = 0.8
     response = _build_response(
         fts_matches,
@@ -674,6 +686,143 @@ def _normalize_query_date(query_date: str | None):
     if not query_date:
         return None
     return _parse_question_date(query_date)
+
+
+def _plain_fts_score(index: int, candidate: MemoryUnit) -> float:
+    score = 0.85 / (1.0 + (index * 0.1))
+    if candidate.level == "fact":
+        score += _fact_brevity_bonus(candidate)
+    return score
+
+
+def _should_trigger_semantic(fts_results: list[MemoryUnit]) -> bool:
+    """
+    Trigger semantic candidate generation when:
+    - plain FTS returns zero results, or
+    - top FTS confidence is below threshold, or
+    - candidate pool is very small and confidence is weak
+
+    IMPORTANT:
+    plain store.search_fts(...) returns MemoryUnit objects, not scored rows.
+    Reuse the existing plain-path scoring heuristic used by _rerank_fts_matches
+    instead of assuming a raw .score field exists.
+    """
+
+    if not fts_results:
+        return True
+
+    top_confidence = min(_plain_fts_score(0, fts_results[0]), 1.0)
+    if top_confidence < SEMANTIC_TRIGGER_THRESHOLD:
+        return True
+
+    if len(fts_results) <= 1:
+        return True
+
+    if len(fts_results) <= SEMANTIC_TRIGGER_MAX_FTS_CANDIDATES:
+        tail_confidence = min(
+            _plain_fts_score(len(fts_results) - 1, fts_results[-1]),
+            1.0,
+        )
+        if tail_confidence < SEMANTIC_TRIGGER_THRESHOLD:
+            return True
+
+    return False
+
+
+def _semantic_candidate_search(
+    store,
+    query: str,
+    k: int,
+    as_of: str | None,
+) -> list[MemoryUnit]:
+    """
+    Return up to k semantic candidate MemoryUnit objects using existing semantic/embedding
+    infrastructure already present in the codebase.
+
+    Requirements:
+    - return list[MemoryUnit]
+    - apply the same validity filtering used elsewhere in retrieval, respecting as_of
+    - if semantic infrastructure is unavailable or any exception occurs, return []
+    - do not raise
+    """
+
+    try:
+        model = _SEMANTIC_RANKER._load_model()
+        if model is None:
+            return []
+
+        validity_sql, validity_params = store._validity_sql(
+            alias="memory_units",
+            current_only=as_of is None,
+            as_of=as_of,
+        )
+        rows = store._conn.execute(
+            f"""
+            SELECT id, level, content, content_hash, normalized_hash, lineage_parent_id, parent_id, metadata,
+                   embedding, section_heading, valid_from, valid_until,
+                   confirmation_count, last_confirmed_at, fts_rowid
+            FROM memory_units
+            WHERE level = 'fact'
+            {validity_sql}
+            ORDER BY fts_rowid
+            """,
+            tuple(validity_params),
+        ).fetchall()
+        if not rows:
+            return []
+
+        candidates = [store._row_to_unit(row) for row in rows]
+        candidates = [candidate for candidate in candidates if _is_valid(candidate, as_of=as_of)]
+        if not candidates:
+            return []
+
+        query_embedding = model.encode(
+            query,
+            batch_size=1,
+            convert_to_numpy=False,
+            normalize_embeddings=True,
+            show_progress_bar=False,
+        )
+        content_embeddings = model.encode(
+            [candidate.content for candidate in candidates],
+            batch_size=min(32, max(1, len(candidates))),
+            convert_to_numpy=False,
+            normalize_embeddings=True,
+            show_progress_bar=False,
+        )
+        query_vector = [float(value) for value in query_embedding]
+        scored: list[tuple[float, str, MemoryUnit]] = []
+        for candidate, embedding in zip(candidates, content_embeddings, strict=False):
+            score = sum(left * float(right) for left, right in zip(query_vector, embedding, strict=False))
+            scored.append((score, candidate.id, candidate))
+        scored.sort(key=lambda item: (-item[0], item[1]))
+        return [candidate for _score, _candidate_id, candidate in scored[:k]]
+    except Exception:
+        return []
+
+
+def _merge_candidates(
+    fts_results: list[MemoryUnit],
+    semantic_results: list[MemoryUnit],
+) -> list[MemoryUnit]:
+    """
+    Merge FTS and semantic candidates into one candidate pool.
+
+    Requirements:
+    - deduplicate by fact ID
+    - preserve deterministic ordering
+    - do NOT assume raw FTS and semantic scores are directly comparable unless the current
+      code already normalizes them onto the same scale
+    """
+
+    merged: list[MemoryUnit] = []
+    seen: set[str] = set()
+    for candidate in [*fts_results, *semantic_results]:
+        if candidate.id in seen:
+            continue
+        seen.add(candidate.id)
+        merged.append(candidate)
+    return merged
 
 
 def _validity_sql(
