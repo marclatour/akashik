@@ -91,65 +91,6 @@ def test_retrieve_as_of_filters_by_supplied_date_not_now(tmp_path) -> None:
         assert after.results == []
 
 
-def test_close_superseded_facts_sets_valid_until_via_index(tmp_path) -> None:
-    adapter = AkashikAdapter(store_path=str(tmp_path / "acmb.db"))
-    adapter.ingest_turn(
-        {
-            "turn_id": "t001",
-            "actor": "user",
-            "content": "I live in Chicago.",
-            "ground_truth_facts": ["f001"],
-            "revises_facts": [],
-            "simulated_date": "2026-01-01T00:00:00",
-        }
-    )
-    rows = adapter.store._conn.execute(
-        "SELECT memory_unit_id FROM acmb_fact_id_index WHERE ground_truth_fact_id = ?",
-        ("f001",),
-    ).fetchall()
-    assert rows
-    unit_id = rows[0][0]
-    adapter._close_superseded_facts(["f001"], "2026-02-01T00:00:00")
-    fetched = adapter.store.fetch_by_id(unit_id)
-    assert fetched is not None
-    assert fetched.valid_until == "2026-02-01T00:00:00"
-
-
-def test_close_superseded_facts_does_not_affect_other_facts(tmp_path) -> None:
-    adapter = AkashikAdapter(store_path=str(tmp_path / "acmb.db"))
-    adapter.ingest_turn(
-        {
-            "turn_id": "t001",
-            "actor": "user",
-            "content": "I live in Chicago.",
-            "ground_truth_facts": ["f001"],
-            "revises_facts": [],
-            "simulated_date": "2026-01-01T00:00:00",
-        }
-    )
-    adapter.ingest_turn(
-        {
-            "turn_id": "t002",
-            "actor": "user",
-            "content": "I like coffee.",
-            "ground_truth_facts": ["f002"],
-            "revises_facts": [],
-            "simulated_date": "2026-01-02T00:00:00",
-        }
-    )
-    adapter._close_superseded_facts(["f001"], "2026-02-01T00:00:00")
-    rows = adapter.store._conn.execute(
-        """
-        SELECT m.id, m.valid_until
-        FROM memory_units m
-        JOIN acmb_fact_id_index i ON i.memory_unit_id = m.id
-        WHERE i.ground_truth_fact_id = ?
-        """,
-        ("f002",),
-    ).fetchall()
-    assert rows[0][1] is None
-
-
 def test_expired_high_activation_fact_is_not_returned(tmp_path) -> None:
     with Store(tmp_path / "store.db") as store:
         unit = store.insert(
@@ -172,32 +113,6 @@ def test_expired_high_activation_fact_is_not_returned(tmp_path) -> None:
             as_of="2026-02-01T00:00:00",
         )
         assert response.results == []
-
-
-def test_end_to_end_revision_excludes_old_fact_and_includes_new_fact(tmp_path) -> None:
-    adapter = AkashikAdapter(store_path=str(tmp_path / "acmb.db"))
-    adapter.ingest_turn(
-        {
-            "turn_id": "t001",
-            "actor": "user",
-            "content": "I live in Chicago.",
-            "ground_truth_facts": ["f001"],
-            "revises_facts": [],
-            "simulated_date": "2026-01-01T00:00:00",
-        }
-    )
-    adapter.ingest_turn(
-        {
-            "turn_id": "t002",
-            "actor": "user",
-            "content": "I moved to Denver.",
-            "ground_truth_facts": ["f002"],
-            "revises_facts": ["f001"],
-            "simulated_date": "2026-02-01T00:00:00",
-        }
-    )
-    assert "f001" not in adapter.query("I live in Chicago.", as_of="2026-02-01T00:00:00")
-    assert "I moved to Denver." in adapter.query("I moved to Denver.", as_of="2026-02-01T00:00:00")
 
 
 def test_reset_store_contents_clears_acmb_fact_id_index_before_memory_units(tmp_path) -> None:

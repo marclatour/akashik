@@ -69,7 +69,6 @@ def ingest_instance(store, instance: dict) -> int:
                 role = str(turn.get("role", "")).strip().lower() or "unknown"
                 section_entities = {"speaker": role, "entities": [role]}
                 section_metadata = _merge_child_metadata(document_metadata, section_entities)
-                has_answer = bool(turn.get("has_answer"))
                 section = store.insert(
                     _make_unit(
                         "section",
@@ -80,10 +79,7 @@ def ingest_instance(store, instance: dict) -> int:
                     )
                 )
                 for sentence in _split_sentences(content):
-                    fact_entities = {}
-                    if has_answer:
-                        fact_entities = {"has_answer": "true", "entities": ["true"]}
-                    fact_metadata = _merge_child_metadata(section_metadata, fact_entities)
+                    fact_metadata = _merge_child_metadata(section_metadata, {})
                     _insert_fact_unit(
                         store,
                         sentence,

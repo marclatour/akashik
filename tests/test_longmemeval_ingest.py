@@ -21,7 +21,7 @@ SYNTHETIC_INSTANCE = {
             {"role": "assistant", "content": "That's great. What kind of books?"},
         ],
         [
-            {"role": "user", "content": "I just finished Dune. It was incredible.", "has_answer": True},
+            {"role": "user", "content": "I just finished Dune. It was incredible."},
             {"role": "assistant", "content": "A classic. Did you enjoy the world-building?"},
         ],
     ],
@@ -69,19 +69,6 @@ def test_speaker_entity() -> None:
         assert dune_fact["metadata"]["speaker"] == "user"
         assert reading_fact["metadata"]["speaker"] == "user"
         assert assistant_fact["metadata"]["speaker"] == "assistant"
-
-
-def test_has_answer_entity() -> None:
-    with Store(":memory:") as store:
-        ingest_instance(store, SYNTHETIC_INSTANCE)
-
-        facts = _fact_rows(store)
-        answer_turn_facts = [row for row in facts if row["metadata"]["session_id"] == "sess_b" and row["metadata"]["speaker"] == "user"]
-        non_answer_facts = [row for row in facts if row not in answer_turn_facts]
-
-        assert answer_turn_facts
-        assert all(row["metadata"].get("has_answer") == "true" for row in answer_turn_facts)
-        assert all("has_answer" not in row["metadata"] for row in non_answer_facts)
 
 
 def test_empty_turn_skipped() -> None:

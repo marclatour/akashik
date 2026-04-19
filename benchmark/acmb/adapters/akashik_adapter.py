@@ -12,6 +12,7 @@ import uuid
 
 from akashik.commitment_detector import detect_commitment, is_closure
 from akashik.identity import content_hash, normalized_hash
+from akashik.ingest import ingest_text
 from akashik.schema import Commitment, MemoryUnit
 from akashik.store import Store
 from benchmark.acmb.adapters.base import ACMBAdapter
@@ -49,48 +50,26 @@ class AkashikAdapter(ACMBAdapter):
         Ingest one conversation turn.
         User turns are stored as facts in memory_units.
         Assistant turns are logged to interaction_log only — never stored as facts.
+
+        Fairness note: this adapter does not read oracle fields
+        (ground_truth_facts, revises_facts) or the caller-supplied
+        commitments list. It sees only what a real runtime would see —
+        raw turn content and actor/turn identifiers.
         """
 
         self._ensure_roots()
         simulated_date = turn.get("simulated_date")
-        revises = list(turn.get("revises_facts", []))
-        if revises and self.store:
-            self._close_superseded_facts(revises, simulated_date)
         if turn["actor"] == "user":
             content = turn["content"]
-            for fact_id in turn.get("ground_truth_facts", []):
-                if fact_id.startswith("c") and commitments:
-                    for commitment in commitments:
-                        if commitment["commitment_id"] == fact_id:
-                            content = content + " " + commitment["description"]
-                            break
             metadata = {
                 "source": "acmb",
                 "speaker": turn["actor"],
                 "turn_id": turn["turn_id"],
-                "ground_truth_facts": list(turn.get("ground_truth_facts", [])),
                 "simulated_date": simulated_date,
+                "session_date": simulated_date,
                 "tags": [],
             }
-            unit = self.store.insert(
-                MemoryUnit(
-                    level="fact",
-                    content=content,
-                    content_hash=content_hash(content),
-                    normalized_hash=normalized_hash(content),
-                    parent_id=self._document_id,
-                    metadata=metadata,
-                    valid_from=simulated_date,
-                )
-            )
-            for fact_id in turn.get("ground_truth_facts", []):
-                self.store.execute(
-                    """
-                    INSERT OR IGNORE INTO acmb_fact_id_index (ground_truth_fact_id, memory_unit_id)
-                    VALUES (?, ?)
-                    """,
-                    (fact_id, unit.id),
-                )
+            ingest_text(self.store, content, metadata=metadata)
             if is_closure(turn["content"]):
                 open_commitments = self.store.get_open_commitments()
                 if open_commitments:
@@ -103,22 +82,16 @@ class AkashikAdapter(ACMBAdapter):
         elif turn["actor"] == "assistant":
             description = detect_commitment(turn["content"])
             if description:
-                commitment_description = description
-                if commitments:
-                    for commitment in commitments:
-                        if commitment_description in commitment["description"] or commitment["description"] in commitment_description:
-                            commitment_description = commitment["description"]
-                            break
                 self.store.insert_commitment(
                     Commitment(
                         id=str(uuid.uuid4()),
-                        description=commitment_description,
+                        description=description,
                         source_turn_id=turn["turn_id"],
                         session_id=self._document_id,
                         opened_at=turn.get("simulated_date", datetime.now(UTC).isoformat()),
                         closed_at=None,
                         status="open",
-                        related_facts=list(turn.get("ground_truth_facts", [])),
+                        related_facts=[],
                         metadata={},
                     )
                 )
@@ -167,35 +140,6 @@ class AkashikAdapter(ACMBAdapter):
             )
         except Exception:
             pass
-
-    def _close_superseded_facts(self, fact_ids: list[str], valid_until: str | None) -> None:
-        """
-        Set valid_until on memory_units whose ground_truth_facts overlap
-        with fact_ids. Uses acmb_fact_id_index — no full table scan.
-
-        TODO: this models linear supersession only (fact A replaced by fact B).
-        Future: support lineage branching for partial updates and conflicting facts.
-        See Architecture_Specification_v0.20.0.md lineage layer.
-        """
-
-        if not fact_ids or not valid_until:
-            return
-        placeholders = ",".join("?" for _ in fact_ids)
-        rows = self.store._conn.execute(
-            f"""
-            SELECT memory_unit_id
-            FROM acmb_fact_id_index
-            WHERE ground_truth_fact_id IN ({placeholders})
-            """,
-            tuple(fact_ids),
-        ).fetchall()
-        with self.store.transaction():
-            for row in rows:
-                memory_unit_id = row[0] if not isinstance(row, tuple) else row[0]
-                self.store._conn.execute(
-                    "UPDATE memory_units SET valid_until = ? WHERE id = ?",
-                    (valid_until, memory_unit_id),
-                )
 
     def query(self, query_text: str, k: int = 10, as_of: str | None = None) -> list[str]:
         """
