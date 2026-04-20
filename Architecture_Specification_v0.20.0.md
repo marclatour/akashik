@@ -189,6 +189,10 @@ The consolidation worker runs during low-activity periods. It:
 
 Consolidation is additive. It never rewrites source sequences. Originals remain permanently reconstructible. The identity frame, the consolidated procedural and semantic layer, expresses in milliseconds. The full episodic history is dark by default, reconstructible on demand.
 
+### Layer 6 - Lunchbox
+
+Addressed Cognition requires physical instantiation. The canonical form is a metal dome-lid lunch box with matching vacuum thermos, lithographed with culturally significant imagery. Happy Days is the reference implementation. Fonzie is the north star. The Fonz would not tolerate volatile RAM.
+
 ## Fact Structure — Complete Schema
 
 ### Sequence table (immutable)

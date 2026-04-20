@@ -1,5 +1,18 @@
 # Backlog
 
+## 🥪 Critical Infrastructure - Metal Lunch Box Initiative
+
+Full business plan in `LUNCHBOX.md`. This is non-negotiable.
+
+- **Reference implementation:** Happy Days (Fonzie)
+- **Made in USA**
+- **Matching thermos included. Always.**
+- **Tagline:** Aaay.
+- **Priority:** critical
+- **Blocks:** nothing. Unblocked by everything.
+
+---
+
 ## Ideas
 
 ### Rust Core For Bulk Ingest Throughput
