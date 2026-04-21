@@ -40,6 +40,16 @@ else
     ok "Python $PYVER"
 fi
 
+info "Checking required tools..."
+for tool in curl git; do
+    if command -v "$tool" &>/dev/null; then
+        ok "$tool available"
+    else
+        fail "$tool not found — required"
+        exit 1
+    fi
+done
+
 # ── 1. Create ~/.akashik/ directory structure ─────────────────────────
 info "Creating ~/.akashik/ directory structure..."
 ensure_dir ~/.akashik/stores/benchmarks/cuad
@@ -77,14 +87,6 @@ else
     ok "~/.akashik/config/defaults.toml already exists"
 fi
 
-if [ -z "$(ls -A ~/.akashik/data/benchmarks/acmb/personas 2>/dev/null)" ]; then
-    info "Generating ACMB personas..."
-    ./.venv/bin/python benchmark/acmb/generate_personas.py
-    ok "ACMB personas generated"
-else
-    ok "ACMB personas already present"
-fi
-
 # ── 3. Set up Python venv ─────────────────────────────────────────────
 info "Setting up Python virtual environment..."
 if [ ! -d ".venv" ]; then
@@ -99,10 +101,26 @@ if [ ! -f "$DEPS_MARKER" ] || [ pyproject.toml -nt "$DEPS_MARKER" ]; then
     info "Installing dependencies..."
     .venv/bin/pip install --quiet --upgrade pip
     .venv/bin/pip install --quiet -e .
+    .venv/bin/pip install --quiet -e ".[benchmark]"
     touch "$DEPS_MARKER"
     ok "Dependencies installed"
 else
     ok "Dependencies already installed"
+fi
+
+if [ -z "$(ls -A ~/.akashik/data/benchmarks/acmb/personas 2>/dev/null)" ]; then
+    info "Generating ACMB personas..."
+    ./.venv/bin/python benchmark/acmb/generate_personas.py
+    ok "ACMB personas generated"
+else
+    ok "ACMB personas already present"
+fi
+
+if [ -z "$(ls -A ~/.akashik/data/benchmarks/acmb/queries 2>/dev/null)" ]; then
+    info "Generating ACMB queries..."
+    ./.venv/bin/python benchmark/acmb/generate_queries.py 2>/dev/null || warn "generate_queries.py not found or failed — skipping"
+else
+    ok "ACMB queries already present"
 fi
 
 # ── 4. Download LongMemEval data if missing ───────────────────────────
@@ -164,6 +182,17 @@ else
     fi
 fi
 
+info "Smoke-testing Ollama endpoint..."
+OLLAMA_TEST=$(curl -s -X POST http://localhost:11434/api/generate \
+    -H "Content-Type: application/json" \
+    -d '{"model":"qwen2.5:1.5b","prompt":"Say OK","stream":false,"options":{"temperature":0,"seed":0}}' \
+    --max-time 15 2>/dev/null)
+if echo "$OLLAMA_TEST" | grep -q '"response"'; then
+    ok "Ollama responding"
+else
+    warn "Ollama not responding — start with: ollama serve"
+fi
+
 # ── 7. Run tests ──────────────────────────────────────────────────────
 info "Running test suite..."
 set +e
@@ -197,10 +226,22 @@ echo "  .venv/bin/python benchmark/longmemeval/run_longmemeval.py \\"
 echo "      --data ~/.akashik/data/benchmarks/longmemeval/longmemeval_oracle.json"
 echo ""
 echo "  # LongMemEval S (full noisy haystack)"
-echo "  .venv/bin/python benchmark/longmemeval/run_longmemeval.py"
+echo "  .venv/bin/python benchmark/longmemeval/run_longmemeval.py \\"
+echo "      --data ~/.akashik/data/benchmarks/longmemeval/longmemeval_s_cleaned.json"
+echo ""
+echo "  # LongMemEval end-to-end QA generation"
+echo "  .venv/bin/python benchmark/longmemeval/run_longmemeval.py \\"
+echo "      --data ~/.akashik/data/benchmarks/longmemeval/longmemeval_s_cleaned.json \\"
+echo "      --generate-answers"
 echo ""
 echo "  # QA judge (after benchmark run with --keep-output)"
 echo "  .venv/bin/python benchmark/longmemeval/run_judge.py \\"
 echo "      --results /tmp/akashik_lme_*.jsonl \\"
 echo "      --data ~/.akashik/data/benchmarks/longmemeval/longmemeval_oracle.json"
+echo ""
+echo "  # ACMB benchmark"
+echo "  .venv/bin/python benchmark/acmb/run_acmb.py"
+echo ""
+echo "  # Chat demo"
+echo "  .venv/bin/python examples/chat_with_memory.py --reset"
 echo ""
