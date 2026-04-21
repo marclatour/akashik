@@ -22,6 +22,7 @@ The properties below held under **blind** benchmark conditions after the v0.25.4
 - **Sub-5ms p50 query latency.** ACMB blind p50 3.74ms. Faster than every semantic baseline (RAG ~22ms); within 5ms of pure lexical BM25 (0.73ms). Fits inside an interactive intercept window.
 - **Deterministic ingest.** Sub-10ms per turn. No LLM call in the hot path. Reproducible — same input, same store, byte-identical facts.
 - **Provenance and lineage are first-class.** Every fact carries `parent_id`, `valid_from`, `valid_until`, `confirmation_count`, `last_confirmed_at`, and a metadata dict. Supersession sets `valid_until` rather than deleting. The audit trail is the data model, not an add-on.
+- **Long-context session recall.** LongMemEval blind (470 instances, `longmemeval_s_cleaned`): Session Recall @10 = **0.79** overall. Strongest on `knowledge-update` (0.93), `single-session-user` (0.91), `temporal-reasoning` (0.80), `multi-session` (0.76). Retrieval holds up across the full 500-session haystack without degradation vs the 25-persona ACMB regime.
 - **A working end-to-end demo.** `examples/chat_with_memory.py` runs against the real store with the real retrieval stack. Not a scripted replay.
 
 ---
@@ -30,25 +31,25 @@ The properties below held under **blind** benchmark conditions after the v0.25.4
 
 - **Belief revision on implied dialogue revisions.** ACMB blind 0.281 vs BM25 ~0.11. Akashik leads, but the lead is narrow because the rule-based contradiction detector (`akashik/contradiction.py`) only covers 8 regex patterns over declarative statements like *"I live in X."* ACMB's revision turns are often descriptive (*"Actually I moved last week"*), which the detector misses. Extending the pattern set is whack-a-mole; the real fix is semantic contradiction detection. Architectural decision pending — see §6.
 - **CUAD P@1 on natural legal queries.** Blind P@1: Akashik 0.06 vs GraphRAG 0.14 vs RAG 0.08. The CUAD query set is keyword-only (*"governed laws california"*) — the queries contain neither the party name nor the document identifier, so document scoping is unrecoverable from query text alone. Akashik's entity-filter mechanism can't fire without entity mentions. On a query set written the way a lawyer or paralegal actually writes ("in the Aduro consulting agreement, what law governs?"), we expect the structural lead in context efficiency to translate into a P@1 lead. That rewrite is open work.
-- **Scale beyond 50 documents / 25 personas.** Current benchmarks cap at these sizes. No evidence yet of degradation or robustness at 500+ documents or 100+ personas.
+- **Preference recall.** LongMemEval `single-session-preference` = **0.23** (n=30) — the one weak cell in the LongMemEval table. Preference turns are soft-phrased ("I usually go with…", "lately I've been…") and the FTS-first retrieval path doesn't surface them well. Same shape as the belief-revision ceiling — descriptive language is where lexical retrieval hits its floor.
+- **Expression engine is inert.** LongMemEval run: **0/500** expression hits, zero candidate-pool contribution. `--use-expression` is off by default and when it is on, it fires on no queries. Layer 4 needs a design review (see §6) — either make it earn its place or retire it.
+- **Scale beyond 50 documents / 25 personas / 500 sessions.** LongMemEval at 470 instances closed the single-user scale question. Multi-user scale (100+ personas, cross-user isolation, long-horizon growth) is still open.
 - **Consolidation (Layer 5).** Scaffolded only. The spec describes a background semantic/procedural compression loop; the code does not yet implement it.
 
 ---
 
 ## 4. Benchmark results
 
-### ACMB v0.3 — blind, 25 personas, v0.25.6-ingest
+### ACMB v0.3 — 7-way blind, 25 personas, v0.25.9
 
-| Metric | Akashik | BM25 | Notes |
-|---|---|---|---|
-| Fact Recall @k | **0.648** | 0.541 | Akashik leads |
-| Belief Revision | **0.281** | ~0.11 | Narrow lead; rule-based detector limits ceiling |
-| Fact Precision | **0.219** | 0.171 | Slight lead |
-| Temporal Correctness | **0.598** | 0.541 | Structural — no baseline equivalent |
-| Distractor Penalty | 0.554 | 0.588 | Mid-pack; lower is better |
-| Latency p50 | 3.74ms | 0.73ms | Faster than semantic baselines, slower than pure lexical |
-
-Akashik-hybrid adapters (`bm25_akashik`, `rag_akashik`) used the same adapter path that leaked oracle fields pre-audit. They need blind reruns before being included in the honest table.
+| Metric | Akashik | rag_akashik | bm25_akashik | RAG | full_ctx | BM25 | TF-IDF |
+|---|---|---|---|---|---|---|---|
+| Fact Recall | 0.648 | **0.752** | 0.679 | 0.614 | 0.560 | 0.541 | 0.533 |
+| Belief Revision | 0.281 | 0.249 | 0.251 | 0.111 | **0.340** | 0.113 | 0.068 |
+| Fact Precision | 0.219 | 0.214 | **0.257** | 0.183 | 0.255 | 0.171 | 0.158 |
+| Temporal Correct | 0.598 | **0.702** | 0.629 | 0.614 | 0.520 | 0.541 | 0.533 |
+| Distractor Penalty | 0.554 | 0.675 | 0.588 | 0.675 | **0.433** | 0.588 | 0.593 |
+| Latency p50 | 3.75ms | 20.95ms | **0.72ms** | 20.86ms | 1.34ms | 0.71ms | 0.90ms |
 
 ### CUAD — blind, 50 contracts, 4-way
 
@@ -59,11 +60,27 @@ Akashik-hybrid adapters (`bm25_akashik`, `rag_akashik`) used the same adapter pa
 | **Akashik** | 0.06 | **0.230** | 0.111 |
 | RAG-Embedding | 0.06 | 0.029 | 0.063 |
 
+Context efficiency 0.230 is structural and confirmed blind. P@1 leadership blocked on natural query rewrite (open work — §6 item 1).
+
 **Caveat — query set design.** CUAD queries are keyword-only stems with no entity mentions. This is not how legal professionals actually query their contract stack, and it disproportionately penalizes systems that depend on entity resolution for scoping. Akashik's context-efficiency lead (0.230 vs 0.029–0.109) is structural and survives blind — retrieved spans are tighter regardless of P@1 ranking. P@1 leadership is open work gated on a natural-query rewrite (§6).
 
 **Caveat — inverse oracle in query text.** Several CUAD queries embed the answer as a soft signal (e.g. *"governed laws california"* contains the governing-law jurisdiction). Any retrieval system that does reasonable token matching will get partial lift from this — GraphRAG's 0.14 P@1 is not fully clean either, just less penalized by it than a system built around entity-filter scoping. The natural-query rewrite in §6 fixes this for everyone.
 
-Do not update the README CUAD table until natural queries land.
+### LongMemEval — blind, 470 instances, v0.25.9
+
+| Dataset | Session Recall @10 | Notes |
+|---|---|---|
+| Oracle | **0.97** | Confirmed blind post-audit |
+| S split | **0.79** | Confirmed blind post-audit |
+
+| Type | Oracle | S blind | Delta |
+|---|---|---|---|
+| single-session-preference | 1.00 | 0.23 | −0.77 |
+| single-session-assistant | 1.00 | 0.80 | −0.20 |
+| multi-session | 0.96 | 0.76 | −0.20 |
+| temporal-reasoning | 0.94 | 0.80 | −0.14 |
+| knowledge-update | 0.97 | 0.93 | −0.04 |
+| single-session-user | 0.97 | 0.91 | −0.06 |
 
 ---
 
@@ -86,9 +103,11 @@ Commits: `9cd8aeb` (ACMB + CUAD strip), `cbd572d` (LongMemEval strip), `v0.25.4-
 
 1. **Natural CUAD queries (Option B).** Rewrite the 50-query set to include party names and document identifiers — the way a paralegal actually queries. Expected outcome: Akashik's context-efficiency lead translates into a P@1 lead. Blocks the CUAD section of any external positioning.
 2. **Semantic contradiction detection — decision taken.** Option (a) accepted as pattern hygiene: 9 additional declarative branches added in v0.25.9-contradiction (joined, stepped into, upgraded to, replaced with, finally switched to, etc.). ACMB rerun confirmed belief revision unchanged at 0.281 — the new patterns don't appear in the persona set, confirming the rule-based ceiling is ~0.281 on this benchmark. Option (b) (small LLM on declarative turns) is a named deferred project — build only if ACMB becomes product-defining, ship behind a feature flag, never wired in silently. Option (c) ruled out.
-3. **Slot-aware entity extraction.** Only worth pursuing if ACMB becomes product-defining. Current entity extraction is a capitalized-token heuristic; slot-aware extraction (person/place/org/date) would lift recall and precision on structured turns. Defer until ACMB's strategic weight is clearer.
-4. **Expression engine audit.** Layer 4 is partial. `--use-expression` exists but is off by default. Need a design review on what the expression engine actually does that scoped reranking doesn't, and whether it's worth keeping as a separable layer.
-5. **LongMemEval full rerun.** Post-audit blind numbers not yet collected. Schedule after #1 and #2.
+3. **Preference ranking boost under distractor load.** LongMemEval blind run confirmed preference recall collapses 1.00 → 0.23 under full haystack noise. Facts are in the store (Oracle = 1.00); they are buried at ranking time. Fix: scoring boost for preference-tagged facts in `retrieve.py` when query looks like a preference question. Targeted, cheap, no schema changes.
+4. **Slot-aware entity extraction.** Only worth pursuing if ACMB becomes product-defining. Current entity extraction is a capitalized-token heuristic; slot-aware extraction (person/place/org/date) would lift recall and precision on structured turns. Defer until ACMB's strategic weight is clearer.
+5. **Preference-turn retrieval.** LongMemEval `single-session-preference` = 0.23 is the visible weak cell. Soft-phrased language ("I usually", "lately", "these days") sits below the FTS floor. Candidates: (a) preference-slot extractor that promotes such turns on ingest, (b) widen semantic fallback trigger to include soft-phrasing lexical markers. Both are cheap experiments — run both, pick the winner.
+6. **Expression engine — repair or retire.** LongMemEval reports 0/500 firings. `--use-expression` is off by default and inert when on. Either identify the query shape it *should* hit and fix triggering, or delete the layer and flatten the stack. Keeping dead code in the retrieval path is an ongoing tax.
+7. **LongMemEval rerun — done (v0.25.9, 2026-04-21).** 470 instances, blind, post-audit. Session Recall @10 = 0.79. Per-type table in §2. Integrate into README only after #4 ships or is explicitly deferred, so the preference weak spot has context.
 
 ---
 

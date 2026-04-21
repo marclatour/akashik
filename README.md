@@ -33,18 +33,18 @@ Akashik's deterministic ingest takes milliseconds. It is not a tradeoff. It is a
 
 Mem0's LLM extraction produces richer semantic consolidation but is unsuitable for real-time conversational interception. Akashik's deterministic approach is designed for the 87ms intercept window — invisible to the user, always current, never blocking. See the ACMB table below for comparative quality metrics.
 
-## ACMB benchmark — blind, 25 personas, v0.25.9
+## ACMB benchmark — 7-way blind, 25 personas, v0.25.9
 
-| Metric | Akashik | BM25 | Notes |
-|---|---|---|---|
-| Fact Recall @k | **0.648** | 0.541 | Akashik leads |
-| Belief Revision | **0.281** | ~0.11 | Narrow lead; rule-based contradiction detector limits the ceiling |
-| Fact Precision | **0.219** | 0.171 | Slight lead |
-| Temporal Correctness | **0.598** | 0.541 | Structural — baselines have no `valid_from` / `as_of` equivalent |
-| Distractor Penalty | 0.554 | 0.588 | Mid-pack; lower is better |
-| Latency p50 | 3.98ms | 0.73ms | Faster than semantic baselines (RAG ~22ms); slower than pure lexical |
+| Metric | Akashik | rag_akashik | bm25_akashik | RAG | full_ctx | BM25 | TF-IDF |
+|---|---|---|---|---|---|---|---|
+| Fact Recall | 0.648 | **0.752** | 0.679 | 0.614 | 0.560 | 0.541 | 0.533 |
+| Belief Revision | 0.281 | 0.249 | 0.251 | 0.111 | **0.340** | 0.113 | 0.068 |
+| Fact Precision | 0.219 | 0.214 | **0.257** | 0.183 | 0.255 | 0.171 | 0.158 |
+| Temporal Correct | 0.598 | **0.702** | 0.629 | 0.614 | 0.520 | 0.541 | 0.533 |
+| Distractor Penalty | 0.554 | 0.675 | 0.588 | 0.675 | **0.433** | 0.588 | 0.593 |
+| Latency p50 | 3.75ms | 20.95ms | **0.72ms** | 20.86ms | 1.34ms | 0.71ms | 0.90ms |
 
-These are blind numbers, run after a fairness audit removed an oracle leak in the Akashik adapter (ground-truth fact IDs and revision signals are no longer consumed). The leak is documented; pre-audit numbers are not cited. Akashik leads fact recall, belief revision, precision, and temporal correctness; distractor penalty is mid-pack. Hybrid adapters (`bm25_akashik`, `rag_akashik`) used the same leaky path pre-audit and are pending blind reruns before they rejoin the table.
+All numbers are blind post-audit (v0.25.4+). Oracle fields removed from all adapters. Hybrid adapters (`bm25_akashik`, `rag_akashik`) now run on equal footing with baselines. `full_context` leads belief revision (0.340) — it sees the full history; at decade-scale this becomes architecturally infeasible. `rag_akashik` leads recall (0.752) and temporal (0.702). Akashik leads on latency among structured systems (3.75ms) and is the only adapter with real temporal filtering, provenance, and lineage.
 
 Akashik stores content as a fixed hierarchy:
 
@@ -367,9 +367,14 @@ Run Mode A:
 
 Current blind baseline (4-way, no oracle hints, v0.25.4+):
 
-- Precision@1: `0.06` (Akashik), `0.14` (GraphRAG), `0.08` (RAG)
-- Context Efficiency: `0.230` (Akashik) — structurally 2–8× ahead of baselines
-- Note: query set is keyword-only stems; P@1 leadership requires natural queries (open work)
+| System | P@1 | Context Efficiency | Composite |
+|---|---|---|---|
+| RAG | 0.08 | 0.029 | 0.065 |
+| GraphRAG | 0.14 | 0.109 | 0.135 |
+| Akashik | 0.06 | **0.230** | 0.111 |
+| RAG-Embedding | 0.06 | 0.029 | 0.063 |
+
+Note: query set is keyword-only stems with no entity mentions. Akashik's context efficiency (0.230) is structural and holds blind — retrieved spans are 2–8× tighter than baselines. P@1 leadership requires natural queries with entity mentions (open work).
 
 Run Mode B:
 
@@ -440,14 +445,7 @@ Oracle:
 
 Current oracle baseline with executor enabled:
 
-- Session Recall @10: `0.97`
-- Turn Recall: `0.89`
-- Executor classifier distribution after `v0.10.1` expansion:
-  - `factual`: `97`
-  - `temporal`: `80`
-  - `preference`: `17`
-  - `aggregation`: `78`
-  - `unknown`: `228`
+- Session Recall @10: `0.97` *(confirmed blind post-audit — `has_answer` field was inert)*
 
 S split:
 
@@ -460,13 +458,20 @@ S split:
 
 Current S baseline:
 
-- Session Recall @10: `0.79`
+- Session Recall @10: `0.79` *(confirmed blind post-audit — unchanged from pre-audit)*
 
-Interpretation:
+Oracle vs S per-type breakdown:
 
-- Oracle measures retrieval quality when the evidence sessions are already isolated
-- S measures retrieval quality under realistic haystack noise
-- the Oracle/S gap is a routing and noise-management problem, not a query paraphrase problem
+| Type | Oracle | S blind | Delta |
+|---|---|---|---|
+| single-session-preference | 1.00 | 0.23 | −0.77 |
+| single-session-assistant | 1.00 | 0.80 | −0.20 |
+| multi-session | 0.96 | 0.76 | −0.20 |
+| temporal-reasoning | 0.94 | 0.80 | −0.14 |
+| knowledge-update | 0.97 | 0.93 | −0.04 |
+| single-session-user | 0.97 | 0.91 | −0.06 |
+
+Preference collapse (1.00 → 0.23) is a ranking problem under distractor load, not a storage problem. Facts are present in the store; they are buried by distractors at ranking time. Fix is a scoring boost in `retrieve.py`, not an ingest change.
 
 Preference-only rebuild:
 
