@@ -17,6 +17,7 @@ import os
 from pathlib import Path
 import sys
 import time
+from urllib import error, request
 
 from akashik.executor import execute as execute_query
 from akashik.parse_temporal_scope import parse_temporal_scope
@@ -29,6 +30,45 @@ from benchmark.longmemeval.ingest_adapter import ingest_instance
 LOGGER = logging.getLogger(__name__)
 TOP_K = 10
 LONGMEMEVAL_DATA_ROOT = Path.home() / ".akashik" / "data" / "benchmarks" / "longmemeval"
+_OLLAMA_URL = "http://localhost:11434/api/generate"
+_DEFAULT_ANSWER_MODEL = "qwen2.5:1.5b"
+_ANSWER_PROMPT_TEMPLATE = (
+    "You are a helpful assistant with access to the following facts about the user:\n\n"
+    "{facts}\n\n"
+    "Question: {question}\n\n"
+    "Answer concisely based only on the facts provided. If the facts do not contain "
+    'enough information to answer, say "I don\'t know."'
+)
+
+
+def _generate_answer(model: str, facts: list[str], question: str) -> str | None:
+    if facts:
+        rendered_facts = "\n".join(f"- {fact}" for fact in facts)
+    else:
+        rendered_facts = "(no facts retrieved)"
+    prompt = _ANSWER_PROMPT_TEMPLATE.format(facts=rendered_facts, question=question)
+    payload = json.dumps(
+        {
+            "model": model,
+            "stream": False,
+            "prompt": prompt,
+            "options": {"temperature": 0, "seed": 0},
+        }
+    ).encode("utf-8")
+    http_request = request.Request(
+        _OLLAMA_URL,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with request.urlopen(http_request, timeout=60) as response:
+            body = json.loads(response.read().decode("utf-8"))
+    except (error.URLError, TimeoutError, OSError, ValueError) as exc:
+        LOGGER.warning("ollama call failed: %s", exc)
+        return None
+    value = body.get("response")
+    return str(value).strip() if value is not None else None
 
 
 def main() -> int:
@@ -86,6 +126,16 @@ def main() -> int:
         default=os.getenv("AKASHIK_USE_EXPRESSION") == "1",
         help="Enable the opt-in expression engine before the retrieval stack.",
     )
+    parser.add_argument(
+        "--generate-answers",
+        action="store_true",
+        help="Generate end-to-end answers via Ollama using retrieved facts as context.",
+    )
+    parser.add_argument(
+        "--answer-model",
+        default=_DEFAULT_ANSWER_MODEL,
+        help="Ollama model used when --generate-answers is set.",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -141,6 +191,8 @@ def main() -> int:
                     use_expression=args.use_expression,
                     needs_ingest=needs_ingest,
                     force_reingest=args.force_reingest,
+                    generate_answers=args.generate_answers,
+                    answer_model=args.answer_model,
                 )
                 if needs_ingest:
                     stores_created += 1
@@ -177,6 +229,8 @@ def main() -> int:
                         document_gate_n=args.document_gate_n,
                         use_executor=args.use_executor,
                         use_expression=args.use_expression,
+                        generate_answers=args.generate_answers,
+                        answer_model=args.answer_model,
                     )
                     if line is None:
                         failed_instances += 1
@@ -246,6 +300,8 @@ def _process_with_persistent_store(
     use_expression: bool,
     needs_ingest: bool,
     force_reingest: bool = False,
+    generate_answers: bool = False,
+    answer_model: str = _DEFAULT_ANSWER_MODEL,
 ) -> dict[str, object] | None:
     if force_reingest and store_path.exists():
         for suffix in ("", "-wal", "-shm"):
@@ -264,6 +320,8 @@ def _process_with_persistent_store(
             document_gate_n=document_gate_n,
             use_executor=use_executor,
             use_expression=use_expression,
+            generate_answers=generate_answers,
+            answer_model=answer_model,
         )
     finally:
         store.close()
@@ -277,6 +335,8 @@ def _process_instance(
     document_gate_n: int,
     use_executor: bool,
     use_expression: bool,
+    generate_answers: bool = False,
+    answer_model: str = _DEFAULT_ANSWER_MODEL,
 ) -> dict[str, object] | None:
     question_id = str(instance.get("question_id", ""))
     try:
@@ -384,6 +444,17 @@ def _process_instance(
     output["expression_candidate_pool"] = int(expression_stats.get("candidate_pool", 0))
     output["expression_expressed"] = int(expression_stats.get("expressed", 0))
     output["expression_hit"] = bool(expression_stats.get("bypassed_retrieval", False))
+    if generate_answers:
+        retrieved_facts = [str(result.unit.content).strip() for result in results[:TOP_K]]
+        retrieved_facts = [fact for fact in retrieved_facts if fact]
+        generated = _generate_answer(answer_model, retrieved_facts, question_text)
+        output["generated_answer"] = generated
+        output["generated_answer_model"] = answer_model
+        output["generated_answer_facts"] = retrieved_facts
+        if "executor_answer" in output:
+            output["executor_answer_deterministic"] = output["executor_answer"]
+        output["executor_answer"] = generated
+        output["executor_abstained"] = generated is None or generated.strip().lower().startswith("i don't know")
     return output
 
 

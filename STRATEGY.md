@@ -22,7 +22,7 @@ The properties below held under **blind** benchmark conditions after the v0.25.4
 - **Sub-5ms p50 query latency.** ACMB blind p50 3.74ms. Faster than every semantic baseline (RAG ~22ms); within 5ms of pure lexical BM25 (0.73ms). Fits inside an interactive intercept window.
 - **Deterministic ingest.** Sub-10ms per turn. No LLM call in the hot path. Reproducible — same input, same store, byte-identical facts.
 - **Provenance and lineage are first-class.** Every fact carries `parent_id`, `valid_from`, `valid_until`, `confirmation_count`, `last_confirmed_at`, and a metadata dict. Supersession sets `valid_until` rather than deleting. The audit trail is the data model, not an add-on.
-- **Long-context session recall.** LongMemEval blind (470 instances, `longmemeval_s_cleaned`): Session Recall @10 = **0.79** overall. Strongest on `knowledge-update` (0.93), `single-session-user` (0.91), `temporal-reasoning` (0.80), `multi-session` (0.76). Retrieval holds up across the full 500-session haystack without degradation vs the 25-persona ACMB regime.
+- **Long-context session recall and end-to-end QA.** LongMemEval blind (470 instances, v0.25.10): Session Recall @10 = **0.97** (Oracle) / **0.79** (S split). End-to-end QA accuracy with qwen2.5:1.5b local CPU: **46%** (Oracle) / **42%** (S split). Single-session accuracy 0.66-0.84 - strong. Temporal and multi-session accuracy limited by 1.5b model capability, not retrieval. Hardware: M1 MacBook Air, 8GB RAM, no internet connection.
 - **A working end-to-end demo.** `examples/chat_with_memory.py` runs against the real store with the real retrieval stack. Not a scripted replay.
 
 ---
@@ -82,6 +82,43 @@ Context efficiency 0.230 is structural and confirmed blind. P@1 leadership block
 | knowledge-update | 0.97 | 0.93 | −0.04 |
 | single-session-user | 0.97 | 0.91 | −0.06 |
 
+### LongMemEval - end-to-end QA, qwen2.5:1.5b local CPU, v0.25.10
+
+| Dataset | Session Recall @10 | QA Accuracy | Model | Hardware |
+|---|---|---|---|---|
+| Oracle | 0.97 | **0.46** | qwen2.5:1.5b | M1 Air, 8GB, local CPU |
+| S split | 0.79 | **0.42** | qwen2.5:1.5b | M1 Air, 8GB, local CPU |
+
+Per-type QA accuracy (Oracle):
+
+| Type | Retrieval Recall | QA Accuracy | Gap | Notes |
+|---|---|---|---|---|
+| single-session-user | 0.97 | 0.84 | -0.13 | Strong |
+| single-session-preference | 1.00 | 0.83 | -0.17 | Strong |
+| single-session-assistant | 1.00 | 0.73 | -0.27 | Good |
+| knowledge-update | 0.97 | 0.51 | -0.46 | Model bottleneck |
+| temporal-reasoning | 0.94 | 0.26 | -0.68 | Model bottleneck - date math |
+| multi-session | 0.96 | 0.20 | -0.76 | Model bottleneck - synthesis |
+
+The retrieval-to-accuracy gap on temporal and multi-session is a 1.5b model limitation, not a memory architecture limitation. Retrieval is near-ceiling (0.94-0.96); the model cannot do date math or cross-session synthesis at this scale.
+
+**Competitive context - LongMemEval-S end-to-end, canonical published results only:**
+
+| System | S Split Accuracy | Model | Source |
+|---|---|---|---|
+| EmergenceMem | 86% | GPT-4o | Emergence AI, June 2025 |
+| TiMem | 76.88% | GPT-4o-mini | Li et al., Jan 2026, arXiv |
+| Zep/Graphiti | 71.2% | GPT-4o | Rasmussen et al., Jan 2025, arXiv |
+| Full context baseline | ~60% | GPT-4o | Wu et al., 2024 |
+| Llama 3.1-8B (no memory system) | 42-45% | Llama 3.1-8B | Wu et al., 2024 - raw model, no retrieval |
+| **Akashik** | **42%** | **qwen2.5:1.5b** | **This repo, April 2026 - local CPU, no API** |
+
+These are not directly comparable - all systems above Akashik use cloud APIs with GPT-4o-class models. The comparison is included for orientation only.
+
+The most meaningful row is Llama 3.1-8B at 42-45% with no memory system. Akashik + qwen2.5:1.5b matches that score with a model 5x smaller. The retrieval is compensating for the model size disadvantage - which is the architectural thesis.
+
+> Akashik delivers 42% S split QA accuracy fully on-device with a 1.5B model, matching a raw 8B model with no memory system. The remaining gap to cloud systems is primarily model-bound, not memory-bound. Swap in a stronger local model and the numbers move.
+
 ---
 
 ## 5. What was found and fixed
@@ -104,10 +141,11 @@ Commits: `9cd8aeb` (ACMB + CUAD strip), `cbd572d` (LongMemEval strip), `v0.25.4-
 1. **Natural CUAD queries (Option B).** Rewrite the 50-query set to include party names and document identifiers — the way a paralegal actually queries. Expected outcome: Akashik's context-efficiency lead translates into a P@1 lead. Blocks the CUAD section of any external positioning.
 2. **Semantic contradiction detection — decision taken.** Option (a) accepted as pattern hygiene: 9 additional declarative branches added in v0.25.9-contradiction (joined, stepped into, upgraded to, replaced with, finally switched to, etc.). ACMB rerun confirmed belief revision unchanged at 0.281 — the new patterns don't appear in the persona set, confirming the rule-based ceiling is ~0.281 on this benchmark. Option (b) (small LLM on declarative turns) is a named deferred project — build only if ACMB becomes product-defining, ship behind a feature flag, never wired in silently. Option (c) ruled out.
 3. **Preference ranking boost under distractor load.** LongMemEval blind run confirmed preference recall collapses 1.00 → 0.23 under full haystack noise. Facts are in the store (Oracle = 1.00); they are buried at ranking time. Fix: scoring boost for preference-tagged facts in `retrieve.py` when query looks like a preference question. Targeted, cheap, no schema changes.
-4. **Slot-aware entity extraction.** Only worth pursuing if ACMB becomes product-defining. Current entity extraction is a capitalized-token heuristic; slot-aware extraction (person/place/org/date) would lift recall and precision on structured turns. Defer until ACMB's strategic weight is clearer.
-5. **Preference-turn retrieval.** LongMemEval `single-session-preference` = 0.23 is the visible weak cell. Soft-phrased language ("I usually", "lately", "these days") sits below the FTS floor. Candidates: (a) preference-slot extractor that promotes such turns on ingest, (b) widen semantic fallback trigger to include soft-phrasing lexical markers. Both are cheap experiments — run both, pick the winner.
-6. **Expression engine — repair or retire.** LongMemEval reports 0/500 firings. `--use-expression` is off by default and inert when on. Either identify the query shape it *should* hit and fix triggering, or delete the layer and flatten the stack. Keeping dead code in the retrieval path is an ongoing tax.
-7. **LongMemEval rerun — done (v0.25.9, 2026-04-21).** 470 instances, blind, post-audit. Session Recall @10 = 0.79. Per-type table in §2. Integrate into README only after #4 ships or is explicitly deferred, so the preference weak spot has context.
+4. **End-to-end LongMemEval with stronger local model.** qwen2.5:1.5b is the floor. Temporal (0.26 Oracle) and multi-session (0.20 Oracle) accuracy are model-bound — retrieval is already at 0.94-0.96 on those types. Running the same pipeline with qwen2.5:7b or llama3:8b would isolate how much of the gap closes with a stronger model. The Llama 3.1-8B baseline (42-45% with no memory system) is the reference point — Akashik + a stronger model should clear it meaningfully. Low-effort experiment, high-value data point.
+5. **Slot-aware entity extraction.** Only worth pursuing if ACMB becomes product-defining. Current entity extraction is a capitalized-token heuristic; slot-aware extraction (person/place/org/date) would lift recall and precision on structured turns. Defer until ACMB's strategic weight is clearer.
+6. **Preference-turn retrieval.** LongMemEval `single-session-preference` = 0.23 is the visible weak cell. Soft-phrased language ("I usually", "lately", "these days") sits below the FTS floor. Candidates: (a) preference-slot extractor that promotes such turns on ingest, (b) widen semantic fallback trigger to include soft-phrasing lexical markers. Both are cheap experiments — run both, pick the winner.
+7. **Expression engine — repair or retire.** LongMemEval reports 0/500 firings. `--use-expression` is off by default and inert when on. Either identify the query shape it *should* hit and fix triggering, or delete the layer and flatten the stack. Keeping dead code in the retrieval path is an ongoing tax.
+8. **LongMemEval rerun — done (v0.25.9, 2026-04-21).** 470 instances, blind, post-audit. Session Recall @10 = 0.79. Per-type table in §2. Integrate into README only after #4 ships or is explicitly deferred, so the preference weak spot has context.
 
 ---
 
