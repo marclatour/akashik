@@ -82,13 +82,13 @@ def test_runner_default_paths_point_to_akashik_home() -> None:
     assert DEFAULT_QUERIES_DIR.endswith("/.akashik/data/benchmarks/acmb/queries")
 
 
-def test_adapter_stub_query_returns_empty_list() -> None:
-    adapter = AkashikAdapter()
+def test_adapter_stub_query_returns_empty_list(tmp_path) -> None:
+    adapter = AkashikAdapter(store_path=str(tmp_path / "acmb.db"))
     assert adapter.query("anything") == []
 
 
-def test_adapter_stub_reset_does_not_raise() -> None:
-    adapter = AkashikAdapter()
+def test_adapter_stub_reset_does_not_raise(tmp_path) -> None:
+    adapter = AkashikAdapter(store_path=str(tmp_path / "acmb.db"))
     adapter.reset()
 
 

@@ -13,17 +13,37 @@ doing real work beyond commitment detection.
 from __future__ import annotations
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
 
 from benchmark.acmb.adapters.base import ACMBAdapter
 
 MAX_COMMITMENTS = 5
-_MODEL = SentenceTransformer("multi-qa-mpnet-base-dot-v1")
+_MODEL_CACHE: dict[str, object] = {}
+
+
+def _get_model(model_name: str) -> object:
+    model = _MODEL_CACHE.get(model_name)
+    if model is not None:
+        return model
+
+    import sentence_transformers
+
+    model_class = sentence_transformers.SentenceTransformer
+    try:
+        model = model_class(model_name, device="cpu", local_files_only=True)
+    except TypeError:
+        model = model_class(model_name)
+    except Exception:
+        try:
+            model = model_class(model_name, device="cpu")
+        except TypeError:
+            model = model_class(model_name)
+    _MODEL_CACHE[model_name] = model
+    return model
 
 
 class RagAkashikAdapter(ACMBAdapter):
     def __init__(self, model_name: str = "multi-qa-mpnet-base-dot-v1"):
-        self.model = _MODEL
+        self.model = _get_model(model_name)
         self.chunks: list[str] = []
         self.embeddings: list[np.ndarray] = []
         self.commitments: list[str] = []

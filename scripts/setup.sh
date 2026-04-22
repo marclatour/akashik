@@ -102,8 +102,8 @@ if [ ! -f "$DEPS_MARKER" ] || \
    ! .venv/bin/python -c "import pytest" &>/dev/null || \
    ! .venv/bin/python -c "from akashik import ingest_turn_fact, ingest_text, retrieve" &>/dev/null; then
     info "Installing dependencies..."
-    .venv/bin/pip install --quiet --upgrade pip
-    .venv/bin/pip install --quiet -e ".[dev]"
+    .venv/bin/pip install --quiet --upgrade pip setuptools
+    .venv/bin/pip install --quiet --no-build-isolation -e ".[dev]"
     .venv/bin/pip install --quiet -e ".[benchmark]"
     touch "$DEPS_MARKER"
     ok "Dependencies installed"
