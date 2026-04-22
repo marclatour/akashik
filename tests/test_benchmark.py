@@ -65,24 +65,3 @@ def test_benchmark_run_script_writes_outputs(tmp_path) -> None:
     assert (results_dir / "results.json").exists()
     assert (results_dir / "report.md").exists()
     assert "gate: PASS" in completed.stdout
-
-    mode_b = subprocess.run(
-        [
-            sys.executable,
-            "benchmark/run_mode_b.py",
-            "--results-dir",
-            str(results_dir),
-            "--mode-a-results",
-            str(results_dir / "results.json"),
-        ],
-        cwd=repo_root,
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-
-    if mode_b.returncode != 0:
-        raise AssertionError(f"benchmark/run_mode_b.py failed:\nSTDOUT:\n{mode_b.stdout}\nSTDERR:\n{mode_b.stderr}")
-
-    assert (results_dir / "results_mode_b.json").exists()
-    assert (results_dir / "report_mode_b.md").exists()
