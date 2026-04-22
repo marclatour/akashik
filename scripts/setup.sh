@@ -97,10 +97,10 @@ else
 fi
 
 DEPS_MARKER=.venv/.akashik_deps_installed
-if [ ! -f "$DEPS_MARKER" ] || [ pyproject.toml -nt "$DEPS_MARKER" ]; then
+if [ ! -f "$DEPS_MARKER" ] || [ pyproject.toml -nt "$DEPS_MARKER" ] || ! .venv/bin/python -c "import pytest" &>/dev/null; then
     info "Installing dependencies..."
     .venv/bin/pip install --quiet --upgrade pip
-    .venv/bin/pip install --quiet -e .
+    .venv/bin/pip install --quiet -e ".[dev]"
     .venv/bin/pip install --quiet -e ".[benchmark]"
     touch "$DEPS_MARKER"
     ok "Dependencies installed"
@@ -166,13 +166,38 @@ fi
 # ── 6. Check Ollama + qwen2.5:1.5b ───────────────────────────────────
 info "Checking Ollama..."
 if ! command -v ollama &>/dev/null; then
-    warn "Ollama not found — required for QA judge"
-    warn "Install on macOS: brew install ollama"
-    warn "Install on Linux: curl -fsSL https://ollama.com/install.sh | sh"
-    warn "Start Ollama: ollama serve"
-    warn "Then run: ollama pull qwen2.5:1.5b"
+    warn "Ollama not found — required for QA judge and chat demo."
+    echo -e "Install Ollama now? [Y/n] \c"
+    read -r INSTALL_OLLAMA
+    INSTALL_OLLAMA=${INSTALL_OLLAMA:-Y}
+    if [[ "$INSTALL_OLLAMA" =~ ^[Yy]$ ]]; then
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            info "Installing Ollama on macOS..."
+            if command -v brew &>/dev/null; then
+                brew install ollama
+            else
+                info "Homebrew not found — using official installer..."
+                curl -fsSL https://ollama.com/install.sh | sh
+            fi
+        else
+            info "Installing Ollama on Linux..."
+            curl -fsSL https://ollama.com/install.sh | sh
+        fi
+        if command -v ollama &>/dev/null; then
+            ok "Ollama installed"
+        else
+            warn "Ollama install may have failed — check output above"
+            warn "Manual install: https://ollama.com/download"
+        fi
+    else
+        warn "Skipping Ollama install — benchmark judge and chat demo will not work without it"
+        warn "Install later: https://ollama.com/download"
+    fi
 else
     ok "Ollama installed"
+fi
+
+if command -v ollama &>/dev/null; then
     if ollama list 2>/dev/null | grep -q "qwen2.5:1.5b"; then
         ok "qwen2.5:1.5b model available"
     else
@@ -180,17 +205,16 @@ else
         ollama pull qwen2.5:1.5b
         ok "qwen2.5:1.5b ready"
     fi
-fi
-
-info "Smoke-testing Ollama endpoint..."
-OLLAMA_TEST=$(curl -s -X POST http://localhost:11434/api/generate \
-    -H "Content-Type: application/json" \
-    -d '{"model":"qwen2.5:1.5b","prompt":"Say OK","stream":false,"options":{"temperature":0,"seed":0}}' \
-    --max-time 15 2>/dev/null)
-if echo "$OLLAMA_TEST" | grep -q '"response"'; then
-    ok "Ollama responding"
-else
-    warn "Ollama not responding — start with: ollama serve"
+    info "Smoke-testing Ollama endpoint..."
+    OLLAMA_TEST=$(curl -s -X POST http://localhost:11434/api/generate \
+        -H "Content-Type: application/json" \
+        -d '{"model":"qwen2.5:1.5b","prompt":"Say OK","stream":false,"options":{"temperature":0,"seed":0}}' \
+        --max-time 15 2>/dev/null)
+    if echo "$OLLAMA_TEST" | grep -q '"response"'; then
+        ok "Ollama responding"
+    else
+        warn "Ollama not responding — start with: ollama serve"
+    fi
 fi
 
 # ── 7. Run tests ──────────────────────────────────────────────────────
