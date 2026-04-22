@@ -21,7 +21,7 @@ ensure_dir() {
 }
 
 echo ""
-echo -e "${BOLD}Akashik Setup${RESET}"
+echo -e "${BOLD}Akashik Bootstrap${RESET}"
 echo "============================================"
 echo ""
 
@@ -221,26 +221,34 @@ if command -v ollama &>/dev/null; then
 fi
 
 # ── 7. Run tests ──────────────────────────────────────────────────────
-info "Running test suite..."
-set +e
-TEST_OUTPUT=$(.venv/bin/python -m pytest --tb=short -q 2>&1)
-TEST_STATUS=$?
-set -e
-printf "%s\n" "$TEST_OUTPUT"
-if [ "$TEST_STATUS" -eq 0 ]; then
-    TEST_RESULT=$(printf "%s\n" "$TEST_OUTPUT" | grep "passed" | tail -1)
-    if [ -z "$TEST_RESULT" ]; then
-        TEST_RESULT="pytest completed successfully"
+echo -e "Run test suite now? [Y/n] \c"
+read -r RUN_TESTS
+RUN_TESTS=${RUN_TESTS:-Y}
+
+if [[ "$RUN_TESTS" =~ ^[Yy]$ ]]; then
+    info "Running test suite..."
+    set +e
+    TEST_OUTPUT=$(.venv/bin/python -m pytest --tb=short -q 2>&1)
+    TEST_STATUS=$?
+    set -e
+    printf "%s\n" "$TEST_OUTPUT"
+    if [ "$TEST_STATUS" -eq 0 ]; then
+        TEST_RESULT=$(printf "%s\n" "$TEST_OUTPUT" | grep "passed" | tail -1)
+        if [ -z "$TEST_RESULT" ]; then
+            TEST_RESULT="pytest completed successfully"
+        fi
+        ok "Tests: $TEST_RESULT"
+    else
+        fail "Some tests failed — check output above"
+        exit 1
     fi
-    ok "Tests: $TEST_RESULT"
 else
-    fail "Some tests failed — check output above"
-    exit 1
+    warn "Skipping test suite — run manually with: .venv/bin/python -m pytest"
 fi
 
 # ── 8. Summary ────────────────────────────────────────────────────────
 echo ""
-echo -e "${BOLD}Setup complete. Benchmark commands:${RESET}"
+echo -e "${BOLD}Bootstrap complete. Benchmark commands:${RESET}"
 echo ""
 echo "  # CUAD Mode A (clause-label queries)"
 echo "  .venv/bin/python benchmark/run_cuad.py"
@@ -271,4 +279,6 @@ echo "  .venv/bin/python benchmark/acmb/run_acmb.py"
 echo ""
 echo "  # Chat demo"
 echo "  .venv/bin/python examples/chat_with_memory.py --reset"
+echo ""
+echo "  # Results saved to ~/.akashik/results/benchmarks/ when --keep-output is used"
 echo ""
