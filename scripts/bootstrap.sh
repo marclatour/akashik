@@ -246,6 +246,30 @@ else
     warn "Skipping test suite — run manually with: .venv/bin/python -m pytest"
 fi
 
+# ── 9. Optional benchmark store pre-warm ─────────────────────────────
+info "Pre-warming benchmark stores..."
+echo -e "Pre-create LongMemEval stores now? (~10 min, makes first full run faster) [y/N] \c"
+read -r PREWARM
+PREWARM=${PREWARM:-N}
+if [[ "$PREWARM" =~ ^[Yy]$ ]]; then
+    info "Pre-warming LongMemEval Oracle stores..."
+    .venv/bin/python benchmark/longmemeval/run_longmemeval.py \
+        --data ~/.akashik/data/benchmarks/longmemeval/longmemeval_oracle.json \
+        --abstention-threshold 0.3 \
+        2>&1 | grep -E "Stores (reused|created)|Session Recall|elapsed" | tail -5
+    ok "LongMemEval Oracle stores ready"
+
+    info "Pre-warming LongMemEval S stores..."
+    .venv/bin/python benchmark/longmemeval/run_longmemeval.py \
+        --data ~/.akashik/data/benchmarks/longmemeval/longmemeval_s_cleaned.json \
+        --abstention-threshold 0.3 \
+        --document-gate-n 5 \
+        2>&1 | grep -E "Stores (reused|created)|Session Recall|elapsed" | tail -5
+    ok "LongMemEval S stores ready"
+else
+    warn "Skipping store pre-warm — first benchmark run will create stores automatically"
+fi
+
 # ── 8. Summary ────────────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}Bootstrap complete. Benchmark commands:${RESET}"
