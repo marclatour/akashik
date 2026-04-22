@@ -97,7 +97,10 @@ else
 fi
 
 DEPS_MARKER=.venv/.akashik_deps_installed
-if [ ! -f "$DEPS_MARKER" ] || [ pyproject.toml -nt "$DEPS_MARKER" ] || ! .venv/bin/python -c "import pytest" &>/dev/null; then
+if [ ! -f "$DEPS_MARKER" ] || \
+   [ pyproject.toml -nt "$DEPS_MARKER" ] || \
+   ! .venv/bin/python -c "import pytest" &>/dev/null || \
+   ! .venv/bin/python -c "from akashik import ingest_turn_fact, ingest_text, retrieve" &>/dev/null; then
     info "Installing dependencies..."
     .venv/bin/pip install --quiet --upgrade pip
     .venv/bin/pip install --quiet -e ".[dev]"
