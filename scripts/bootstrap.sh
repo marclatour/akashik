@@ -101,10 +101,11 @@ if [ ! -f "$DEPS_MARKER" ] || \
    [ pyproject.toml -nt "$DEPS_MARKER" ] || \
    ! .venv/bin/python -c "import pytest" &>/dev/null || \
    ! .venv/bin/python -c "from akashik import ingest_turn_fact, ingest_text, retrieve" &>/dev/null; then
-    info "Installing dependencies..."
+    info "Installing CPU-only PyTorch (avoids CUDA download)..."
     .venv/bin/pip install --quiet --upgrade pip setuptools
-    .venv/bin/pip install --quiet --no-build-isolation -e ".[dev]"
-    .venv/bin/pip install --quiet -e ".[benchmark]"
+    .venv/bin/pip install --quiet torch --index-url https://download.pytorch.org/whl/cpu
+    info "Installing dependencies..."
+    .venv/bin/pip install --quiet -e ".[dev,benchmark]"
     touch "$DEPS_MARKER"
     ok "Dependencies installed"
 else
