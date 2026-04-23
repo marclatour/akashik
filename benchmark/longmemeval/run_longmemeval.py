@@ -319,9 +319,9 @@ def main() -> int:
                         elapsed_seconds=time.monotonic() - instance_started_at,
                         progress_index=completed_count,
                     )
-                for _index, line in sorted(completed_rows, key=lambda item: item[0]):
-                    emitted.append(line)
-                    handle.write(json.dumps(line, sort_keys=True) + "\n")
+            for _index, line in sorted(completed_rows, key=lambda item: item[0]):
+                emitted.append(line)
+                handle.write(json.dumps(line, sort_keys=True) + "\n")
         else:
             with Store(args.store) as store:
                 for index, instance in enumerate(instances, start=1):
