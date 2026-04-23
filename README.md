@@ -87,6 +87,13 @@ Benchmark results below still reflect the cold path unless noted otherwise. Expr
 ./.venv/bin/python -m pip install -e ".[dev]"
 ```
 
+Linux users: install CPU-only PyTorch before other dependencies to avoid downloading the full CUDA stack:
+
+```bash
+./.venv/bin/python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+./.venv/bin/python -m pip install -e ".[dev,benchmark]"
+```
+
 Benchmark extras:
 
 ```bash
