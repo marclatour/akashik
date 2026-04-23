@@ -16,6 +16,7 @@ import json
 import logging
 import os
 from pathlib import Path
+import sqlite3
 import sys
 import time
 from urllib import error, request
@@ -24,7 +25,7 @@ from akashik.executor import execute as execute_query
 from akashik.parse_temporal_scope import parse_temporal_scope
 from akashik.parse_temporal_scope import _parse_question_date
 from akashik.retrieve import retrieve, score_documents
-from akashik.store import Store
+from akashik.store import AKASHIK_SCHEMA_VERSION, Store
 from akashik.temporal_resolver import classify_temporal_query
 from benchmark.longmemeval.ingest_adapter import ingest_instance
 
@@ -707,8 +708,15 @@ def _store_needs_ingest(store_path: Path, *, force_reingest: bool) -> bool:
         return True
     if not store_path.exists() or store_path.stat().st_size == 0:
         return True
-    with Store(store_path) as store:
-        return store.schema_version_mismatch()
+    try:
+        conn = sqlite3.connect(f"file:{store_path}?mode=ro", uri=True)
+        try:
+            stored = int(conn.execute("PRAGMA user_version").fetchone()[0])
+        finally:
+            conn.close()
+        return stored != AKASHIK_SCHEMA_VERSION
+    except sqlite3.OperationalError:
+        return True
 
 
 def _reset_store_contents(store: Store) -> None:
