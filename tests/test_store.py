@@ -73,6 +73,35 @@ def test_search_fts_and_stats(tmp_path) -> None:
         assert stats.by_level["fact"] == 0
 
 
+def test_bulk_ingest_rebuilds_fts_and_fact_context_index(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        document = store.insert(_unit("document", "Bulk ingest document."))
+        section = store.insert(_unit("section", "Bulk ingest section.", parent_id=document.id))
+
+        store.begin_bulk_ingest()
+        try:
+            store.insert(
+                _unit(
+                    "fact",
+                    "I prefer steel lunchboxes with matching thermoses.",
+                    parent_id=section.id,
+                )
+            )
+            assert store.search_fts("steel lunchboxes") == []
+            assert (
+                store._conn.execute("SELECT COUNT(*) FROM fact_context_index").fetchone()[0] == 0
+            )
+        finally:
+            store.end_bulk_ingest()
+
+        matches = store.search_fts("steel lunchboxes")
+        assert matches
+        assert matches[0].level == "fact"
+        assert (
+            store._conn.execute("SELECT COUNT(*) FROM fact_context_index").fetchone()[0] > 0
+        )
+
+
 def test_section_heading_round_trips(tmp_path) -> None:
     with Store(tmp_path / "store.db") as store:
         unit = store.insert(_unit("fact", "Heading is a first-class field.", section_heading="Renewal Term"))

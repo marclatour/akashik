@@ -126,31 +126,35 @@ def ingest_file(
     base_metadata = _base_metadata(path, metadata)
     base_metadata["entities"] = extract_entities(raw_text, filename=path.stem)
 
-    with store.transaction():
-        document = store.insert(_make_unit("document", raw_text, metadata=base_metadata))
-        for section_text in split_sections(raw_text):
-            section_heading = extract_section_heading(section_text)
-            section_entities: dict = {}
-            section = store.insert(
-                _make_unit(
-                    "section",
-                    section_text,
-                    parent_id=document.id,
-                    metadata=base_metadata,
-                    section_entities=section_entities,
-                    section_heading=section_heading,
+    store.begin_bulk_ingest()
+    try:
+        with store.transaction():
+            document = store.insert(_make_unit("document", raw_text, metadata=base_metadata))
+            for section_text in split_sections(raw_text):
+                section_heading = extract_section_heading(section_text)
+                section_entities: dict = {}
+                section = store.insert(
+                    _make_unit(
+                        "section",
+                        section_text,
+                        parent_id=document.id,
+                        metadata=base_metadata,
+                        section_entities=section_entities,
+                        section_heading=section_heading,
+                    )
                 )
-            )
-            for fact_text in split_facts(section_text):
-                _insert_fact_unit(
-                    store,
-                    fact_text,
-                    parent_id=section.id,
-                    metadata=base_metadata,
-                    section_entities=section_entities,
-                    section_heading=section_heading,
-                )
-    return document
+                for fact_text in split_facts(section_text):
+                    _insert_fact_unit(
+                        store,
+                        fact_text,
+                        parent_id=section.id,
+                        metadata=base_metadata,
+                        section_entities=section_entities,
+                        section_heading=section_heading,
+                    )
+        return document
+    finally:
+        store.end_bulk_ingest()
 
 
 def ingest_text(
@@ -581,12 +585,13 @@ def _make_unit(
 
 
 def _find_reinforceable_fact(store, unit: MemoryUnit, instance_id: str | None) -> MemoryUnit | None:
-    filters: dict[str, str] | None = {"instance_id": instance_id} if instance_id else None
-    candidates = store.fetch_by_metadata_filters(level="fact", filters=filters)
+    candidates = store.fetch_by_normalized_hash(unit.normalized_hash)
     for candidate in candidates:
+        if candidate.level != "fact":
+            continue
         if candidate.valid_until is not None:
             continue
-        if candidate.normalized_hash != unit.normalized_hash:
+        if instance_id and candidate.metadata.get("instance_id") != instance_id:
             continue
         return candidate
     return None

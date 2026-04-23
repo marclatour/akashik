@@ -38,59 +38,63 @@ def ingest_instance(store, instance: dict) -> int:
     )
     corpus = _make_unit("corpus", f"instance:{question_id}", metadata=corpus_metadata)
 
-    with store.transaction():
-        corpus = store.insert(corpus)
-        for index, session in enumerate(sessions):
-            session_id = str(session_ids[index])
-            session_date = str(session_dates[index])
-            document_metadata = _merge_child_metadata(
-                corpus_metadata,
-                {
-                    "instance_id": question_id,
-                    "session_id": session_id,
-                    "session_date": session_date,
-                    "question_type": question_type,
-                    "entities": [session_id, session_date],
-                },
-            )
-            document = store.insert(
-                _make_unit(
-                    "document",
-                    _session_content(session),
-                    parent_id=corpus.id,
-                    metadata=document_metadata,
+    store.begin_bulk_ingest()
+    try:
+        with store.transaction():
+            corpus = store.insert(corpus)
+            for index, session in enumerate(sessions):
+                session_id = str(session_ids[index])
+                session_date = str(session_dates[index])
+                document_metadata = _merge_child_metadata(
+                    corpus_metadata,
+                    {
+                        "instance_id": question_id,
+                        "session_id": session_id,
+                        "session_date": session_date,
+                        "question_type": question_type,
+                        "entities": [session_id, session_date],
+                    },
                 )
-            )
-            for turn_index, turn in enumerate(session):
-                content = str(turn.get("content", "")).strip()
-                if not content:
-                    skipped_turns += 1
-                    continue
-                role = str(turn.get("role", "")).strip().lower() or "unknown"
-                section_entities = {"speaker": role, "entities": [role]}
-                section_metadata = _merge_child_metadata(document_metadata, section_entities)
-                section = store.insert(
+                document = store.insert(
                     _make_unit(
-                        "section",
-                        content,
-                        parent_id=document.id,
-                        metadata=section_metadata,
-                        section_heading=f"{role}_{turn_index}",
+                        "document",
+                        _session_content(session),
+                        parent_id=corpus.id,
+                        metadata=document_metadata,
                     )
                 )
-                for sentence in _split_sentences(content):
-                    fact_metadata = _merge_child_metadata(section_metadata, {})
-                    ingest_turn_fact(
-                        store,
-                        sentence,
-                        parent_id=section.id,
-                        role=role,
-                        turn_id=f"{session_id}_{turn_index}",
-                        session_date=session_date,
-                        metadata=fact_metadata,
-                        split=False,
+                for turn_index, turn in enumerate(session):
+                    content = str(turn.get("content", "")).strip()
+                    if not content:
+                        skipped_turns += 1
+                        continue
+                    role = str(turn.get("role", "")).strip().lower() or "unknown"
+                    section_entities = {"speaker": role, "entities": [role]}
+                    section_metadata = _merge_child_metadata(document_metadata, section_entities)
+                    section = store.insert(
+                        _make_unit(
+                            "section",
+                            content,
+                            parent_id=document.id,
+                            metadata=section_metadata,
+                            section_heading=f"{role}_{turn_index}",
+                        )
                     )
-                    fact_count += 1
+                    for sentence in _split_sentences(content):
+                        fact_metadata = _merge_child_metadata(section_metadata, {})
+                        ingest_turn_fact(
+                            store,
+                            sentence,
+                            parent_id=section.id,
+                            role=role,
+                            turn_id=f"{session_id}_{turn_index}",
+                            session_date=session_date,
+                            metadata=fact_metadata,
+                            split=False,
+                        )
+                        fact_count += 1
+    finally:
+        store.end_bulk_ingest()
 
     if skipped_turns:
         LOGGER.info("Skipped %s empty LongMemEval turns for %s", skipped_turns, question_id)

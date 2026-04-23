@@ -129,6 +129,9 @@ class Store:
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA foreign_keys = ON")
         self._conn.execute("PRAGMA journal_mode = WAL")
+        self._bulk_ingest_mode = False
+        self._bulk_ingest_batch_open = False
+        self._bulk_ingest_fact_count = 0
         self._opened_user_version = int(self._conn.execute("PRAGMA user_version").fetchone()[0])
         self.initialize()
 
@@ -259,6 +262,38 @@ class Store:
     def close(self) -> None:
         self._conn.close()
 
+    def begin_bulk_ingest(self) -> None:
+        """Switch the store into a faster ingest mode for corpus loading."""
+        if self._bulk_ingest_mode:
+            return
+        self._conn.execute("PRAGMA synchronous = NORMAL")
+        self._conn.execute("PRAGMA cache_size = -65536")
+        self._bulk_ingest_mode = True
+        self._bulk_ingest_batch_open = False
+        self._bulk_ingest_fact_count = 0
+
+    def end_bulk_ingest(self) -> None:
+        """Finalize deferred secondary indexes after bulk ingest completes."""
+        if not self._bulk_ingest_mode:
+            return
+        try:
+            if self._bulk_ingest_batch_open and self._conn.in_transaction:
+                self._conn.commit()
+            self._bulk_ingest_batch_open = False
+            self._bulk_ingest_fact_count = 0
+            self._bulk_ingest_mode = False
+            with self.transaction():
+                self._conn.execute(
+                    "INSERT INTO memory_units_fts(memory_units_fts) VALUES('rebuild')"
+                )
+                self._backfill_fact_context_index()
+            self._conn.execute("PRAGMA synchronous = FULL")
+            self._conn.execute("PRAGMA cache_size = -2000")
+        finally:
+            self._bulk_ingest_batch_open = False
+            self._bulk_ingest_fact_count = 0
+            self._bulk_ingest_mode = False
+
     def schema_version_mismatch(self) -> bool:
         stored = int(self._conn.execute("PRAGMA user_version").fetchone()[0])
         mismatch = stored != AKASHIK_SCHEMA_VERSION or (
@@ -293,8 +328,28 @@ class Store:
         if unit.parent_id is not None and self.fetch_by_id(unit.parent_id) is None:
             raise ValueError(f"Parent {unit.parent_id!r} does not exist.")
 
-        if self._conn.in_transaction:
+        if self._conn.in_transaction and not self._bulk_ingest_batch_open:
             self._insert_unit(unit)
+            return unit
+
+        if self._bulk_ingest_mode:
+            if not self._bulk_ingest_batch_open:
+                self._conn.execute("BEGIN")
+                self._bulk_ingest_batch_open = True
+            try:
+                self._insert_unit(unit)
+                if unit.level == "fact":
+                    self._bulk_ingest_fact_count += 1
+            except Exception:
+                if self._bulk_ingest_batch_open and self._conn.in_transaction:
+                    self._conn.rollback()
+                self._bulk_ingest_batch_open = False
+                self._bulk_ingest_fact_count = 0
+                raise
+            if self._bulk_ingest_fact_count >= BACKFILL_BATCH_SIZE:
+                self._conn.commit()
+                self._bulk_ingest_batch_open = False
+                self._bulk_ingest_fact_count = 0
             return unit
 
         with self._conn:
@@ -303,7 +358,8 @@ class Store:
 
     def _insert_unit(self, unit: MemoryUnit) -> None:
         fts_rowid = self._insert_main_row(unit)
-        self._insert_fts_row(fts_rowid, unit)
+        if not self._bulk_ingest_mode:
+            self._insert_fts_row(fts_rowid, unit)
         self._insert_epigenetic_row(unit)
 
     def _insert_main_row(self, unit: MemoryUnit) -> int:
@@ -352,7 +408,7 @@ class Store:
         entries: list[tuple[str, str]],
         fact_id: str,
     ) -> None:
-        if not entries:
+        if not entries or self._bulk_ingest_mode:
             return
         self.executemany(
             """
