@@ -9,6 +9,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import argparse
+import concurrent.futures
 from collections import defaultdict
 from datetime import datetime, timedelta
 import json
@@ -136,7 +137,14 @@ def main() -> int:
         default=_DEFAULT_ANSWER_MODEL,
         help="Ollama model used when --generate-answers is set.",
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=None,
+        help="Parallel workers. Default: 75%% of CPU cores. Use 1 for sequential.",
+    )
     args = parser.parse_args()
+    workers = args.workers if args.workers is not None else max(1, int((os.cpu_count() or 2) * 0.75))
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
@@ -179,44 +187,89 @@ def main() -> int:
             )
             planned_reused = sum(1 for _instance, _path, needs_ingest in store_plans if not needs_ingest)
             planned_created = len(store_plans) - planned_reused
-            for index, (instance, store_path, needs_ingest) in enumerate(store_plans, start=1):
-                instance_started_at = time.monotonic()
-                question_id = str(instance.get("question_id", f"instance_{index}"))
-                line = _process_with_persistent_store(
-                    store_path,
-                    instance,
-                    abstention_threshold=args.abstention_threshold,
-                    document_gate_n=args.document_gate_n,
-                    use_executor=args.use_executor,
-                    use_expression=args.use_expression,
-                    needs_ingest=needs_ingest,
-                    force_reingest=args.force_reingest,
-                    generate_answers=args.generate_answers,
-                    answer_model=args.answer_model,
-                )
-                if needs_ingest:
-                    stores_created += 1
-                else:
-                    stores_reused += 1
-                if line is None:
-                    failed_instances += 1
-                else:
+            if not summary_printed:
+                _print_store_summary(planned_reused, planned_created)
+                summary_printed = True
+            if workers == 1:
+                for index, (instance, store_path, needs_ingest) in enumerate(store_plans, start=1):
+                    instance_started_at = time.monotonic()
+                    question_id = str(instance.get("question_id", f"instance_{index}"))
+                    line = _process_with_persistent_store(
+                        store_path,
+                        instance,
+                        abstention_threshold=args.abstention_threshold,
+                        document_gate_n=args.document_gate_n,
+                        use_executor=args.use_executor,
+                        use_expression=args.use_expression,
+                        needs_ingest=needs_ingest,
+                        force_reingest=args.force_reingest,
+                        generate_answers=args.generate_answers,
+                        answer_model=args.answer_model,
+                    )
+                    if needs_ingest:
+                        stores_created += 1
+                    else:
+                        stores_reused += 1
+                    if line is None:
+                        failed_instances += 1
+                    else:
+                        emitted.append(line)
+                        handle.write(json.dumps(line, sort_keys=True) + "\n")
+                    if verbose_instance_progress:
+                        _print_instance_progress(
+                            index=index,
+                            total=len(instances),
+                            question_id=question_id,
+                            action="ingesting" if needs_ingest else "reusing",
+                            elapsed_seconds=time.monotonic() - instance_started_at,
+                            succeeded=line is not None,
+                        )
+                    else:
+                        _print_progress(index=index, total=len(instances), started_at=started_at)
+            else:
+                completed_rows: list[tuple[int, dict[str, object]]] = []
+                with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as executor:
+                    futures = {
+                        executor.submit(
+                            _process_store_plan,
+                            index,
+                            store_path,
+                            instance,
+                            abstention_threshold=args.abstention_threshold,
+                            document_gate_n=args.document_gate_n,
+                            use_executor=args.use_executor,
+                            use_expression=args.use_expression,
+                            needs_ingest=needs_ingest,
+                            force_reingest=args.force_reingest,
+                            generate_answers=args.generate_answers,
+                            answer_model=args.answer_model,
+                        ): (index, needs_ingest)
+                        for index, (instance, store_path, needs_ingest) in enumerate(store_plans, start=1)
+                    }
+                    for completed_count, future in enumerate(concurrent.futures.as_completed(futures), start=1):
+                        index, question_id, needs_ingest, line, elapsed_seconds = future.result()
+                        if needs_ingest:
+                            stores_created += 1
+                        else:
+                            stores_reused += 1
+                        if line is None:
+                            failed_instances += 1
+                        else:
+                            completed_rows.append((index, line))
+                        if verbose_instance_progress:
+                            _print_instance_progress(
+                                index=index,
+                                total=len(instances),
+                                question_id=question_id,
+                                action="ingesting" if needs_ingest else "reusing",
+                                elapsed_seconds=elapsed_seconds,
+                                succeeded=line is not None,
+                            )
+                        else:
+                            _print_progress(index=completed_count, total=len(instances), started_at=started_at)
+                for _index, line in sorted(completed_rows, key=lambda item: item[0]):
                     emitted.append(line)
                     handle.write(json.dumps(line, sort_keys=True) + "\n")
-                if not summary_printed:
-                    _print_store_summary(planned_reused, planned_created)
-                    summary_printed = True
-                if verbose_instance_progress:
-                    _print_instance_progress(
-                        index=index,
-                        total=len(instances),
-                        question_id=question_id,
-                        action="ingesting" if needs_ingest else "reusing",
-                        elapsed_seconds=time.monotonic() - instance_started_at,
-                        succeeded=line is not None,
-                    )
-                else:
-                    _print_progress(index=index, total=len(instances), started_at=started_at)
         else:
             with Store(args.store) as store:
                 for index, instance in enumerate(instances, start=1):
@@ -325,6 +378,37 @@ def _process_with_persistent_store(
         )
     finally:
         store.close()
+
+
+def _process_store_plan(
+    index: int,
+    store_path: Path,
+    instance: dict,
+    *,
+    abstention_threshold: float,
+    document_gate_n: int,
+    use_executor: bool,
+    use_expression: bool,
+    needs_ingest: bool,
+    force_reingest: bool = False,
+    generate_answers: bool = False,
+    answer_model: str = _DEFAULT_ANSWER_MODEL,
+) -> tuple[int, str, bool, dict[str, object] | None, float]:
+    started_at = time.monotonic()
+    question_id = str(instance.get("question_id", f"instance_{index}"))
+    line = _process_with_persistent_store(
+        store_path,
+        instance,
+        abstention_threshold=abstention_threshold,
+        document_gate_n=document_gate_n,
+        use_executor=use_executor,
+        use_expression=use_expression,
+        needs_ingest=needs_ingest,
+        force_reingest=force_reingest,
+        generate_answers=generate_answers,
+        answer_model=answer_model,
+    )
+    return index, question_id, needs_ingest, line, max(time.monotonic() - started_at, 0.0)
 
 
 def _process_instance(

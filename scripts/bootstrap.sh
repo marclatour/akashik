@@ -256,6 +256,7 @@ if [[ "$PREWARM" =~ ^[Yy]$ ]]; then
     .venv/bin/python benchmark/longmemeval/run_longmemeval.py \
         --data ~/.akashik/data/benchmarks/longmemeval/longmemeval_oracle.json \
         --abstention-threshold 0.3 \
+        --workers $(python3 -c "import os; print(max(1, int((os.cpu_count() or 2) * 0.75)))") \
         2>&1 | grep -E "Stores (reused|created)|Session Recall|elapsed" | tail -5
     ok "LongMemEval Oracle stores ready"
 
@@ -264,6 +265,7 @@ if [[ "$PREWARM" =~ ^[Yy]$ ]]; then
         --data ~/.akashik/data/benchmarks/longmemeval/longmemeval_s_cleaned.json \
         --abstention-threshold 0.3 \
         --document-gate-n 5 \
+        --workers $(python3 -c "import os; print(max(1, int((os.cpu_count() or 2) * 0.75)))") \
         2>&1 | grep -E "Stores (reused|created)|Session Recall|elapsed" | tail -5
     ok "LongMemEval S stores ready"
 else
@@ -273,6 +275,8 @@ fi
 # ── 8. Summary ────────────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}Bootstrap complete. Benchmark commands:${RESET}"
+echo ""
+echo "  # All benchmarks parallelized — 75% of CPU cores by default, override with --workers N"
 echo ""
 echo "  # CUAD Mode A (clause-label queries)"
 echo "  .venv/bin/python benchmark/run_cuad.py"
