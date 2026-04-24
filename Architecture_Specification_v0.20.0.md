@@ -263,6 +263,46 @@ Soft reinforcement occurs when the assistant restates a fact and the user does n
 
 User corrections trigger lineage branching on the corrected fact. The correction creates a new sequence node with `lineage_parent_id` pointing to the incorrect fact, and the epigenetic layer silences the prior leaf.
 
+## Ingest Modes
+
+Two ingest modes exist and must remain independently correct.
+
+**Real-time conversational ingest**
+
+- One turn at a time, usually `1-5` facts per turn
+- Uses the standard per-row write path
+- Per-row FTS sync is correct here: low volume, immediate consistency required
+- `begin_bulk_ingest()` / `end_bulk_ingest()` are not used
+- This is the default path for interactive conversation
+
+**Bulk corpus onboarding**
+
+- Used for ChatGPT exports, email archives, Obsidian vaults, medical records, and benchmark store creation
+- `begin_bulk_ingest()` / `end_bulk_ingest()` are required
+- FTS5 and `fact_context_index` maintenance are deferred until the end of the ingest job
+- `PRAGMA synchronous=NORMAL` and `PRAGMA cache_size=-65536` are applied during the ingest window
+- `end_bulk_ingest()` restores normal settings, rebuilds FTS5, and backfills `fact_context_index`
+
+The `begin_bulk_ingest()` / `end_bulk_ingest()` pair is the API contract and the abstraction boundary. Conversational turns never call it. Import jobs always call it.
+
+### Deferred FTS5 Rebuild
+
+The 700x bulk ingest speedup comes primarily from deferred FTS5 rebuild. Standard per-row FTS sync pays B-tree insertion cost on every fact - cost compounds as tree grows. SQLite FTS5 exposes:
+
+```sql
+INSERT INTO memory_units_fts(memory_units_fts) VALUES('rebuild')
+```
+
+This discards incremental index state and rebuilds from the base table in one sorted pass. Sorting + bulk insert into a fresh B-tree is dramatically cheaper than N incremental insertions.
+
+Supporting optimizations:
+
+- `PRAGMA synchronous=NORMAL` during bulk ingest (safe: corrupt store triggers force-reingest, not data loss)
+- `PRAGMA cache_size=-65536` (64MB) reduces mid-ingest disk flushes
+- `fact_context_index` populated once at end via `_backfill_fact_context_index()`
+
+Both modes must remain independently correct. Bulk mode must never be invoked on per-turn ingest paths.
+
 ## Invariants
 
 - The sequence layer is append-only and immutable — no updates, no deletes, ever

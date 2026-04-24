@@ -25,6 +25,28 @@ The properties below held under **blind** benchmark conditions after the v0.25.4
 - **Long-context session recall and end-to-end QA.** LongMemEval blind (470 instances, v0.25.10): Session Recall @10 = **0.97** (Oracle) / **0.79** (S split). End-to-end QA accuracy with qwen2.5:1.5b local CPU: **46%** (Oracle) / **42%** (S split). Single-session accuracy 0.66-0.84 - strong. Temporal and multi-session accuracy limited by 1.5b model capability, not retrieval. Hardware: M1 MacBook Air, 8GB RAM, no internet connection.
 - **A working end-to-end demo.** `examples/chat_with_memory.py` runs against the real store with the real retrieval stack. Not a scripted replay.
 
+### Ingest Architecture
+
+Two ingest modes exist and must remain distinct:
+
+**Real-time conversational ingest**
+- One turn at a time, 1-5 facts per turn
+- Per-row FTS sync is correct - low volume, immediate consistency needed
+- `begin_bulk_ingest()` / `end_bulk_ingest()` NOT used
+- Latency target: `<10ms` per turn
+
+**Bulk corpus onboarding**
+- User imports ChatGPT history, email archive, Obsidian vault, medical records
+- `begin_bulk_ingest()` / `end_bulk_ingest()` required
+- FTS5 deferred rebuild: one B-tree rebuild vs 4000 incremental updates
+- `PRAGMA synchronous=NORMAL` + 64MB cache during ingest
+- 700x speedup measured: 500 LongMemEval instances in 3m24s vs ~41 hours
+- Latency target: `<1 minute` for typical personal corpus
+
+The first corpus import is the moment a user trusts or abandons the system. 40 minutes vs 1 minute is a product decision, not an engineering detail.
+
+The `begin_bulk_ingest()` / `end_bulk_ingest()` API is the correct abstraction boundary. Conversational turns never call it. Import jobs always call it.
+
 ---
 
 ## 3. What's not yet proven

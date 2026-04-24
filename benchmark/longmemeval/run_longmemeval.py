@@ -21,9 +21,16 @@ import sys
 import time
 from urllib import error, request
 
+from akashik.answer_contract import (
+    answer_prompt,
+    contract_to_answer_text,
+    parse_answer_contract,
+    validate_answer_contract,
+)
 from akashik.executor import execute as execute_query
 from akashik.parse_temporal_scope import parse_temporal_scope
 from akashik.parse_temporal_scope import _parse_question_date
+from akashik.reader import read_context
 from akashik.retrieve import retrieve, score_documents
 from akashik.store import AKASHIK_SCHEMA_VERSION, Store
 from akashik.temporal_resolver import classify_temporal_query
@@ -34,21 +41,9 @@ TOP_K = 10
 LONGMEMEVAL_DATA_ROOT = Path.home() / ".akashik" / "data" / "benchmarks" / "longmemeval"
 _OLLAMA_URL = "http://localhost:11434/api/generate"
 _DEFAULT_ANSWER_MODEL = "qwen2.5:1.5b"
-_ANSWER_PROMPT_TEMPLATE = (
-    "You are a helpful assistant with access to the following facts about the user:\n\n"
-    "{facts}\n\n"
-    "Question: {question}\n\n"
-    "Answer concisely based only on the facts provided. If the facts do not contain "
-    'enough information to answer, say "I don\'t know."'
-)
 
 
-def _generate_answer(model: str, facts: list[str], question: str) -> str | None:
-    if facts:
-        rendered_facts = "\n".join(f"- {fact}" for fact in facts)
-    else:
-        rendered_facts = "(no facts retrieved)"
-    prompt = _ANSWER_PROMPT_TEMPLATE.format(facts=rendered_facts, question=question)
+def _generate_answer(model: str, prompt: str) -> str | None:
     payload = json.dumps(
         {
             "model": model,
@@ -71,6 +66,67 @@ def _generate_answer(model: str, facts: list[str], question: str) -> str | None:
         return None
     value = body.get("response")
     return str(value).strip() if value is not None else None
+
+
+def _generate_answer_with_contract(
+    *,
+    model: str,
+    question: str,
+    question_type: str,
+    results,
+    deterministic_answer: str | None,
+    deterministic_answer_type: str | None,
+    deterministic_abstained: bool | None,
+) -> dict[str, object]:
+    packet = read_context(
+        question,
+        list(results[:TOP_K]),
+        question_type=question_type or None,
+    )
+    raw_contract = _generate_answer(model, answer_prompt(packet))
+    parsed_contract = parse_answer_contract(raw_contract or "")
+    contract_valid = False
+    contract_error: str | None = None
+    contract_fact_ids: list[str] = []
+
+    if raw_contract is None:
+        contract_error = "generation failed"
+    elif parsed_contract is None:
+        contract_error = "invalid JSON or schema"
+    else:
+        contract_fact_ids = list(parsed_contract.fact_ids)
+        contract_valid, contract_error = validate_answer_contract(parsed_contract, packet)
+
+    if contract_valid and parsed_contract is not None and parsed_contract.confidence != "abstain":
+        final_answer = contract_to_answer_text(parsed_contract)
+        final_answer_type = parsed_contract.answer_type
+        final_abstained = False
+    elif deterministic_answer and deterministic_answer.strip():
+        final_answer = deterministic_answer
+        final_answer_type = deterministic_answer_type or "unknown"
+        final_abstained = bool(deterministic_abstained)
+    else:
+        final_answer = "I don't know."
+        final_answer_type = "unknown"
+        final_abstained = True
+
+    return {
+        "reader_fact_ids": [fact.fact_id for fact in packet.facts],
+        "reader_dropped_fact_ids": list(packet.dropped_fact_ids),
+        "reader_rationale": list(packet.rationale),
+        "generated_answer_facts": [fact.content for fact in packet.facts],
+        "answer_contract_raw": raw_contract,
+        "answer_contract_valid": contract_valid,
+        "answer_contract_error": contract_error,
+        "answer_contract_fact_ids": contract_fact_ids,
+        "generated_answer": final_answer,
+        "generated_answer_type": (
+            parsed_contract.answer_type if contract_valid and parsed_contract is not None else None
+        ),
+        "selected_answer": final_answer,
+        "selected_answer_type": final_answer_type,
+        "selected_answer_abstained": final_abstained,
+    }
 
 
 def main() -> int:
@@ -572,6 +628,9 @@ def _process_instance(
         output["executor_answer"] = executor_result.answer
         output["executor_abstained"] = executor_result.abstained
         output["executor_answer_type"] = executor_result.answer_type
+    deterministic_answer = output.get("executor_answer")
+    deterministic_answer_type = str(output.get("executor_answer_type", "unknown"))
+    deterministic_abstained = bool(output.get("executor_abstained", False))
     expression_stats = getattr(
         store,
         "_last_expression_stats",
@@ -581,16 +640,25 @@ def _process_instance(
     output["expression_expressed"] = int(expression_stats.get("expressed", 0))
     output["expression_hit"] = bool(expression_stats.get("bypassed_retrieval", False))
     if generate_answers:
-        retrieved_facts = [str(result.unit.content).strip() for result in results[:TOP_K]]
-        retrieved_facts = [fact for fact in retrieved_facts if fact]
-        generated = _generate_answer(answer_model, retrieved_facts, question_text)
-        output["generated_answer"] = generated
+        output["executor_answer_deterministic"] = deterministic_answer
+        generated = _generate_answer_with_contract(
+            model=answer_model,
+            question=question_text,
+            question_type=question_type,
+            results=results,
+            deterministic_answer=(
+                str(deterministic_answer)
+                if deterministic_answer is not None
+                else None
+            ),
+            deterministic_answer_type=deterministic_answer_type,
+            deterministic_abstained=deterministic_abstained,
+        )
+        output.update(generated)
         output["generated_answer_model"] = answer_model
-        output["generated_answer_facts"] = retrieved_facts
-        if "executor_answer" in output:
-            output["executor_answer_deterministic"] = output["executor_answer"]
-        output["executor_answer"] = generated
-        output["executor_abstained"] = generated is None or generated.strip().lower().startswith("i don't know")
+        output["executor_answer"] = str(generated["selected_answer"])
+        output["executor_abstained"] = bool(generated["selected_answer_abstained"])
+        output["executor_answer_type"] = str(generated["selected_answer_type"])
     return output
 
 
