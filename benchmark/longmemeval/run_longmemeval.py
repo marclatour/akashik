@@ -21,9 +21,18 @@ import sys
 import time
 from urllib import error, request
 
+from akashik.answer_contract import (
+    answer_prompt,
+    contract_to_answer_text,
+    parse_answer_contract,
+    validate_answer_contract,
+)
+from akashik.backends.base import BackendResponse
 from akashik.executor import execute as execute_query
+from akashik.memory_block import format_memory_block
 from akashik.parse_temporal_scope import parse_temporal_scope
 from akashik.parse_temporal_scope import _parse_question_date
+from akashik.reader import read_context
 from akashik.retrieve import retrieve, score_documents
 from akashik.store import AKASHIK_SCHEMA_VERSION, Store
 from akashik.temporal_resolver import classify_temporal_query
@@ -34,21 +43,11 @@ TOP_K = 10
 LONGMEMEVAL_DATA_ROOT = Path.home() / ".akashik" / "data" / "benchmarks" / "longmemeval"
 _OLLAMA_URL = "http://localhost:11434/api/generate"
 _DEFAULT_ANSWER_MODEL = "qwen2.5:1.5b"
-_ANSWER_PROMPT_TEMPLATE = (
-    "You are a helpful assistant with access to the following facts about the user:\n\n"
-    "{facts}\n\n"
-    "Question: {question}\n\n"
-    "Answer concisely based only on the facts provided. If the facts do not contain "
-    'enough information to answer, say "I don\'t know."'
-)
+_DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-5"
+_DEFAULT_OPENAI_MODEL = "gpt-4o"
 
 
-def _generate_answer(model: str, facts: list[str], question: str) -> str | None:
-    if facts:
-        rendered_facts = "\n".join(f"- {fact}" for fact in facts)
-    else:
-        rendered_facts = "(no facts retrieved)"
-    prompt = _ANSWER_PROMPT_TEMPLATE.format(facts=rendered_facts, question=question)
+def _generate_ollama_response(model: str, prompt: str) -> BackendResponse | None:
     payload = json.dumps(
         {
             "model": model,
@@ -63,6 +62,7 @@ def _generate_answer(model: str, facts: list[str], question: str) -> str | None:
         headers={"Content-Type": "application/json"},
         method="POST",
     )
+    started_at = time.monotonic()
     try:
         with request.urlopen(http_request, timeout=60) as response:
             body = json.loads(response.read().decode("utf-8"))
@@ -70,7 +70,207 @@ def _generate_answer(model: str, facts: list[str], question: str) -> str | None:
         LOGGER.warning("ollama call failed: %s", exc)
         return None
     value = body.get("response")
-    return str(value).strip() if value is not None else None
+    answer = str(value).strip() if value is not None else ""
+    return BackendResponse(
+        answer=answer,
+        backend="ollama",
+        model=model,
+        latency_ms=(time.monotonic() - started_at) * 1000,
+        input_tokens=None,
+        output_tokens=None,
+    )
+
+
+def _generate_answer_with_contract(
+    *,
+    model: str,
+    question: str,
+    question_type: str,
+    results,
+    deterministic_answer: str | None,
+    deterministic_answer_type: str | None,
+    deterministic_abstained: bool | None,
+) -> dict[str, object]:
+    packet = read_context(
+        question,
+        list(results[:TOP_K]),
+        question_type=question_type or None,
+    )
+    response = _generate_ollama_response(model, answer_prompt(packet))
+    raw_contract = response.answer if response is not None else None
+    parsed_contract = parse_answer_contract(raw_contract or "")
+    contract_valid = False
+    contract_error: str | None = None
+    contract_fact_ids: list[str] = []
+
+    if response is None:
+        contract_error = "generation failed"
+    elif parsed_contract is None:
+        contract_error = "invalid JSON or schema"
+    else:
+        contract_fact_ids = list(parsed_contract.fact_ids)
+        contract_valid, contract_error = validate_answer_contract(parsed_contract, packet)
+
+    if contract_valid and parsed_contract is not None and parsed_contract.confidence != "abstain":
+        final_answer = contract_to_answer_text(parsed_contract)
+        final_answer_type = parsed_contract.answer_type
+        final_abstained = False
+    elif deterministic_answer and deterministic_answer.strip():
+        final_answer = deterministic_answer
+        final_answer_type = deterministic_answer_type or "unknown"
+        final_abstained = bool(deterministic_abstained)
+    else:
+        final_answer = "I don't know."
+        final_answer_type = "unknown"
+        final_abstained = True
+
+    return {
+        "reader_fact_ids": [fact.fact_id for fact in packet.facts],
+        "reader_dropped_fact_ids": list(packet.dropped_fact_ids),
+        "reader_rationale": list(packet.rationale),
+        "generated_answer_facts": [fact.content for fact in packet.facts],
+        "answer_contract_raw": raw_contract,
+        "answer_contract_valid": contract_valid,
+        "answer_contract_error": contract_error,
+        "answer_contract_fact_ids": contract_fact_ids,
+        "generated_answer": final_answer,
+        "generated_answer_type": (
+            parsed_contract.answer_type if contract_valid and parsed_contract is not None else None
+        ),
+        "selected_answer": final_answer,
+        "selected_answer_type": final_answer_type,
+        "selected_answer_abstained": final_abstained,
+        "backend": "ollama",
+        "backend_model": model,
+        "backend_latency_ms": response.latency_ms if response is not None else 0.0,
+        "backend_input_tokens": response.input_tokens if response is not None else None,
+        "backend_output_tokens": response.output_tokens if response is not None else None,
+        "memory_block": None,
+    }
+
+
+def _generate_answer_with_anthropic(
+    *,
+    model: str,
+    question: str,
+    question_type: str,
+    results,
+    deterministic_answer: str | None,
+    deterministic_answer_type: str | None,
+    deterministic_abstained: bool | None,
+) -> dict[str, object]:
+    packet = read_context(
+        question,
+        list(results[:TOP_K]),
+        question_type=question_type or None,
+    )
+    memory_block = format_memory_block(packet)
+
+    response: BackendResponse | None = None
+    try:
+        from akashik.backends.anthropic import AnthropicBackend
+
+        response = AnthropicBackend(model=model).generate(question, memory_block)
+    except Exception as exc:
+        LOGGER.warning("anthropic call failed: %s", exc)
+
+    generated_answer = (response.answer if response is not None else "").strip()
+    if generated_answer:
+        final_answer = generated_answer
+        final_answer_type = "unknown"
+        final_abstained = generated_answer.lower() == "i don't know."
+    elif deterministic_answer and deterministic_answer.strip():
+        final_answer = deterministic_answer
+        final_answer_type = deterministic_answer_type or "unknown"
+        final_abstained = bool(deterministic_abstained)
+    else:
+        final_answer = "I don't know."
+        final_answer_type = "unknown"
+        final_abstained = True
+
+    return {
+        "reader_fact_ids": [fact.fact_id for fact in packet.facts],
+        "reader_dropped_fact_ids": list(packet.dropped_fact_ids),
+        "reader_rationale": list(packet.rationale),
+        "generated_answer_facts": [fact.content for fact in packet.facts],
+        "answer_contract_raw": None,
+        "answer_contract_valid": None,
+        "answer_contract_error": None,
+        "answer_contract_fact_ids": [],
+        "generated_answer": final_answer,
+        "generated_answer_type": None,
+        "selected_answer": final_answer,
+        "selected_answer_type": final_answer_type,
+        "selected_answer_abstained": final_abstained,
+        "backend": "anthropic",
+        "backend_model": model,
+        "backend_latency_ms": response.latency_ms if response is not None else 0.0,
+        "backend_input_tokens": response.input_tokens if response is not None else None,
+        "backend_output_tokens": response.output_tokens if response is not None else None,
+        "memory_block": memory_block,
+    }
+
+
+def _generate_answer_with_openai(
+    *,
+    model: str,
+    question: str,
+    question_type: str,
+    results,
+    deterministic_answer: str | None,
+    deterministic_answer_type: str | None,
+    deterministic_abstained: bool | None,
+) -> dict[str, object]:
+    packet = read_context(
+        question,
+        list(results[:TOP_K]),
+        question_type=question_type or None,
+    )
+    memory_block = format_memory_block(packet)
+
+    response: BackendResponse | None = None
+    try:
+        from akashik.backends.openai import OpenAIBackend
+
+        response = OpenAIBackend(model=model).generate(question, memory_block)
+    except Exception as exc:
+        LOGGER.warning("openai call failed: %s", exc)
+
+    generated_answer = (response.answer if response is not None else "").strip()
+    if generated_answer:
+        final_answer = generated_answer
+        final_answer_type = "unknown"
+        final_abstained = generated_answer.lower() == "i don't know."
+    elif deterministic_answer and deterministic_answer.strip():
+        final_answer = deterministic_answer
+        final_answer_type = deterministic_answer_type or "unknown"
+        final_abstained = bool(deterministic_abstained)
+    else:
+        final_answer = "I don't know."
+        final_answer_type = "unknown"
+        final_abstained = True
+
+    return {
+        "reader_fact_ids": [fact.fact_id for fact in packet.facts],
+        "reader_dropped_fact_ids": list(packet.dropped_fact_ids),
+        "reader_rationale": list(packet.rationale),
+        "generated_answer_facts": [fact.content for fact in packet.facts],
+        "answer_contract_raw": None,
+        "answer_contract_valid": None,
+        "answer_contract_error": None,
+        "answer_contract_fact_ids": [],
+        "generated_answer": final_answer,
+        "generated_answer_type": None,
+        "selected_answer": final_answer,
+        "selected_answer_type": final_answer_type,
+        "selected_answer_abstained": final_abstained,
+        "backend": "openai",
+        "backend_model": model,
+        "backend_latency_ms": response.latency_ms if response is not None else 0.0,
+        "backend_input_tokens": response.input_tokens if response is not None else None,
+        "backend_output_tokens": response.output_tokens if response is not None else None,
+        "memory_block": memory_block,
+    }
 
 
 def main() -> int:
@@ -131,12 +331,18 @@ def main() -> int:
     parser.add_argument(
         "--generate-answers",
         action="store_true",
-        help="Generate end-to-end answers via Ollama using retrieved facts as context.",
+        help="Generate end-to-end answers via the selected backend.",
+    )
+    parser.add_argument(
+        "--backend",
+        choices=["ollama", "anthropic", "openai"],
+        default="ollama",
+        help="Answer generation backend",
     )
     parser.add_argument(
         "--answer-model",
-        default=_DEFAULT_ANSWER_MODEL,
-        help="Ollama model used when --generate-answers is set.",
+        default=None,
+        help="Backend model used when --generate-answers is set.",
     )
     parser.add_argument(
         "--workers",
@@ -146,6 +352,12 @@ def main() -> int:
     )
     args = parser.parse_args()
     workers = args.workers if args.workers is not None else max(1, int((os.cpu_count() or 2) * 0.75))
+    default_models = {
+        "ollama": _DEFAULT_ANSWER_MODEL,
+        "anthropic": _DEFAULT_ANTHROPIC_MODEL,
+        "openai": _DEFAULT_OPENAI_MODEL,
+    }
+    resolved_answer_model = args.answer_model or default_models[args.backend]
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
@@ -254,7 +466,8 @@ def main() -> int:
                         needs_ingest=needs_ingest,
                         force_reingest=args.force_reingest,
                         generate_answers=args.generate_answers,
-                        answer_model=args.answer_model,
+                        answer_model=resolved_answer_model,
+                        backend_name=args.backend,
                     )
                     completed_count += 1
                     _record_result(
@@ -280,7 +493,8 @@ def main() -> int:
                             needs_ingest=needs_ingest,
                             force_reingest=args.force_reingest,
                             generate_answers=args.generate_answers,
-                            answer_model=args.answer_model,
+                            answer_model=resolved_answer_model,
+                            backend_name=args.backend,
                         ): (index, needs_ingest)
                         for index, instance, store_path, needs_ingest in ingest_plans
                     }
@@ -308,7 +522,8 @@ def main() -> int:
                         needs_ingest=needs_ingest,
                         force_reingest=args.force_reingest,
                         generate_answers=args.generate_answers,
-                        answer_model=args.answer_model,
+                        answer_model=resolved_answer_model,
+                        backend_name=args.backend,
                     )
                     completed_count += 1
                     _record_result(
@@ -335,7 +550,8 @@ def main() -> int:
                         use_executor=args.use_executor,
                         use_expression=args.use_expression,
                         generate_answers=args.generate_answers,
-                        answer_model=args.answer_model,
+                        answer_model=resolved_answer_model,
+                        backend_name=args.backend,
                     )
                     if line is None:
                         failed_instances += 1
@@ -407,6 +623,7 @@ def _process_with_persistent_store(
     force_reingest: bool = False,
     generate_answers: bool = False,
     answer_model: str = _DEFAULT_ANSWER_MODEL,
+    backend_name: str = "ollama",
 ) -> dict[str, object] | None:
     if force_reingest and store_path.exists():
         for suffix in ("", "-wal", "-shm"):
@@ -427,6 +644,7 @@ def _process_with_persistent_store(
             use_expression=use_expression,
             generate_answers=generate_answers,
             answer_model=answer_model,
+            backend_name=backend_name,
         )
     finally:
         store.close()
@@ -445,6 +663,7 @@ def _process_store_plan(
     force_reingest: bool = False,
     generate_answers: bool = False,
     answer_model: str = _DEFAULT_ANSWER_MODEL,
+    backend_name: str = "ollama",
 ) -> tuple[int, str, bool, dict[str, object] | None, float]:
     started_at = time.monotonic()
     question_id = str(instance.get("question_id", f"instance_{index}"))
@@ -459,6 +678,7 @@ def _process_store_plan(
         force_reingest=force_reingest,
         generate_answers=generate_answers,
         answer_model=answer_model,
+        backend_name=backend_name,
     )
     return index, question_id, needs_ingest, line, max(time.monotonic() - started_at, 0.0)
 
@@ -473,6 +693,7 @@ def _process_instance(
     use_expression: bool,
     generate_answers: bool = False,
     answer_model: str = _DEFAULT_ANSWER_MODEL,
+    backend_name: str = "ollama",
 ) -> dict[str, object] | None:
     question_id = str(instance.get("question_id", ""))
     try:
@@ -572,6 +793,9 @@ def _process_instance(
         output["executor_answer"] = executor_result.answer
         output["executor_abstained"] = executor_result.abstained
         output["executor_answer_type"] = executor_result.answer_type
+    deterministic_answer = output.get("executor_answer")
+    deterministic_answer_type = str(output.get("executor_answer_type", "unknown"))
+    deterministic_abstained = bool(output.get("executor_abstained", False))
     expression_stats = getattr(
         store,
         "_last_expression_stats",
@@ -581,16 +805,54 @@ def _process_instance(
     output["expression_expressed"] = int(expression_stats.get("expressed", 0))
     output["expression_hit"] = bool(expression_stats.get("bypassed_retrieval", False))
     if generate_answers:
-        retrieved_facts = [str(result.unit.content).strip() for result in results[:TOP_K]]
-        retrieved_facts = [fact for fact in retrieved_facts if fact]
-        generated = _generate_answer(answer_model, retrieved_facts, question_text)
-        output["generated_answer"] = generated
+        output["executor_answer_deterministic"] = deterministic_answer
+        if backend_name == "anthropic":
+            generated = _generate_answer_with_anthropic(
+                model=answer_model,
+                question=question_text,
+                question_type=question_type,
+                results=results,
+                deterministic_answer=(
+                    str(deterministic_answer)
+                    if deterministic_answer is not None
+                    else None
+                ),
+                deterministic_answer_type=deterministic_answer_type,
+                deterministic_abstained=deterministic_abstained,
+            )
+        elif backend_name == "openai":
+            generated = _generate_answer_with_openai(
+                model=answer_model,
+                question=question_text,
+                question_type=question_type,
+                results=results,
+                deterministic_answer=(
+                    str(deterministic_answer)
+                    if deterministic_answer is not None
+                    else None
+                ),
+                deterministic_answer_type=deterministic_answer_type,
+                deterministic_abstained=deterministic_abstained,
+            )
+        else:
+            generated = _generate_answer_with_contract(
+                model=answer_model,
+                question=question_text,
+                question_type=question_type,
+                results=results,
+                deterministic_answer=(
+                    str(deterministic_answer)
+                    if deterministic_answer is not None
+                    else None
+                ),
+                deterministic_answer_type=deterministic_answer_type,
+                deterministic_abstained=deterministic_abstained,
+            )
+        output.update(generated)
         output["generated_answer_model"] = answer_model
-        output["generated_answer_facts"] = retrieved_facts
-        if "executor_answer" in output:
-            output["executor_answer_deterministic"] = output["executor_answer"]
-        output["executor_answer"] = generated
-        output["executor_abstained"] = generated is None or generated.strip().lower().startswith("i don't know")
+        output["executor_answer"] = str(generated["selected_answer"])
+        output["executor_abstained"] = bool(generated["selected_answer_abstained"])
+        output["executor_answer_type"] = str(generated["selected_answer_type"])
     return output
 
 

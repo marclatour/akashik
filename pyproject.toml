@@ -15,6 +15,8 @@ dev = [
     "pytest>=8.0",
     "numpy>=1.24",
     "sentence-transformers>=5.4",
+    "anthropic>=0.40",
+    "openai>=1.0",
 ]
 benchmark = ["rank-bm25>=0.2"]
 
