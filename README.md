@@ -501,6 +501,17 @@ Useful diagnostics:
 ./.venv/bin/python benchmark/longmemeval/run_longmemeval.py --dry-run
 ```
 
+Optional diversified retrieval for multi-session diagnostics:
+
+```bash
+./.venv/bin/python benchmark/longmemeval/run_longmemeval.py \
+  --question-type multi-session \
+  --diverse-retrieval \
+  --diverse-pool 100 \
+  --diverse-top-sessions 5 \
+  --diverse-facts-per-session 3
+```
+
 Result output behavior:
 
 - if `--output` is omitted, results go to `/tmp/akashik_lme_{dataset_stem}_{timestamp}.jsonl`

@@ -34,6 +34,7 @@ from akashik.parse_temporal_scope import parse_temporal_scope
 from akashik.parse_temporal_scope import _parse_question_date
 from akashik.reader import read_context
 from akashik.retrieve import retrieve, score_documents
+from akashik.schema import RetrievalResponse, RetrievalResult
 from akashik.store import AKASHIK_SCHEMA_VERSION, Store
 from akashik.temporal_resolver import classify_temporal_query
 from benchmark.longmemeval.ingest_adapter import ingest_instance
@@ -350,6 +351,30 @@ def main() -> int:
         default=None,
         help="Parallel workers. Default: 75%% of CPU cores. Use 1 for sequential.",
     )
+    parser.add_argument(
+        "--diverse-retrieval",
+        action="store_true",
+        default=False,
+        help="Use retrieve_diverse() instead of retrieve() for session-diverse results.",
+    )
+    parser.add_argument(
+        "--diverse-pool",
+        type=int,
+        default=100,
+        help="Candidate pool size for retrieve_diverse. Default: 100.",
+    )
+    parser.add_argument(
+        "--diverse-top-sessions",
+        type=int,
+        default=5,
+        help="Top N sessions to draw from. Default: 5.",
+    )
+    parser.add_argument(
+        "--diverse-facts-per-session",
+        type=int,
+        default=3,
+        help="Facts per session. Default: 3.",
+    )
     args = parser.parse_args()
     workers = args.workers if args.workers is not None else max(1, int((os.cpu_count() or 2) * 0.75))
     default_models = {
@@ -468,6 +493,10 @@ def main() -> int:
                         generate_answers=args.generate_answers,
                         answer_model=resolved_answer_model,
                         backend_name=args.backend,
+                        diverse_retrieval=args.diverse_retrieval,
+                        diverse_pool=args.diverse_pool,
+                        diverse_top_sessions=args.diverse_top_sessions,
+                        diverse_facts_per_session=args.diverse_facts_per_session,
                     )
                     completed_count += 1
                     _record_result(
@@ -495,6 +524,10 @@ def main() -> int:
                             generate_answers=args.generate_answers,
                             answer_model=resolved_answer_model,
                             backend_name=args.backend,
+                            diverse_retrieval=args.diverse_retrieval,
+                            diverse_pool=args.diverse_pool,
+                            diverse_top_sessions=args.diverse_top_sessions,
+                            diverse_facts_per_session=args.diverse_facts_per_session,
                         ): (index, needs_ingest)
                         for index, instance, store_path, needs_ingest in ingest_plans
                     }
@@ -524,6 +557,10 @@ def main() -> int:
                         generate_answers=args.generate_answers,
                         answer_model=resolved_answer_model,
                         backend_name=args.backend,
+                        diverse_retrieval=args.diverse_retrieval,
+                        diverse_pool=args.diverse_pool,
+                        diverse_top_sessions=args.diverse_top_sessions,
+                        diverse_facts_per_session=args.diverse_facts_per_session,
                     )
                     completed_count += 1
                     _record_result(
@@ -552,6 +589,10 @@ def main() -> int:
                         generate_answers=args.generate_answers,
                         answer_model=resolved_answer_model,
                         backend_name=args.backend,
+                        diverse_retrieval=args.diverse_retrieval,
+                        diverse_pool=args.diverse_pool,
+                        diverse_top_sessions=args.diverse_top_sessions,
+                        diverse_facts_per_session=args.diverse_facts_per_session,
                     )
                     if line is None:
                         failed_instances += 1
@@ -624,6 +665,10 @@ def _process_with_persistent_store(
     generate_answers: bool = False,
     answer_model: str = _DEFAULT_ANSWER_MODEL,
     backend_name: str = "ollama",
+    diverse_retrieval: bool = False,
+    diverse_pool: int = 100,
+    diverse_top_sessions: int = 5,
+    diverse_facts_per_session: int = 3,
 ) -> dict[str, object] | None:
     if force_reingest and store_path.exists():
         for suffix in ("", "-wal", "-shm"):
@@ -645,6 +690,10 @@ def _process_with_persistent_store(
             generate_answers=generate_answers,
             answer_model=answer_model,
             backend_name=backend_name,
+            diverse_retrieval=diverse_retrieval,
+            diverse_pool=diverse_pool,
+            diverse_top_sessions=diverse_top_sessions,
+            diverse_facts_per_session=diverse_facts_per_session,
         )
     finally:
         store.close()
@@ -664,6 +713,10 @@ def _process_store_plan(
     generate_answers: bool = False,
     answer_model: str = _DEFAULT_ANSWER_MODEL,
     backend_name: str = "ollama",
+    diverse_retrieval: bool = False,
+    diverse_pool: int = 100,
+    diverse_top_sessions: int = 5,
+    diverse_facts_per_session: int = 3,
 ) -> tuple[int, str, bool, dict[str, object] | None, float]:
     started_at = time.monotonic()
     question_id = str(instance.get("question_id", f"instance_{index}"))
@@ -679,6 +732,10 @@ def _process_store_plan(
         generate_answers=generate_answers,
         answer_model=answer_model,
         backend_name=backend_name,
+        diverse_retrieval=diverse_retrieval,
+        diverse_pool=diverse_pool,
+        diverse_top_sessions=diverse_top_sessions,
+        diverse_facts_per_session=diverse_facts_per_session,
     )
     return index, question_id, needs_ingest, line, max(time.monotonic() - started_at, 0.0)
 
@@ -694,6 +751,10 @@ def _process_instance(
     generate_answers: bool = False,
     answer_model: str = _DEFAULT_ANSWER_MODEL,
     backend_name: str = "ollama",
+    diverse_retrieval: bool = False,
+    diverse_pool: int = 100,
+    diverse_top_sessions: int = 5,
+    diverse_facts_per_session: int = 3,
 ) -> dict[str, object] | None:
     question_id = str(instance.get("question_id", ""))
     try:
@@ -740,15 +801,17 @@ def _process_instance(
         )
 
     try:
-        response = retrieve(
-            question_text,
+        response = _retrieve_response(
             store,
-            level="fact",
-            limit=TOP_K,
-            entity_filters=retrieval_filters,
+            question_text,
+            retrieval_filters=retrieval_filters,
             document_gate_n=document_gate_n,
-            query_date=str(instance.get("question_date", "")),
+            question_date=str(instance.get("question_date", "")),
             use_expression=use_expression,
+            diverse_retrieval=diverse_retrieval,
+            diverse_pool=diverse_pool,
+            diverse_top_sessions=diverse_top_sessions,
+            diverse_facts_per_session=diverse_facts_per_session,
         )
     except Exception:
         LOGGER.exception("Failed to retrieve for instance %s", question_id)
@@ -854,6 +917,58 @@ def _process_instance(
         output["executor_abstained"] = bool(generated["selected_answer_abstained"])
         output["executor_answer_type"] = str(generated["selected_answer_type"])
     return output
+
+
+def _retrieve_response(
+    store,
+    question_text: str,
+    *,
+    retrieval_filters: dict[str, str | list[str]],
+    document_gate_n: int,
+    question_date: str,
+    use_expression: bool,
+    diverse_retrieval: bool,
+    diverse_pool: int,
+    diverse_top_sessions: int,
+    diverse_facts_per_session: int,
+) -> RetrievalResponse:
+    if not diverse_retrieval:
+        return retrieve(
+            question_text,
+            store,
+            level="fact",
+            limit=TOP_K,
+            entity_filters=retrieval_filters,
+            document_gate_n=document_gate_n,
+            query_date=question_date,
+            use_expression=use_expression,
+        )
+
+    from akashik import retrieve_diverse
+
+    units = retrieve_diverse(
+        store,
+        question_text,
+        limit=TOP_K,
+        pool=diverse_pool,
+        top_sessions=diverse_top_sessions,
+        facts_per_session=diverse_facts_per_session,
+        threshold=0.0,
+        document_gate_n=document_gate_n,
+    )
+    results = [
+        RetrievalResult(
+            unit=unit,
+            confidence=round(max(0.8 - (index * 0.05), 0.0), 3),
+            parent_chain=store.fetch_parent_chain(unit.id),
+        )
+        for index, unit in enumerate(units[:TOP_K])
+    ]
+    return RetrievalResponse(
+        results=results,
+        confidence=results[0].confidence if results else 0.0,
+        temporal_answer=None,
+    )
 
 
 def _filter_results_by_session_date(results, *, start: str, end: str, question_id: str):

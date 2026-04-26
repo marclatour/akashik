@@ -243,8 +243,8 @@ def retrieve(
 
 
 def retrieve_diverse(
-    query: str,
     store: Store,
+    query: str,
     *,
     limit: int = 10,
     pool: int = 100,
