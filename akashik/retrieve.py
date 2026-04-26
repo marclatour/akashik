@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 import json
 import logging
 import re
+from typing import TYPE_CHECKING
 
 from akashik.expression import express, extract_context
 from akashik.identity import content_hash, normalized_hash
@@ -16,6 +17,9 @@ from akashik.query_normalize import normalize_query
 from akashik.semantic import SemanticRanker
 from akashik.schema import LEVEL_INDEX, MemoryUnit, RetrievalResponse, RetrievalResult, validate_level
 from akashik.temporal_resolver import resolve_two_event_temporal
+
+if TYPE_CHECKING:
+    from akashik.store import Store
 
 LOGGER = logging.getLogger(__name__)
 _FTS_TOKEN_RE = re.compile(r"\w+", re.UNICODE)
@@ -238,6 +242,66 @@ def retrieve(
     return RetrievalResponse(results=[], confidence=0.0, temporal_answer=temporal_answer)
 
 
+def retrieve_diverse(
+    query: str,
+    store: Store,
+    *,
+    limit: int = 10,
+    pool: int = 100,
+    top_sessions: int = 5,
+    facts_per_session: int = 3,
+    threshold: float = 0.0,
+    document_gate_n: int | None = None,
+) -> list[MemoryUnit]:
+    response = retrieve(
+        query,
+        store,
+        limit=pool,
+        document_gate_n=document_gate_n or 0,
+    )
+    candidates = response.results
+    if threshold > 0.0:
+        candidates = [
+            candidate
+            for candidate in candidates
+            if _candidate_score(candidate, 0) >= threshold
+        ]
+    if not candidates:
+        return []
+
+    grouped: dict[str, list[tuple[float, int, RetrievalResult | MemoryUnit]]] = {}
+    session_scores: dict[str, tuple[float, int]] = {}
+
+    for index, candidate in enumerate(candidates):
+        session_id = _candidate_session_id(candidate)
+        score = _candidate_score(candidate, index)
+        grouped.setdefault(session_id, []).append((score, index, candidate))
+        current_best = session_scores.get(session_id)
+        if current_best is None or score > current_best[0] or (
+            score == current_best[0] and index < current_best[1]
+        ):
+            session_scores[session_id] = (score, index)
+
+    top_session_ids = [
+        session_id
+        for session_id, _best in sorted(
+            session_scores.items(),
+            key=lambda item: (-item[1][0], item[1][1], item[0]),
+        )[:top_sessions]
+    ]
+
+    selected: list[tuple[float, int, RetrievalResult | MemoryUnit]] = []
+    for session_id in top_session_ids:
+        session_candidates = sorted(
+            grouped.get(session_id, []),
+            key=lambda item: (-item[0], item[1]),
+        )
+        selected.extend(session_candidates[:facts_per_session])
+
+    selected.sort(key=lambda item: (-item[0], item[1]))
+    return [_candidate_unit(candidate) for _score, _index, candidate in selected[:limit]]
+
+
 def retrieve_commitments(store, query: str) -> list:
     """
     Retrieve open commitments relevant to the query.
@@ -265,6 +329,53 @@ def retrieve_commitments(store, query: str) -> list:
         if query_tokens & set(normalize_query(commitment.description).split())
     ]
     return result[:MAX_COMMITMENTS]
+
+
+def _candidate_unit(candidate: RetrievalResult | MemoryUnit) -> MemoryUnit:
+    return candidate.unit if hasattr(candidate, "unit") else candidate
+
+
+def _candidate_session_id(candidate: RetrievalResult | MemoryUnit) -> str:
+    session_id = _session_id_from_object(candidate)
+    if session_id:
+        return session_id
+    unit = getattr(candidate, "unit", None)
+    if unit is not None:
+        session_id = _session_id_from_object(unit)
+        if session_id:
+            return session_id
+    return "__unknown__"
+
+
+def _session_id_from_object(obj: object) -> str | None:
+    direct = getattr(obj, "session_id", None)
+    if direct:
+        return str(direct)
+    for attr in ("metadata", "source_metadata"):
+        metadata = getattr(obj, attr, None)
+        if not isinstance(metadata, dict):
+            continue
+        value = metadata.get("session_id")
+        if value:
+            return str(value)
+    return None
+
+
+def _candidate_score(candidate: RetrievalResult | MemoryUnit, index: int) -> float:
+    for attr in ("score", "confidence"):
+        value = getattr(candidate, attr, None)
+        try:
+            if value is not None:
+                return float(value)
+        except (TypeError, ValueError):
+            continue
+    rank = getattr(candidate, "rank", None)
+    try:
+        if rank is not None:
+            return -float(rank)
+    except (TypeError, ValueError):
+        pass
+    return 1.0 / (1.0 + index)
 
 
 def _search_fts_with_entity_scope(

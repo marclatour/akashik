@@ -2,7 +2,7 @@
 
 from akashik.executor import execute
 from akashik.ingest import ingest_file, ingest_text, ingest_turn_fact
-from akashik.retrieve import retrieve
+from akashik.retrieve import retrieve, retrieve_diverse
 from akashik.schema import (
     LEVELS,
     ExecutorResult,
@@ -28,6 +28,7 @@ __all__ = [
     "ingest_text",
     "ingest_turn_fact",
     "retrieve",
+    "retrieve_diverse",
 ]
 
 __version__ = "0.10.2"

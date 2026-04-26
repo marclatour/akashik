@@ -225,6 +225,8 @@ Preference extraction is additive and deterministic:
 - `as_of="YYYY-MM-DD"` for historical queries
 - `query_date="..."` when recency-aware Navigator scoring should use a question-relative date
 
+`retrieve_diverse(store, query, ...)` is also available as a thin helper over `retrieve()` when callers want a session-diversified fact list from a broader candidate pool without changing the core retrieval stack.
+
 Default behavior excludes superseded facts. Historical queries include only facts valid at the requested date.
 
 The Navigator remains additive-only. In `0.9.1` it can also add a small confidence-decay boost based on:
