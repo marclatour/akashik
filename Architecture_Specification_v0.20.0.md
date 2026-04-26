@@ -318,6 +318,16 @@ This system fails in ways you can inspect. Every failure has a traceable cause i
 | Local judge | unchanged, evaluation only |
 | All existing tests | valid against sequence layer |
 
+### Prototype Result - April 2026
+
+A Python-set bitmap prototype was built and benchmarked against SQLite FTS5 on structured queries (location, employer, role, vehicle, tool) at 10K and 100K synthetic facts.
+
+Result: FTS5 won at every scale tested. At 100K facts, FTS5 averaged 0.047ms vs bitmap at 1.2ms - a 25x loss. SQLite's C-level FTS5 implementation outperforms Python-level set intersection by construction.
+
+Conclusion: Substrate Hybridization Retrieval remains a valid direction at million-fact scale or multi-user concurrent access, where FTS5 degrades and Roaring bitmap C libraries (pyroaring) would close the gap. At current single-user sub-100K-fact scale, FTS5 is already fast enough. The 8-slot classifier built for this prototype is preserved as a design artifact for Multi-Access Memory Index Phase 2 entity/slot work.
+
+The doctrine stands: bitmaps for structure, FTS5 for words, semantic for meaning. The threshold for switching to bitmaps is higher than the current scale requires.
+
 ## Migration Path From Current Codebase
 
 Each step is independently testable and reversible. No big-bang migration.
