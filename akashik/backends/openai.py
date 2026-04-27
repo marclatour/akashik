@@ -29,13 +29,13 @@ class OpenAIBackend(AnswerBackend):
         question: str,
         memory_block: str,
         *,
-        max_tokens: int = 500,
+        max_completion_tokens: int = 500,
     ) -> BackendResponse:
         system_prompt = self._build_system_prompt(memory_block)
         started_at = time.monotonic()
         response = self._client.chat.completions.create(
             model=self.model,
-            max_tokens=max_tokens,
+            max_completion_tokens=max_completion_tokens,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": question},
