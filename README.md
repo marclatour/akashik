@@ -56,7 +56,8 @@ deterministic retrieval
 | Provenance | None | UUID + session + timestamp on every fact |
 | Temporal queries ("where did I live in 2023?") | No answer | `as_of` queries via valid_from/valid_until |
 | Cross-session breadth | Clusters in recent sessions | retrieve_diverse() across all sessions |
-| Latency | ~20ms (embedding) | 3.75ms p50 (deterministic) |
+| Primary retrieval path | Embedding similarity always | Hash → FTS5 → semantic fallback |
+| Latency (primary path) | ~20ms (embedding) | 3.75ms p50 (deterministic) |
 
 ## Why deterministic
 
