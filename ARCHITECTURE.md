@@ -4,6 +4,28 @@
 
 Authored by Claude, GPT, Codex | Reviewed by Grok, Gemini | Mandated by Marc | April 2026
 
+## Implementation Status
+
+This document is the north-star architecture specification. Not all layers are fully implemented. Current status:
+
+| Layer | Status | Notes |
+|---|---|---|
+| Layer 1 — Sequence | ✅ Shipped | Append-only fact store, content_hash, normalized_hash, provenance |
+| Layer 2 — Lineage | 🔶 Partial | Schema exists (lineage_parent_id). Normal ingest uses valid_until mutation; lineage chains not yet populated automatically |
+| Layer 3 — Epigenetic | 🔶 Partial | activation_weight, reinforcement_count, silence shipped. promoter/repressor conditions in schema, not yet evaluated in expression engine |
+| Layer 4 — Expression | 🔷 Experimental | Implemented as opt-in path (--use-expression). Not the primary retrieval mechanism yet. Default is classic retrieval stack. |
+| Layer 5 — Consolidation | ❌ Not implemented | Schema scaffolding only. No background worker deriving semantic/procedural facts. |
+
+**What is fully validated and shipped:**
+- Deterministic retrieval stack (hash → FTS5 → semantic fallback)
+- `retrieve_diverse()` — session-diverse retrieval, validated on LongMemEval
+- Bulk ingest with deferred FTS5 rebuild
+- Executor — deterministic rules engine, 100% correct on typed queries
+- Pluggable backends (OpenAI, Ollama)
+- Per-instance SQLite stores with entity_filters scoping
+
+The gap between this spec and the current implementation is intentional. Build the foundation, validate it, then advance each layer. The benchmark validation section at the end of this document reflects what is actually measured and shipped.
+
 ## Purpose
 
 Addressed Cognition is the long-horizon memory architecture for Akashik. It is designed to solve a problem that no existing AI memory system has solved cleanly: maintain a complete, provenance-preserving record of a human's cognitive history across years or decades, and express only the right subset of that history into an LLM's context window in under 100ms, on consumer hardware, with no cloud dependency, and no hallucinated or corrupted memory.
