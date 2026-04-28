@@ -1,4 +1,4 @@
-# Akashik 0.25.9
+# Akashik
 
 Addressed Cognition — deterministic memory OS for long-lived human–AI relationships.
 
@@ -33,7 +33,7 @@ Akashik's deterministic ingest takes milliseconds. It is not a tradeoff. It is a
 
 Mem0's LLM extraction produces richer semantic consolidation but is unsuitable for real-time conversational interception. Akashik's deterministic approach is designed for the 87ms intercept window — invisible to the user, always current, never blocking. See the ACMB table below for comparative quality metrics.
 
-## ACMB benchmark — 7-way blind, 25 personas, v0.25.9
+## ACMB benchmark — 7-way blind, 25 personas
 
 | Metric | Akashik | rag_akashik | bm25_akashik | RAG | full_ctx | BM25 | TF-IDF |
 |---|---|---|---|---|---|---|---|
@@ -70,7 +70,7 @@ The cold-path retrieval stack remains:
 5. Navigator tie-breaker
 6. semantic fallback only when confidence is low
 
-Addressed Cognition `v0.25.9` is the active development branch. The north-star design document is [ARCHITECTURE.md](ARCHITECTURE.md). Existing stores are migrated automatically on first open. `v0.25.9` keeps the existing retrieval stack intact and adds an opt-in expression engine that can fire before retrieval when explicitly enabled.
+Addressed Cognition is the active development branch. The north-star design document is [ARCHITECTURE.md](ARCHITECTURE.md). Existing stores are migrated automatically on first open. The current branch keeps the existing retrieval stack intact and adds an opt-in expression engine that can fire before retrieval when explicitly enabled.
 
 Expression engine controls:
 
@@ -374,7 +374,7 @@ Run Mode A:
 ./.venv/bin/python benchmark/run_cuad.py
 ```
 
-Current blind baseline (4-way, no oracle hints, v0.25.4+):
+Current blind baseline (4-way, no oracle hints):
 
 | System | P@1 | Context Efficiency | Composite |
 |---|---|---|---|
@@ -427,7 +427,7 @@ Judge CUAD outputs after a kept run:
   --votes 3
 ```
 
-## LongMemEval — v0.26.1-validated (April 2026)
+## LongMemEval — validated results (April 2026)
 
 LongMemEval uses one runner with two dataset regimes over the same question set:
 
