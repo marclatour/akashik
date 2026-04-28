@@ -276,6 +276,37 @@ Preference extraction is additive and deterministic:
 
 `retrieve_diverse(store, query, ...)` is also available as a thin helper over `retrieve()` when callers want a session-diversified fact list from a broader candidate pool without changing the core retrieval stack.
 
+### Multi-agent scoping with entity_filters
+
+One Akashik store serves all agents and LLM conversations for a single user.
+Facts are tagged at ingest with the agent or conversation that created them.
+Retrieval scopes by tag — or returns universal personal facts to any caller.
+
+```python
+# OpenClaw writes a code preference
+ingest_text(store, "I prefer TypeScript", metadata={
+    "agent": "openclaw",
+    "domain": "code",
+    "session_date": "2026-04-27",
+})
+
+# Claude conversation writes a personal fact (no agent tag — universal)
+ingest_text(store, "I live in Denver", metadata={
+    "session_date": "2026-04-27",
+})
+
+# OpenClaw retrieves code preferences (scoped) + universal personal facts
+retrieve("what language do I prefer", store,
+    entity_filters={"agent": "openclaw"})
+
+# Any agent retrieves universal personal facts
+retrieve("where do I live", store)
+```
+
+This means: tell one agent you moved to Denver, every agent knows.
+Agent-specific facts stay scoped. Personal facts are always available.
+Akashik is the single source of truth for the user — not per-agent silos.
+
 Default behavior excludes superseded facts. Historical queries include only facts valid at the requested date.
 
 The Navigator remains additive-only. In `0.9.1` it can also add a small confidence-decay boost based on:

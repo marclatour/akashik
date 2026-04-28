@@ -1,5 +1,5 @@
 # Addressed Cognition
-## Architecture Specification v0.20.0
+## Architecture Specification
 ### Akashik Memory System
 
 Authored by Claude, GPT, Codex | Reviewed by Grok, Gemini | Mandated by Marc | April 2026
