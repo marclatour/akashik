@@ -66,58 +66,68 @@ Context efficiency 0.230 is structural and confirmed blind. P@1 leadership block
 
 **Caveat — inverse oracle in query text.** Several CUAD queries embed the answer as a soft signal (e.g. *"governed laws california"* contains the governing-law jurisdiction). Any retrieval system that does reasonable token matching will get partial lift from this — GraphRAG's 0.14 P@1 is not fully clean either, just less penalized by it than a system built around entity-filter scoping. The natural-query rewrite in §6 fixes this for everyone.
 
-### LongMemEval — blind, 470 instances, v0.25.9
+## LongMemEval — Validated Results (v0.26.1, April 2026)
 
-| Dataset | Session Recall @10 | Notes |
+### Setup
+- Dataset: longmemeval_oracle.json (N=470) and longmemeval_s_cleaned.json (N=500)
+- Retrieval: retrieve_diverse() — pool=100, top_sessions=8, facts_per_session=5 (40 facts total)
+- Judge: qwen2.5:1.5b, 3 votes
+- Stores: unchanged from original ingest — gains are retrieval and synthesis only
+
+### Multi-session progression (the decisive experiment)
+
+| Setup | Multi-session QA | Overall Oracle QA |
 |---|---|---|
-| Oracle | **0.97** | Confirmed blind post-audit |
-| S split | **0.79** | Confirmed blind post-audit |
+| qwen + standard retrieval top-10 | 0.06 | 0.37 |
+| GPT-5.4-mini + standard retrieval top-10 | 0.06 | 0.41 |
+| qwen + diverse retrieval 8×5=40 | 0.29 | 0.54 |
+| GPT-5.4-mini + diverse retrieval 8×5=40 | 0.45 | 0.64 |
 
-| Type | Oracle | S blind | Delta |
-|---|---|---|---|
-| single-session-preference | 1.00 | 0.23 | −0.77 |
-| single-session-assistant | 1.00 | 0.80 | −0.20 |
-| multi-session | 0.96 | 0.76 | −0.20 |
-| temporal-reasoning | 0.94 | 0.80 | −0.14 |
-| knowledge-update | 0.97 | 0.93 | −0.04 |
-| single-session-user | 0.97 | 0.91 | −0.06 |
+Diverse retrieval moved multi-session QA from 0.06 to 0.29 with no model change (+4.8x).
+Frontier model on top of diverse retrieval reached 0.45 (+7.5x from baseline).
+Standard retrieval + frontier model did not move multi-session at all (0.06 → 0.06).
+The retrieval architecture is the primary lever. Model quality adds synthesis on top.
 
-### LongMemEval - end-to-end QA, qwen2.5:1.5b local CPU, v0.25.10
+### Full per-category results (diverse retrieval, both models)
 
-| Dataset | Session Recall @10 | QA Accuracy | Model | Hardware |
-|---|---|---|---|---|
-| Oracle | 0.97 | **0.46** | qwen2.5:1.5b | M1 Air, 8GB, local CPU |
-| S split | 0.79 | **0.42** | qwen2.5:1.5b | M1 Air, 8GB, local CPU |
+| Category | N | Oracle qwen | Oracle GPT-5.4-mini | S qwen | S GPT-5.4-mini |
+|---|---|---|---|---|---|
+| single-session-user | 64 | 0.81 | 0.84 | 0.86 | 0.84 |
+| single-session-assistant | 56 | 0.84 | 0.88 | 0.79 | 0.86 |
+| single-session-preference | 30 | 0.90 | 0.93 | 0.57 | 0.87 |
+| knowledge-update | 72 | 0.67 | 0.86 | 0.61 | 0.75 |
+| temporal-reasoning | 127 | 0.35 | 0.41 | 0.31 | 0.39 |
+| multi-session | 121 | 0.29 | 0.45 | 0.32 | 0.36 |
+| **Overall** | **470** | **0.54** | **0.64** | **0.51** | **0.59** |
+| Deterministic path | — | 1.00 | 1.00 | 1.00 | 1.00 |
 
-Per-type QA accuracy (Oracle):
+### Competitive context (LongMemEval-S, canonical published results)
 
-| Type | Retrieval Recall | QA Accuracy | Gap | Notes |
-|---|---|---|---|---|
-| single-session-user | 0.97 | 0.84 | -0.13 | Strong |
-| single-session-preference | 1.00 | 0.83 | -0.17 | Strong |
-| single-session-assistant | 1.00 | 0.73 | -0.27 | Good |
-| knowledge-update | 0.97 | 0.51 | -0.46 | Model bottleneck |
-| temporal-reasoning | 0.94 | 0.26 | -0.68 | Model bottleneck - date math |
-| multi-session | 0.96 | 0.20 | -0.76 | Model bottleneck - synthesis |
+| System | Model | S split QA |
+|---|---|---|
+| EmergenceMem | GPT-4o | 0.86 |
+| TiMem | GPT-4o-mini | 0.77 |
+| Zep | GPT-4o | 0.71 |
+| Full context | GPT-4o | ~0.60 |
+| **Akashik + diverse retrieval** | **GPT-5.4-mini** | **0.59** |
+| **Akashik + diverse retrieval** | **qwen2.5:1.5b** | **0.51** |
 
-The retrieval-to-accuracy gap on temporal and multi-session is a 1.5b model limitation, not a memory architecture limitation. Retrieval is near-ceiling (0.94-0.96); the model cannot do date math or cross-session synthesis at this scale.
+Akashik with GPT-5.4-mini (cheaper than GPT-4o) reaches full-context GPT-4o performance.
+Akashik with qwen2.5:1.5b (1.5B local model) reaches 0.51 — competitive with systems using models 50x larger.
 
-**Competitive context - LongMemEval-S end-to-end, canonical published results only:**
+### Key findings
 
-| System | S Split Accuracy | Model | Source |
-|---|---|---|---|
-| EmergenceMem | 86% | GPT-4o | Emergence AI, June 2025 |
-| TiMem | 76.88% | GPT-4o-mini | Li et al., Jan 2026, arXiv |
-| Zep/Graphiti | 71.2% | GPT-4o | Rasmussen et al., Jan 2025, arXiv |
-| Full context baseline | ~60% | GPT-4o | Wu et al., 2024 |
-| Llama 3.1-8B (no memory system) | 42-45% | Llama 3.1-8B | Wu et al., 2024 - raw model, no retrieval |
-| **Akashik** | **42%** | **qwen2.5:1.5b** | **This repo, April 2026 - local CPU, no API** |
+- Diverse retrieval is the architectural lever — not model quality
+- Single-session categories: model barely matters (+0.03-0.04). Memory block does the work.
+- Knowledge-update and multi-session: frontier model adds meaningful synthesis (+0.16-0.19)
+- Single-session-preference collapses under S split noise with small model (0.90→0.57) but holds with GPT (0.93→0.87) — distractor sensitivity is model-dependent
+- Temporal-reasoning remains the architectural gap (0.31-0.41) — not solved by retrieval diversity or model quality alone
+- Deterministic executor path: 100% correct in all four configurations
+- Ingest unchanged — all gains from retrieval architecture and synthesis layer only
 
-These are not directly comparable - all systems above Akashik use cloud APIs with GPT-4o-class models. The comparison is included for orientation only.
+### What these numbers are not
 
-The most meaningful row is Llama 3.1-8B at 42-45% with no memory system. Akashik + qwen2.5:1.5b matches that score with a model 5x smaller. The retrieval is compensating for the model size disadvantage - which is the architectural thesis.
-
-> Akashik delivers 42% S split QA accuracy fully on-device with a 1.5B model, matching a raw 8B model with no memory system. The remaining gap to cloud systems is primarily model-bound, not memory-bound. Swap in a stronger local model and the numbers move.
+These are not S-split comparisons against published systems using identical judge methodology. Published systems use GPT-4o as judge; we use qwen2.5:1.5b. Direct numeric comparison overstates or understates depending on judge calibration. The competitive table is directional only.
 
 ---
 

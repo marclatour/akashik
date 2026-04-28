@@ -70,7 +70,7 @@ The cold-path retrieval stack remains:
 5. Navigator tie-breaker
 6. semantic fallback only when confidence is low
 
-Addressed Cognition `v0.25.9` is the active development branch. The north-star design document is [Architecture_Specification_v0.20.0.md](Architecture_Specification_v0.20.0.md). Existing stores are migrated automatically on first open. `v0.25.9` keeps the existing retrieval stack intact and adds an opt-in expression engine that can fire before retrieval when explicitly enabled.
+Addressed Cognition `v0.25.9` is the active development branch. The north-star design document is [ARCHITECTURE.md](ARCHITECTURE.md). Existing stores are migrated automatically on first open. `v0.25.9` keeps the existing retrieval stack intact and adds an opt-in expression engine that can fire before retrieval when explicitly enabled.
 
 Expression engine controls:
 
@@ -427,7 +427,7 @@ Judge CUAD outputs after a kept run:
   --votes 3
 ```
 
-## LongMemEval
+## LongMemEval — v0.26.1-validated (April 2026)
 
 LongMemEval uses one runner with two dataset regimes over the same question set:
 
@@ -452,45 +452,40 @@ Oracle:
   --abstention-threshold 0.3
 ```
 
-Current oracle baseline with executor enabled:
+Session Recall @10: **0.97** Oracle / **0.92** S split (diverse retrieval)
 
-- Session Recall @10: `0.97` *(confirmed blind post-audit — `has_answer` field was inert)*
+### QA Accuracy with diverse retrieval (pool=100, top_sessions=8, facts_per_session=5)
 
-S split:
+| Category | Oracle qwen | Oracle GPT-5.4-mini | S qwen | S GPT-5.4-mini |
+|---|---|---|---|---|
+| single-session-user | 0.81 | 0.84 | 0.86 | 0.84 |
+| single-session-assistant | 0.84 | 0.88 | 0.79 | 0.86 |
+| single-session-preference | 0.90 | 0.93 | 0.57 | 0.87 |
+| knowledge-update | 0.67 | 0.86 | 0.61 | 0.75 |
+| temporal-reasoning | 0.35 | 0.41 | 0.31 | 0.39 |
+| multi-session | 0.29 | 0.45 | 0.32 | 0.36 |
+| **Overall** | **0.54** | **0.64** | **0.51** | **0.59** |
+| Deterministic path | 1.00 | 1.00 | 1.00 | 1.00 |
 
-```bash
-./.venv/bin/python benchmark/longmemeval/run_longmemeval.py \
-  --data benchmark/longmemeval/data/longmemeval_s_cleaned.json \
-  --document-gate-n 5 \
-  --abstention-threshold 0.3
-```
+Multi-session QA baseline (standard retrieval, any model): **0.06**
+Multi-session QA with diverse retrieval + qwen2.5:1.5b: **0.29** (+4.8x)
+Multi-session QA with diverse retrieval + GPT-5.4-mini: **0.45** (+7.5x)
 
-Current S baseline:
+Diverse retrieval is the primary architectural lever. The retrieval architecture moves
+multi-session QA regardless of model. Frontier model adds synthesis quality on top.
+Deterministic executor path is 100% correct across all configurations.
 
-- Session Recall @10: `0.79` *(confirmed blind post-audit — unchanged from pre-audit)*
-
-Oracle vs S per-type breakdown:
-
-| Type | Oracle | S blind | Delta |
-|---|---|---|---|
-| single-session-preference | 1.00 | 0.23 | −0.77 |
-| single-session-assistant | 1.00 | 0.80 | −0.20 |
-| multi-session | 0.96 | 0.76 | −0.20 |
-| temporal-reasoning | 0.94 | 0.80 | −0.14 |
-| knowledge-update | 0.97 | 0.93 | −0.04 |
-| single-session-user | 0.97 | 0.91 | −0.06 |
-
-Preference collapse (1.00 → 0.23) is a ranking problem under distractor load, not a storage problem. Facts are present in the store; they are buried by distractors at ranking time. Fix is a scoring boost in `retrieve.py`, not an ingest change.
-
-Preference-only rebuild:
+Run with diverse retrieval:
 
 ```bash
 ./.venv/bin/python benchmark/longmemeval/run_longmemeval.py \
-  --data benchmark/longmemeval/data/longmemeval_s_cleaned.json \
-  --document-gate-n 5 \
-  --abstention-threshold 0.3 \
-  --question-type single-session-preference \
-  --force-reingest \
+  --data ~/.akashik/data/benchmarks/longmemeval/longmemeval_oracle.json \
+  --diverse-retrieval \
+  --diverse-top-sessions 8 \
+  --diverse-facts-per-session 5 \
+  --generate-answers \
+  --backend openai \
+  --answer-model gpt-5.4-mini \
   --keep-output
 ```
 

@@ -328,6 +328,31 @@ Conclusion: Substrate Hybridization Retrieval remains a valid direction at milli
 
 The doctrine stands: bitmaps for structure, FTS5 for words, semantic for meaning. The threshold for switching to bitmaps is higher than the current scale requires.
 
+## Benchmark Validation — v0.26.1 (April 2026)
+
+### LongMemEval results with Substrate-Diverse Retrieval
+
+retrieve_diverse() with pool=100, top_sessions=8, facts_per_session=5 (40 facts per query).
+Stores unchanged from original ingest. Gains are retrieval architecture and synthesis only.
+
+| Category | Oracle GPT-5.4-mini | S GPT-5.4-mini |
+|---|---|---|
+| single-session-user | 0.84 | 0.84 |
+| single-session-assistant | 0.88 | 0.86 |
+| single-session-preference | 0.93 | 0.87 |
+| knowledge-update | 0.86 | 0.75 |
+| temporal-reasoning | 0.41 | 0.39 |
+| multi-session | 0.45 | 0.36 |
+| **Overall** | **0.64** | **0.59** |
+| Deterministic path | 1.00 | 1.00 |
+
+Multi-session baseline (standard retrieval): 0.06
+Multi-session with diverse retrieval: 0.45 Oracle / 0.36 S (+7.5x / +6x)
+
+Architecture validated: diverse retrieval is the primary lever. Model adds synthesis.
+Temporal-reasoning remains the open architectural gap (0.39-0.41).
+ETL Phase 1 is next — ingest quality is the remaining improvement path.
+
 ## Migration Path From Current Codebase
 
 Each step is independently testable and reversible. No big-bang migration.
