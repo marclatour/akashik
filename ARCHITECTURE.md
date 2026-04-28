@@ -397,31 +397,8 @@ Each step is independently testable and reversible. No big-bang migration.
 
 ## Positioning
 
-Akashik is not a vector database. It is not a chatbot memory buffer. It is not a retrieval system.
-
-Akashik is a deterministic, versioned memory operating system for long-lived human–AI relationships.
-
-OpenClaw is essentially a high-performance CPU that currently suffers from Volatile RAM — it clears its head the moment you close the terminal. Akashik provides the Non-Volatile Semantic Storage (the SSD) and the MMU (the Memory Management Unit) to make that data accessible in 87ms.
-
-Akashik turns any local AI assistant from a session-based tool into a lifelong personal AI that actually remembers and evolves with you.
-
-The primary use case is local AI assistants and agents. Akashik gives them memory that persists across sessions, evolves with the user over years, and injects only the right context at the right moment — without cloud dependency, without hallucinated memory, and without the context window explosion that makes long-term local AI impractical today.
-
-Akashik's deterministic approach is not a philosophical stance — it is an engineering requirement. The 87ms intercept window leaves no room for LLM inference in the memory path. Determinism is what makes the architecture viable for the primary use case.
-
-| Component | Role |
-|---|---|
-| OpenClaw / local LLM | CPU — high-performance local reasoning |
-| Akashik fact store | SSD — non-volatile semantic storage, persists forever |
-| Akashik expression engine | MMU — memory management unit, right facts in 87ms |
-| LLM context window | CPU cache — small, fast, only what's needed right now |
-
-The LLM is the CPU. Akashik is the memory. The CPU computes. The memory never hallucinates.
-
-## One-Line Summary
-
-Store everything as immutable truth. Express only what matters now.
+See [README.md](README.md) for current positioning and competitive context.
 
 ---
 
-Addressed Cognition v0.20.0 | Akashik Memory System | April 2026
+Addressed Cognition | Akashik Memory System | April 2026

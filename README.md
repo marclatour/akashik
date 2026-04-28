@@ -20,8 +20,12 @@ The hard boundary:
 
 ## How other memory systems compare
 
-Most agent memory systems — including OpenClaw's built-in memory — store
-facts as flat text and retrieve via embedding similarity:
+Most agent systems — including OpenClaw — have their own memory layer.
+Akashik is not a replacement for that memory. It is a structured substrate
+underneath it: typed facts, lineage chains, temporal validity, and provenance
+that flat text memory systems cannot provide.
+
+Many agent memory systems store facts as flat text and retrieve via embedding similarity:
 
 ```text
 Markdown files (truth)
