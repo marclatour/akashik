@@ -1,29 +1,71 @@
 # Akashik
 
-Addressed Cognition — deterministic memory OS for long-lived human–AI relationships.
+**Any LLM or agent searches memory. Akashik defines memory.**
 
-## What Akashik is for
+Akashik is a deterministic memory substrate for AI agents and assistants.
+It sits beneath any LLM or agent system — OpenClaw, Claude, GPT, Codex —
+and gives it structured, versioned, provenance-preserving memory that
+persists correctly across years of interactions.
 
-OpenClaw is essentially a high-performance CPU that currently suffers from Volatile RAM — it clears its head the moment you close the terminal. Akashik provides the Non-Volatile Semantic Storage (the SSD) and the MMU (the Memory Management Unit) to make that data accessible in 87ms.
+The hard boundary:
 
-Akashik turns any local AI assistant from a session-based tool into a lifelong personal AI that actually remembers and evolves with you.
-
-The mental model:
+> The LLM never stores facts. Akashik never reasons.
 
 | Component | Role |
 |---|---|
-| OpenClaw / local LLM | CPU — high-performance local reasoning |
-| Akashik fact store | SSD — non-volatile semantic storage, persists forever |
-| Akashik expression engine | MMU — memory management unit, right facts in 87ms |
-| LLM context window | CPU cache — small, fast, only what's needed right now |
+| LLM / Agent (OpenClaw, Claude, GPT, Codex) | CPU — reasoning and execution |
+| Akashik fact store | SSD — structured system of record |
+| Akashik retrieval | MMU — right facts, right time, sub-10ms |
+| LLM context window | CPU cache — small, fast, only what's needed |
 
-The LLM never stores facts. Akashik never reasons. Hard boundary between them.
+## How other memory systems compare
+
+Most agent memory systems — including OpenClaw's built-in memory — store
+facts as flat text and retrieve via embedding similarity:
+
+```text
+Markdown files (truth)
+        ↓
+chunk + embed
+        ↓
+SQLite (search index)
+        ↓
+vector + keyword search
+```
+
+This works for simple recall. It breaks down when facts change over time,
+when you need to know what was true *then* vs what is true *now*, or when
+contradicting facts accumulate without resolution.
+
+Akashik uses SQLite differently:
+
+```text
+Typed facts (truth)
+        ↓
+lineage + temporal index
+        ↓
+SQLite (system of record)
+        ↓
+deterministic retrieval
+```
+
+| Problem | Flat text memory | Akashik |
+|---|---|---|
+| Fact changes over time | Old and new coexist | Lineage closes superseded facts |
+| Compaction under long sessions | Detail lost in summary | Append-only, nothing ever lost |
+| Provenance | None | UUID + session + timestamp on every fact |
+| Temporal queries ("where did I live in 2023?") | No answer | `as_of` queries via valid_from/valid_until |
+| Cross-session breadth | Clusters in recent sessions | retrieve_diverse() across all sessions |
+| Latency | ~20ms (embedding) | 3.75ms p50 (deterministic) |
 
 ## Why deterministic
 
-LLM-based memory systems like Mem0 extract and consolidate facts using an LLM call per conversation turn. On consumer hardware this takes 5-15 seconds per turn. For a system intercepting live conversations, that is architecturally incompatible — you cannot block a conversation waiting for memory extraction.
+LLM-based memory systems like Mem0 extract facts using an LLM call per
+conversation turn. On consumer hardware this takes 5–15 seconds per turn —
+architecturally incompatible with real-time conversational interception.
 
-Akashik's deterministic ingest takes milliseconds. It is not a tradeoff. It is a requirement for the use case.
+Akashik's deterministic ingest takes milliseconds. It is not a tradeoff.
+It is a requirement for the use case.
 
 | Approach | Ingest per turn | Query latency |
 |---|---|---|
@@ -31,7 +73,10 @@ Akashik's deterministic ingest takes milliseconds. It is not a tradeoff. It is a
 | RAG (embedding) | <10ms | ~22ms p50 |
 | Mem0 (LLM-assisted) | 5–15 seconds | — |
 
-Mem0's LLM extraction produces richer semantic consolidation but is unsuitable for real-time conversational interception. Akashik's deterministic approach is designed for the 87ms intercept window — invisible to the user, always current, never blocking. See the ACMB table below for comparative quality metrics.
+Mem0's LLM extraction produces richer semantic consolidation but is
+unsuitable for real-time conversational interception. Akashik's
+deterministic approach is designed for the 87ms intercept window —
+invisible to the user, always current, never blocking.
 
 ## ACMB benchmark — 7-way blind, 25 personas
 
