@@ -46,7 +46,9 @@ lineage + temporal index
         ↓
 SQLite (system of record)
         ↓
-deterministic retrieval
+hash → FTS5 → semantic embeddings (fallback)
+        ↓
+deterministic retrieval, 3.75ms p50
 ```
 
 | Problem | Flat text memory | Akashik |
@@ -56,8 +58,9 @@ deterministic retrieval
 | Provenance | None | UUID + session + timestamp on every fact |
 | Temporal queries ("where did I live in 2023?") | No answer | `as_of` queries via valid_from/valid_until |
 | Cross-session breadth | Clusters in recent sessions | retrieve_diverse() across all sessions |
-| Primary retrieval path | Embedding similarity always | Hash → FTS5 → semantic fallback |
-| Latency (primary path) | ~20ms (embedding) | 3.75ms p50 (deterministic) |
+| Primary retrieval | Embedding similarity (always) | Hash → FTS5 (deterministic-first) |
+| Semantic embeddings | Always in hot path | Fallback only when confidence low |
+| Latency p50 | ~20ms | 3.75ms (deterministic path) |
 
 ## Why deterministic
 
