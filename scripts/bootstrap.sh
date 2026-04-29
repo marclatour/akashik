@@ -31,10 +31,22 @@ if ! command -v python3 &>/dev/null; then
     fail "Python 3 not found. Install from https://python.org"
     exit 1
 fi
-PYVER=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+
+# ── Detect best available Python ─────────────────────────────────────
+if command -v python3.13 &>/dev/null; then
+    PYTHON=python3.13
+    ok "python3.13 found — using it for venv"
+else
+    PYTHON=python3
+    warn "python3.13 not found — falling back to $(python3 --version)"
+fi
+
+PYVER=$($PYTHON -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
 PYMAJOR=${PYVER%%.*}
 PYMINOR=${PYVER#*.}
-if (( PYMAJOR < 3 )) || { (( PYMAJOR == 3 )) && (( PYMINOR < 13 )); }; then
+if [[ "$PYTHON" == "python3.13" ]]; then
+    ok "Python $PYVER"
+elif (( PYMAJOR < 3 )) || { (( PYMAJOR == 3 )) && (( PYMINOR < 13 )); }; then
     warn "Python $PYVER found — Akashik targets 3.13+. Continuing anyway."
 else
     ok "Python $PYVER"
@@ -90,7 +102,7 @@ fi
 # ── 3. Set up Python venv ─────────────────────────────────────────────
 info "Setting up Python virtual environment..."
 if [ ! -d ".venv" ]; then
-    python3 -m venv .venv
+    $PYTHON -m venv .venv
     ok ".venv created"
 else
     ok ".venv already exists"
