@@ -4,7 +4,7 @@ import importlib
 
 from akashik.identity import content_hash, normalized_hash
 from akashik.ingest import ingest_file
-from akashik.retrieve import _apply_navigator_tiebreak, retrieve, score_documents
+from akashik.retrieve import _apply_navigator_tiebreak, retrieve, retrieve_diverse, score_documents
 from akashik.schema import MemoryUnit
 from akashik.store import Store
 
@@ -512,3 +512,50 @@ def _make_document_with_facts(store, *, session_id: str, facts: list[str]) -> Me
             )
         )
     return document
+
+
+def test_retrieve_diverse_spreads_across_sessions(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        _make_document_with_facts(
+            store,
+            session_id="session-a",
+            facts=[
+                "User user user lives in Chicago neighborhood one.",
+                "User user user lives in Chicago neighborhood two.",
+                "User user user lives in Chicago neighborhood three.",
+                "User user user lives in Chicago neighborhood four.",
+                "User user user lives in Chicago neighborhood five.",
+            ],
+        )
+        _make_document_with_facts(
+            store,
+            session_id="session-b",
+            facts=[
+                "User works at Helio as a data engineer.",
+                "User joined Helio in 2024.",
+            ],
+        )
+        _make_document_with_facts(
+            store,
+            session_id="session-c",
+            facts=[
+                "User enjoys hiking on weekends.",
+                "User plays chess in the evenings.",
+            ],
+        )
+
+        plain = retrieve("user", store, limit=5).results
+        diverse = retrieve_diverse(
+            store,
+            "user",
+            limit=5,
+            pool=20,
+            top_sessions=3,
+            facts_per_session=2,
+        )
+
+        plain_sessions = {r.unit.metadata.get("session_id") for r in plain}
+        diverse_sessions = {f.metadata.get("session_id") for f in diverse}
+
+        assert len(diverse_sessions) > len(plain_sessions)
+        assert diverse_sessions == {"session-a", "session-b", "session-c"}

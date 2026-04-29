@@ -38,6 +38,9 @@ _SYSTEM_NO_FACTS = (
 
 
 def _retrieve_facts(store, query: str) -> list[str]:
+    # retrieve_diverse is inert on a single-session store (cold start)
+    # but becomes the primary lever as sessions accumulate over time.
+    # On multi-session stores it enforces breadth across sessions.
     results = retrieve_diverse(
         store,
         query,
