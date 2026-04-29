@@ -15,7 +15,7 @@ from pathlib import Path
 from urllib import error, request
 
 from akashik.ingest_pipeline import ingest_turn
-from akashik.retrieve import retrieve
+from akashik.retrieve import retrieve_diverse
 from akashik.store import Store
 
 _STORE_PATH = Path.home() / ".akashik" / "stores" / "demo" / "chat.db"
@@ -25,10 +25,12 @@ _RETRIEVAL_LIMIT = 5
 
 _SYSTEM_WITH_FACTS = """You are a helpful personal assistant with memory.
 
-What you remember about this person:
+IMPORTANT: You have the following verified facts about this person. You MUST use these facts when answering questions about them. Do not say you don't know something that is listed here.
+
+Facts about this person:
 {facts}
 
-Use this context naturally in your responses. If you don't have relevant memory, just respond normally."""
+Always refer to these facts when relevant. Never contradict them."""
 
 _SYSTEM_NO_FACTS = (
     "You are a helpful personal assistant. You don't know much about this person yet."
@@ -36,8 +38,22 @@ _SYSTEM_NO_FACTS = (
 
 
 def _retrieve_facts(store, query: str) -> list[str]:
-    response = retrieve(query, store, level="fact", limit=_RETRIEVAL_LIMIT)
-    return [r.unit.content for r in response.results if r.unit.content]
+    results = retrieve_diverse(
+        store,
+        query,
+        limit=10,
+        pool=50,
+        top_sessions=5,
+        facts_per_session=3,
+    )
+    seen: set[str] = set()
+    facts: list[str] = []
+    for fact in results:
+        if not fact.content or fact.content in seen:
+            continue
+        seen.add(fact.content)
+        facts.append(fact.content)
+    return facts
 
 
 def _build_system_prompt(facts: list[str]) -> str:
