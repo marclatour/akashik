@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import date
+import logging
 import math
 import re
 
@@ -12,6 +13,8 @@ from akashik.query_normalize import normalize_query
 from akashik.retrieve import retrieve
 from akashik.schema import ExecutorResult, RetrievalResult, SourceCitation
 from akashik.temporal_resolver import classify_temporal_query, resolve_two_event_temporal
+
+LOGGER = logging.getLogger(__name__)
 
 COMMON_PREFIXES = [
     "I live in ",
@@ -174,6 +177,7 @@ def execute(
             use_expression=use_expression,
         )
     except Exception:
+        LOGGER.exception("execute() failed for query %r; returning abstained result.", query)
         return _abstained_result(
             answer_type=answer_type,
             raw_facts=[],

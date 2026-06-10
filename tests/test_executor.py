@@ -382,3 +382,23 @@ def test_cli_execute_command(tmp_path) -> None:
 
     assert result.exit_code == 0
     assert "Answer:" in result.output
+
+
+def test_execute_logs_and_abstains_on_internal_error(tmp_path, monkeypatch, caplog) -> None:
+    import akashik.executor as executor_module
+
+    def _boom(*_args, **_kwargs):
+        raise RuntimeError("forced failure")
+
+    monkeypatch.setattr(executor_module, "_execute_factual", _boom)
+
+    with Store(tmp_path / "store.db") as store:
+        with caplog.at_level("ERROR", logger="akashik.executor"):
+            result = execute(store, "where do I live?")
+
+    assert result.abstained is True
+    assert any("execute() failed" in record.message for record in caplog.records)
+    assert any(
+        record.exc_text and "forced failure" in record.exc_text
+        for record in caplog.records
+    )
