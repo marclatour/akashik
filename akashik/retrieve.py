@@ -72,6 +72,7 @@ _FACT_METADATA_ONLY_KEYS = {"speaker"}
 MAX_COMMITMENTS = 5
 SEMANTIC_TRIGGER_THRESHOLD = 0.72
 SEMANTIC_TRIGGER_MAX_FTS_CANDIDATES = 5
+SEMANTIC_CANDIDATE_POOL_LIMIT = 1000
 
 
 def _is_valid(unit, as_of: str | None = None) -> bool:
@@ -855,6 +856,9 @@ def _semantic_candidate_search(
     - apply the same validity filtering used elsewhere in retrieval, respecting as_of
     - if semantic infrastructure is unavailable or any exception occurs, return []
     - do not raise
+
+    The candidate pool is bounded to the SEMANTIC_CANDIDATE_POOL_LIMIT most
+    recent facts so embedding cost stays constant as the store grows.
     """
 
     try:
@@ -862,27 +866,11 @@ def _semantic_candidate_search(
         if model is None:
             return []
 
-        validity_sql, validity_params = store._validity_sql(
-            alias="memory_units",
+        candidates = store.fetch_recent_facts(
+            SEMANTIC_CANDIDATE_POOL_LIMIT,
             current_only=as_of is None,
             as_of=as_of,
         )
-        rows = store._conn.execute(
-            f"""
-            SELECT id, level, content, content_hash, normalized_hash, lineage_parent_id, parent_id, metadata,
-                   embedding, section_heading, valid_from, valid_until,
-                   confirmation_count, last_confirmed_at, fts_rowid
-            FROM memory_units
-            WHERE level = 'fact'
-            {validity_sql}
-            ORDER BY fts_rowid
-            """,
-            tuple(validity_params),
-        ).fetchall()
-        if not rows:
-            return []
-
-        candidates = [store._row_to_unit(row) for row in rows]
         candidates = [candidate for candidate in candidates if _is_valid(candidate, as_of=as_of)]
         if not candidates:
             return []
@@ -909,6 +897,7 @@ def _semantic_candidate_search(
         scored.sort(key=lambda item: (-item[0], item[1]))
         return [candidate for _score, _candidate_id, candidate in scored[:k]]
     except Exception:
+        LOGGER.exception("Semantic candidate search failed; falling back to FTS-only results.")
         return []
 
 

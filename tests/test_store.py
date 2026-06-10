@@ -224,3 +224,18 @@ def test_fts_repaired_after_interrupted_bulk_ingest(tmp_path) -> None:
     with Store(db_path) as reopened:
         results = reopened.search_fts("beacon", limit=10)
         assert [unit.content for unit in results] == ["The beacon fires at dawn."]
+
+
+def test_fetch_recent_facts_bounded_and_newest_first(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        for index in range(5):
+            store.insert(_unit("fact", f"Fact number {index}."))
+        store.insert(_unit("document", "Documents are excluded."))
+
+        recent = store.fetch_recent_facts(3)
+
+        assert [unit.content for unit in recent] == [
+            "Fact number 4.",
+            "Fact number 3.",
+            "Fact number 2.",
+        ]

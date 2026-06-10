@@ -645,6 +645,35 @@ class Store:
                 descendants.extend(self.fetch_descendants_at_level(child.id, level))
         return descendants
 
+    def fetch_recent_facts(
+        self,
+        limit: int,
+        *,
+        current_only: bool = False,
+        as_of: str | None = None,
+    ) -> list[MemoryUnit]:
+        """Return the most recently inserted facts, newest first."""
+        validity_sql, validity_params = self._validity_sql(
+            alias="memory_units",
+            current_only=current_only,
+            as_of=as_of,
+        )
+        rows = self._conn.execute(
+            f"""
+            SELECT id, level, content, content_hash, normalized_hash,
+                   lineage_parent_id, parent_id, metadata, embedding,
+                   section_heading, valid_from, valid_until,
+                   confirmation_count, last_confirmed_at
+            FROM memory_units
+            WHERE level = 'fact'
+            {validity_sql}
+            ORDER BY fts_rowid DESC
+            LIMIT ?
+            """,
+            (*validity_params, limit),
+        ).fetchall()
+        return [self._row_to_unit(row) for row in rows]
+
     def search_fts(
         self,
         query: str,
