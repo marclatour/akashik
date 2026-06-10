@@ -58,6 +58,7 @@ Supported commands:
 ```bash
 akashik ingest --file <path> --level document
 akashik query --text "your query" --level fact
+akashik execute "your question" --query-date 2026-06-10
 akashik show --id <uuid>
 akashik stats
 ```

@@ -153,10 +153,10 @@ Benchmark extras:
 ./.venv/bin/python -m pip install -e ".[benchmark]"
 ```
 
-Local judge dependency:
+Local judge / LLM-ingest dependency (not required for the deterministic core):
 
 ```bash
-./.venv/bin/python -m pip install ollama
+./.venv/bin/python -m pip install -e ".[llm]"
 ```
 
 ## Library

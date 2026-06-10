@@ -1,10 +1,10 @@
 # Scripts
 
-## setup.sh
+## bootstrap.sh
 
 First-time setup for Akashik. Run from the repo root:
 
-    bash scripts/setup.sh
+    bash scripts/bootstrap.sh
 
 Sets up:
 - `~/.akashik/` directory structure
@@ -12,7 +12,7 @@ Sets up:
 - LongMemEval benchmark data (auto-download)
 - Ollama + `qwen2.5:1.5b` judge model (auto-install if Ollama present)
 - CUAD source data (manual download required — license agreement)
-- Runs test suite to verify installation
+- Optionally runs the test suite to verify installation (Y/n prompt)
 
 If Ollama is missing, the script prints install instructions:
 
