@@ -175,3 +175,16 @@ def test_validity_sql_never_filters_non_fact_levels(tmp_path: Path) -> None:
         levels = [unit.level for unit in results]
         assert "document" in levels
         assert "fact" not in levels
+
+
+def test_is_valid_false_for_expired_tz_aware_valid_until() -> None:
+    # A tz-aware valid_until used to raise TypeError against naive utcnow()
+    # and fail open, keeping superseded facts alive forever.
+    unit = _unit("x", valid_until="2020-01-01T00:00:00+00:00")
+    assert _is_valid(unit) is False
+
+
+def test_is_valid_mixed_naive_aware_as_of() -> None:
+    unit = _unit("x", valid_until="2026-02-01T00:00:00+00:00")
+    assert _is_valid(unit, "2026-01-31T00:00:00") is True
+    assert _is_valid(unit, "2026-02-01T00:00:00") is False

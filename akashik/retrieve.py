@@ -75,6 +75,13 @@ SEMANTIC_TRIGGER_MAX_FTS_CANDIDATES = 5
 SEMANTIC_CANDIDATE_POOL_LIMIT = 1000
 
 
+def _aware_utc(value: datetime) -> datetime:
+    """Interpret naive datetimes as UTC so naive/aware comparisons never raise."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value
+
+
 def _is_valid(unit, as_of: str | None = None) -> bool:
     """
     Returns True if the fact is currently valid.
@@ -85,8 +92,8 @@ def _is_valid(unit, as_of: str | None = None) -> bool:
     if not unit.valid_until:
         return True
     try:
-        check = datetime.fromisoformat(as_of) if as_of else datetime.utcnow()
-        until = datetime.fromisoformat(unit.valid_until)
+        check = _aware_utc(datetime.fromisoformat(as_of)) if as_of else datetime.now(UTC)
+        until = _aware_utc(datetime.fromisoformat(unit.valid_until))
         return check < until
     except (ValueError, TypeError):
         return True
