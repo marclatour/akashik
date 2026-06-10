@@ -441,7 +441,7 @@ def _search_fts_with_entity_scope(
     if not fts_query:
         return ([], 0.0)
 
-    validity_sql, validity_params = _validity_sql(alias="fact", current_only=as_of is None, as_of=as_of)
+    validity_sql, validity_params = store.validity_sql(alias="fact", current_only=as_of is None, as_of=as_of)
 
     placeholders = ", ".join("?" for _ in document_ids)
     rows = store._conn.execute(
@@ -572,7 +572,7 @@ def _score_documents_for_scope(
         LOGGER.debug("score_documents: 0 documents scored, top-%s: []", top_n)
         return []
 
-    validity_sql, validity_params = _validity_sql(
+    validity_sql, validity_params = store.validity_sql(
         alias="fact",
         current_only=current_only,
         as_of=as_of,
@@ -923,22 +923,6 @@ def _merge_candidates(
         seen.add(candidate.id)
         merged.append(candidate)
     return merged
-
-
-def _validity_sql(
-    *,
-    alias: str,
-    current_only: bool,
-    as_of: str | None,
-) -> tuple[str, list[object]]:
-    if as_of:
-        return (
-            f"AND (({alias}.valid_from IS NULL OR {alias}.valid_from <= ?) AND ({alias}.valid_until IS NULL OR {alias}.valid_until > ?))",
-            [as_of, as_of],
-        )
-    if current_only:
-        return (f"AND {alias}.valid_until IS NULL", [])
-    return ("", [])
 
 
 def _scoped_result_confidence(candidates: list[dict[str, object]]) -> float:

@@ -556,7 +556,7 @@ class Store:
         current_only: bool = False,
         as_of: str | None = None,
     ) -> list[MemoryUnit]:
-        validity_sql, params = self._validity_sql(
+        validity_sql, params = self.validity_sql(
             alias="memory_units",
             current_only=current_only,
             as_of=as_of,
@@ -574,7 +574,7 @@ class Store:
         current_only: bool = False,
         as_of: str | None = None,
     ) -> list[MemoryUnit]:
-        validity_sql, params = self._validity_sql(
+        validity_sql, params = self.validity_sql(
             alias="memory_units",
             current_only=current_only,
             as_of=as_of,
@@ -653,7 +653,7 @@ class Store:
         as_of: str | None = None,
     ) -> list[MemoryUnit]:
         """Return the most recently inserted facts, newest first."""
-        validity_sql, validity_params = self._validity_sql(
+        validity_sql, validity_params = self.validity_sql(
             alias="memory_units",
             current_only=current_only,
             as_of=as_of,
@@ -687,7 +687,7 @@ class Store:
         if not fts_query:
             return []
         fetch_limit = max(limit * 50, 1000)
-        validity_sql, validity_params = self._validity_sql(
+        validity_sql, validity_params = self.validity_sql(
             alias="m",
             current_only=current_only,
             as_of=as_of,
@@ -855,7 +855,7 @@ class Store:
             ),
         )
 
-    def _validity_sql(
+    def validity_sql(
         self,
         *,
         alias: str,
