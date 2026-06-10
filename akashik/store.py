@@ -140,8 +140,40 @@ class Store:
             self._conn.executescript(_SCHEMA_SQL)
             self._migrate_schema()
             self._conn.execute(f"PRAGMA user_version = {AKASHIK_SCHEMA_VERSION}")
+        if self._db_preexisting:
+            self._repair_fts_if_inconsistent()
         if self._db_preexisting and self._opened_user_version != AKASHIK_SCHEMA_VERSION:
             self._warn_schema_mismatch(self._opened_user_version)
+
+    def _repair_fts_if_inconsistent(self) -> None:
+        """Rebuild the FTS index when it has drifted from memory_units.
+
+        A crash between a bulk-ingest batch commit and end_bulk_ingest()
+        leaves committed rows with no FTS entries; repair on open so the
+        FTS-sync invariant holds for every reopened store.
+        """
+        main_count = int(
+            self._conn.execute("SELECT COUNT(*) FROM memory_units").fetchone()[0]
+        )
+        # COUNT(*) on an external-content FTS table reads through to the
+        # content table; the docsize shadow table holds one row per document
+        # actually present in the FTS index.
+        fts_count = int(
+            self._conn.execute(
+                "SELECT COUNT(*) FROM memory_units_fts_docsize"
+            ).fetchone()[0]
+        )
+        if main_count == fts_count:
+            return
+        LOGGER.warning(
+            "FTS index out of sync (%s units vs %s indexed); rebuilding.",
+            main_count,
+            fts_count,
+        )
+        with self.transaction():
+            self._conn.execute(
+                "INSERT INTO memory_units_fts(memory_units_fts) VALUES('rebuild')"
+            )
 
     def _migrate_schema(self) -> None:
         columns = {

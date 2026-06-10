@@ -208,3 +208,19 @@ def test_schema_version_mismatch_detected(tmp_path) -> None:
 def test_schema_version_match(tmp_path) -> None:
     with Store(tmp_path / "store.db") as store:
         assert store.schema_version_mismatch() is False
+
+
+def test_fts_repaired_after_interrupted_bulk_ingest(tmp_path) -> None:
+    db_path = tmp_path / "store.db"
+    store = Store(db_path)
+    store.begin_bulk_ingest()
+    store.insert(_unit("fact", "The beacon fires at dawn."))
+    store.insert(_unit("fact", "The harbor closes at dusk."))
+    # Simulate a crash after a batch commit but before end_bulk_ingest():
+    # the rows are durable, the FTS index never saw them.
+    store._conn.commit()
+    store._conn.close()
+
+    with Store(db_path) as reopened:
+        results = reopened.search_fts("beacon", limit=10)
+        assert [unit.content for unit in results] == ["The beacon fires at dawn."]
