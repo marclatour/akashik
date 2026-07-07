@@ -193,3 +193,15 @@ Open questions:
 - Should corpus names be user-defined or derived from source path?
 - How does `akashik query` scope to a specific corpus?
 - What is the migration path for users with existing `./akashik.db` files?
+
+### Move acmb_fact_id_index out of core schema
+
+`store.py` creates the `acmb_fact_id_index` table and its index for every store, but only ACMB benchmark code reads or writes it. Move creation to the benchmark adapter (schema migration: drop from `_SCHEMA_SQL`/`_migrate_schema`, create on demand in `benchmark/acmb`).
+
+Why it matters: keeps benchmark residue out of every production database file.
+
+### Batch association-edge updates in retrieval
+
+`update_association_edges` in `retrieve.py` issues one SELECT + UPDATE per fact pair after every successful retrieval — O(n²) queries for n returned facts. Batch the pairs into a single transaction (or SQL upsert) instead.
+
+Why it matters: post-retrieval bookkeeping cost grows quadratically with result size; it is pure overhead on the hot path's tail.

@@ -72,6 +72,14 @@ _FACT_METADATA_ONLY_KEYS = {"speaker"}
 MAX_COMMITMENTS = 5
 SEMANTIC_TRIGGER_THRESHOLD = 0.72
 SEMANTIC_TRIGGER_MAX_FTS_CANDIDATES = 5
+SEMANTIC_CANDIDATE_POOL_LIMIT = 1000
+
+
+def _aware_utc(value: datetime) -> datetime:
+    """Interpret naive datetimes as UTC so naive/aware comparisons never raise."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value
 
 
 def _is_valid(unit, as_of: str | None = None) -> bool:
@@ -84,8 +92,8 @@ def _is_valid(unit, as_of: str | None = None) -> bool:
     if not unit.valid_until:
         return True
     try:
-        check = datetime.fromisoformat(as_of) if as_of else datetime.utcnow()
-        until = datetime.fromisoformat(unit.valid_until)
+        check = _aware_utc(datetime.fromisoformat(as_of)) if as_of else datetime.now(UTC)
+        until = _aware_utc(datetime.fromisoformat(unit.valid_until))
         return check < until
     except (ValueError, TypeError):
         return True
@@ -440,7 +448,7 @@ def _search_fts_with_entity_scope(
     if not fts_query:
         return ([], 0.0)
 
-    validity_sql, validity_params = _validity_sql(alias="fact", current_only=as_of is None, as_of=as_of)
+    validity_sql, validity_params = store.validity_sql(alias="fact", current_only=as_of is None, as_of=as_of)
 
     placeholders = ", ".join("?" for _ in document_ids)
     rows = store._conn.execute(
@@ -571,7 +579,7 @@ def _score_documents_for_scope(
         LOGGER.debug("score_documents: 0 documents scored, top-%s: []", top_n)
         return []
 
-    validity_sql, validity_params = _validity_sql(
+    validity_sql, validity_params = store.validity_sql(
         alias="fact",
         current_only=current_only,
         as_of=as_of,
@@ -855,6 +863,9 @@ def _semantic_candidate_search(
     - apply the same validity filtering used elsewhere in retrieval, respecting as_of
     - if semantic infrastructure is unavailable or any exception occurs, return []
     - do not raise
+
+    The candidate pool is bounded to the SEMANTIC_CANDIDATE_POOL_LIMIT most
+    recent facts so embedding cost stays constant as the store grows.
     """
 
     try:
@@ -862,27 +873,11 @@ def _semantic_candidate_search(
         if model is None:
             return []
 
-        validity_sql, validity_params = store._validity_sql(
-            alias="memory_units",
+        candidates = store.fetch_recent_facts(
+            SEMANTIC_CANDIDATE_POOL_LIMIT,
             current_only=as_of is None,
             as_of=as_of,
         )
-        rows = store._conn.execute(
-            f"""
-            SELECT id, level, content, content_hash, normalized_hash, lineage_parent_id, parent_id, metadata,
-                   embedding, section_heading, valid_from, valid_until,
-                   confirmation_count, last_confirmed_at, fts_rowid
-            FROM memory_units
-            WHERE level = 'fact'
-            {validity_sql}
-            ORDER BY fts_rowid
-            """,
-            tuple(validity_params),
-        ).fetchall()
-        if not rows:
-            return []
-
-        candidates = [store._row_to_unit(row) for row in rows]
         candidates = [candidate for candidate in candidates if _is_valid(candidate, as_of=as_of)]
         if not candidates:
             return []
@@ -909,6 +904,7 @@ def _semantic_candidate_search(
         scored.sort(key=lambda item: (-item[0], item[1]))
         return [candidate for _score, _candidate_id, candidate in scored[:k]]
     except Exception:
+        LOGGER.exception("Semantic candidate search failed; falling back to FTS-only results.")
         return []
 
 
@@ -934,22 +930,6 @@ def _merge_candidates(
         seen.add(candidate.id)
         merged.append(candidate)
     return merged
-
-
-def _validity_sql(
-    *,
-    alias: str,
-    current_only: bool,
-    as_of: str | None,
-) -> tuple[str, list[object]]:
-    if as_of:
-        return (
-            f"AND (({alias}.valid_from IS NULL OR {alias}.valid_from <= ?) AND ({alias}.valid_until IS NULL OR {alias}.valid_until > ?))",
-            [as_of, as_of],
-        )
-    if current_only:
-        return (f"AND {alias}.valid_until IS NULL", [])
-    return ("", [])
 
 
 def _scoped_result_confidence(candidates: list[dict[str, object]]) -> float:

@@ -66,6 +66,19 @@ _CONTEXT_INDEX_STOPWORDS = {
 }
 MIN_TOKEN_LENGTH = 4
 
+FACT_TYPES = (
+    "idea",
+    "claim",
+    "recommendation",
+    "decision",
+    "experiment",
+    "action_item",
+    "outcome",
+    "preference",
+    "constraint",
+    "artifact",
+)
+
 
 def process_turn_commitments(store, turn: dict, *, session_id: str | None = None) -> None:
     """
@@ -277,6 +290,117 @@ def ingest_turn_fact(
     return inserted
 
 
+def commit_fact(
+    store,
+    content: str,
+    *,
+    fact_type: str = "claim",
+    project: str = "general",
+    supersedes: str | None = None,
+    source: str | None = None,
+    session_id: str | None = None,
+    session_date: str | None = None,
+    metadata: dict | None = None,
+) -> MemoryUnit:
+    """Commit one fact deliberately — like a git commit, never ambient.
+
+    The deliberate write path for agent/user memory: no sentence splitting,
+    typed via ``fact_type``, scoped via ``project``. With ``supersedes`` the
+    older fact's validity window is closed and the new unit records it as
+    ``lineage_parent_id`` in the same transaction; the old fact is never
+    deleted.
+    """
+    text = " ".join(str(content or "").split())
+    if not text:
+        raise ValueError("commit_fact requires non-empty content.")
+    if fact_type not in FACT_TYPES:
+        raise ValueError(f"fact_type must be one of {FACT_TYPES}, got {fact_type!r}")
+
+    commit_date = str(session_date).strip() if session_date else datetime.now(timezone.utc).date().isoformat()
+
+    superseded: MemoryUnit | None = None
+    if supersedes is not None:
+        superseded = store.fetch_by_id(supersedes)
+        if superseded is None or superseded.level != "fact":
+            raise ValueError(f"cannot supersede unknown fact {supersedes!r}")
+
+    base_metadata: dict = {
+        "source": source or "user",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "tags": [],
+        "fact_type": fact_type,
+        "project": project,
+        "session_date": commit_date,
+        "simulated_date": commit_date,
+    }
+    if session_id is not None:
+        base_metadata["session_id"] = session_id
+    base_metadata["entities"] = _merge_entity_lists(extract_entities(text))
+    if metadata:
+        caller = dict(metadata)
+        caller_entities = caller.pop("entities", None)
+        base_metadata.update(caller)
+        if caller_entities is not None:
+            base_metadata["entities"] = _merge_entity_lists(
+                list(caller_entities) if isinstance(caller_entities, list) else [],
+                base_metadata.get("entities", []),
+            )
+
+    with store.transaction():
+        section = _ensure_commit_section(store, project)
+        if superseded is not None:
+            store.close_fact(superseded.id, commit_date)
+        unit = _insert_fact_unit(
+            store,
+            text,
+            parent_id=section.id,
+            metadata=base_metadata,
+            lineage_parent_id=superseded.id if superseded is not None else None,
+            # Identical text committed under a different project or fact_type
+            # is a distinct scoped fact, not a restatement of the old one.
+            reinforce_scope_keys=("project", "fact_type"),
+        )
+    return unit
+
+
+def _ensure_commit_section(store, project: str) -> MemoryUnit:
+    """Find or create the document/section scaffolding for a project's commits."""
+    scaffold_text = f"[akashik-commits] project={project}"
+    existing_sections = [
+        unit
+        for unit in store.fetch_by_content_hash(content_hash(scaffold_text))
+        if unit.level == "section"
+    ]
+    if existing_sections:
+        return existing_sections[0]
+
+    scaffold_metadata = {
+        "source": "commit",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "tags": [],
+        "project": project,
+    }
+    existing_documents = [
+        unit
+        for unit in store.fetch_by_content_hash(content_hash(scaffold_text))
+        if unit.level == "document"
+    ]
+    if existing_documents:
+        document = existing_documents[0]
+    else:
+        document = store.insert(
+            _make_unit("document", scaffold_text, metadata=scaffold_metadata)
+        )
+    return store.insert(
+        _make_unit(
+            "section",
+            scaffold_text,
+            parent_id=document.id,
+            metadata=scaffold_metadata,
+        )
+    )
+
+
 def split_sections(text: str) -> list[str]:
     stripped = text.strip()
     if not stripped:
@@ -468,6 +592,8 @@ def _insert_fact_unit(
     metadata: dict | None = None,
     section_entities: dict | None = None,
     section_heading: str | None = None,
+    lineage_parent_id: str | None = None,
+    reinforce_scope_keys: tuple[str, ...] = (),
 ) -> MemoryUnit:
     unit = _make_unit(
         "fact",
@@ -476,6 +602,7 @@ def _insert_fact_unit(
         metadata=metadata,
         section_entities=section_entities,
         section_heading=section_heading,
+        lineage_parent_id=lineage_parent_id,
     )
     triple = extract_triple(unit.content)
     valid_from = unit.valid_from
@@ -484,7 +611,13 @@ def _insert_fact_unit(
         contradiction = find_contradicting_fact(store, triple, instance_id)
         if contradiction is not None:
             close_fact(store, contradiction.id, valid_from)
-    existing = _find_reinforceable_fact(store, unit, instance_id)
+    # An explicit lineage node must always be inserted so the supersession
+    # chain stays reconstructible; reinforcement would drop the link.
+    existing = (
+        None
+        if lineage_parent_id
+        else _find_reinforceable_fact(store, unit, instance_id, scope_keys=reinforce_scope_keys)
+    )
     if existing is not None:
         confirmed_at = valid_from or str(unit.metadata.get("session_date", "")).strip() or None
         if confirmed_at:
@@ -560,6 +693,7 @@ def _make_unit(
     metadata: dict | None = None,
     section_entities: dict | None = None,
     section_heading: str | None = None,
+    lineage_parent_id: str | None = None,
 ) -> MemoryUnit:
     merged_metadata = _merge_child_metadata(metadata, section_entities)
     return MemoryUnit(
@@ -568,6 +702,7 @@ def _make_unit(
         content_hash=content_hash(content),
         normalized_hash=normalized_hash(content),
         parent_id=parent_id,
+        lineage_parent_id=lineage_parent_id,
         metadata=merged_metadata,
         section_heading=section_heading,
         valid_from=(
@@ -584,7 +719,13 @@ def _make_unit(
     )
 
 
-def _find_reinforceable_fact(store, unit: MemoryUnit, instance_id: str | None) -> MemoryUnit | None:
+def _find_reinforceable_fact(
+    store,
+    unit: MemoryUnit,
+    instance_id: str | None,
+    *,
+    scope_keys: tuple[str, ...] = (),
+) -> MemoryUnit | None:
     candidates = store.fetch_by_normalized_hash(unit.normalized_hash)
     for candidate in candidates:
         if candidate.level != "fact":
@@ -592,6 +733,8 @@ def _find_reinforceable_fact(store, unit: MemoryUnit, instance_id: str | None) -
         if candidate.valid_until is not None:
             continue
         if instance_id and candidate.metadata.get("instance_id") != instance_id:
+            continue
+        if any(candidate.metadata.get(key) != unit.metadata.get(key) for key in scope_keys):
             continue
         return candidate
     return None
@@ -612,6 +755,9 @@ def _insert_preference_derived_facts(
 
     valid_from = str(merged_metadata.get("session_date", "")).strip() or None
     instance_id = str(merged_metadata.get("instance_id", "")).strip() or None
+    # Derived facts inherit commit scope: a preference stated in one project
+    # must not reinforce or close a derived fact in another.
+    project = str(merged_metadata.get("project", "")).strip() or None
     for preference in extract_preferences(content):
         value = str(preference["value"])
         polarity = str(preference["polarity"])
@@ -621,6 +767,7 @@ def _insert_preference_derived_facts(
             instance_id=instance_id,
             value=value,
             polarity="like" if polarity == "dislike" else "dislike",
+            project=project,
         )
         if contradiction is not None and valid_from:
             close_fact(store, contradiction.id, valid_from)
@@ -630,6 +777,7 @@ def _insert_preference_derived_facts(
             instance_id=instance_id,
             value=value,
             polarity=polarity,
+            project=project,
         )
         if reinforcement is not None:
             if valid_from:
@@ -666,6 +814,7 @@ def _find_preference_fact(
     instance_id: str | None,
     value: str,
     polarity: str,
+    project: str | None = None,
 ) -> MemoryUnit | None:
     filters: dict[str, str] = {
         "derived": "preference",
@@ -674,6 +823,8 @@ def _find_preference_fact(
     }
     if instance_id:
         filters["instance_id"] = instance_id
+    if project:
+        filters["project"] = project
     candidates = store.fetch_by_metadata_filters(level="fact", filters=filters)
     current = [candidate for candidate in candidates if candidate.valid_until is None]
     if not current:

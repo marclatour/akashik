@@ -4,10 +4,13 @@ from __future__ import annotations
 
 from datetime import date
 import json
+import logging
 from typing import Any
 from urllib import error, request
 
 from akashik.ingest import ingest_text
+
+LOGGER = logging.getLogger(__name__)
 
 _OLLAMA_URL = "http://localhost:11434/api/generate"
 _MODEL = "qwen2.5:1.5b"
@@ -181,7 +184,8 @@ def ingest_turn(store, text: str, simulated_date: str | None = None) -> dict:
 
     try:
         raw_response = _call_ollama(text)
-    except (error.URLError, TimeoutError, OSError, ValueError):
+    except (error.URLError, TimeoutError, OSError, ValueError) as exc:
+        LOGGER.warning("Ollama call failed (%s); turn not ingested.", exc)
         return _result(
             extracted=False,
             fact=None,
@@ -195,6 +199,7 @@ def ingest_turn(store, text: str, simulated_date: str | None = None) -> dict:
     try:
         parsed = json.loads(_strip_markdown_fences(raw_response))
     except (TypeError, json.JSONDecodeError):
+        LOGGER.warning("Unparseable extraction response; turn not ingested: %r", raw_response)
         return _result(
             extracted=False,
             fact=None,

@@ -559,3 +559,34 @@ def test_retrieve_diverse_spreads_across_sessions(tmp_path) -> None:
 
         assert len(diverse_sessions) > len(plain_sessions)
         assert diverse_sessions == {"session-a", "session-b", "session-c"}
+
+
+def test_semantic_candidate_search_uses_bounded_pool(tmp_path, monkeypatch) -> None:
+    class _FakeModel:
+        def encode(self, payload, **kwargs):
+            if isinstance(payload, str):
+                return [1.0, 0.0]
+            return [[1.0, 0.0] for _ in payload]
+
+    monkeypatch.setattr(
+        retrieve_module._SEMANTIC_RANKER, "_load_model", lambda: _FakeModel()
+    )
+
+    with Store(tmp_path / "store.db") as store:
+        store.insert(_unit("fact", "The beacon fires at dawn."))
+
+        seen_limits: list[int] = []
+        original_fetch = store.fetch_recent_facts
+
+        def _spy(limit, **kwargs):
+            seen_limits.append(limit)
+            return original_fetch(limit, **kwargs)
+
+        monkeypatch.setattr(store, "fetch_recent_facts", _spy)
+
+        results = retrieve_module._semantic_candidate_search(
+            store, "beacon", k=5, as_of=None
+        )
+
+        assert seen_limits == [retrieve_module.SEMANTIC_CANDIDATE_POOL_LIMIT]
+        assert [unit.content for unit in results] == ["The beacon fires at dawn."]

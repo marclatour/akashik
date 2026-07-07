@@ -4,19 +4,23 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "akashik"
-version = "0.10.2"
+version = "0.26.2"
 description = "Local-first structured memory library backed by SQLite"
 readme = "README.md"
+license = {text = "Apache-2.0"}
 requires-python = ">=3.11"
-dependencies = ["click>=8.1", "ollama>=0.1.0"]
+dependencies = ["click>=8.1"]
 
 [project.optional-dependencies]
+llm = ["ollama>=0.1.0"]
+agents = ["openai-agents>=0.17"]
 dev = [
     "pytest>=8.0",
     "numpy>=1.24",
     "sentence-transformers>=5.4",
     "anthropic>=0.40",
     "openai>=1.0",
+    "ollama>=0.1.0",
 ]
 benchmark = ["rank-bm25>=0.2"]
 

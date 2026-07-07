@@ -58,11 +58,21 @@ Supported commands:
 ```bash
 akashik ingest --file <path> --level document
 akashik query --text "your query" --level fact
+akashik execute "your question" --query-date 2026-06-10
 akashik show --id <uuid>
 akashik stats
+akashik commit "fact text" --type decision --project <slug> [--supersedes <uuid>]
+akashik state <project>
+akashik log <uuid>
 ```
 
 Default database path is `./akashik.db`.
+
+## Versioning
+
+- `pyproject.toml` `version` and `akashik.__version__` are the canonical package version and must always match.
+- Both must stay in sync with the git tag line: when bumping the version, cut a matching `vX.Y.Z` tag in the same change (suffixed tags like `v0.26.1-validated` are historical checkpoints, not releases).
+- `git tag` sorts lexically, so `v0.9.x` appears after `v0.26.x`; use `git tag --sort=-v:refname` to find the actual latest tag.
 
 ## Documentation Rules
 

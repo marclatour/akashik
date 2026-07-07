@@ -150,3 +150,41 @@ def test_reset_store_contents_clears_acmb_fact_id_index_before_memory_units(tmp_
         _reset_store_contents(store)
         assert store._conn.execute("SELECT COUNT(*) FROM acmb_fact_id_index").fetchone()[0] == 0
         assert store._conn.execute("SELECT COUNT(*) FROM memory_units").fetchone()[0] == 0
+
+
+def test_validity_sql_never_filters_non_fact_levels(tmp_path: Path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        closed_document = MemoryUnit(
+            level="document",
+            content="archived ledger of harbor closures",
+            content_hash=content_hash("archived ledger of harbor closures"),
+            normalized_hash=normalized_hash("archived ledger of harbor closures"),
+            metadata={"source": "tests", "tags": []},
+            valid_until="2020-01-01T00:00:00",
+        )
+        store.insert(closed_document)
+        store.insert(
+            _unit(
+                "archived ledger entry about closures",
+                valid_until="2020-01-01T00:00:00",
+            )
+        )
+
+        results = store.search_fts("archived ledger", limit=10, current_only=True)
+
+        levels = [unit.level for unit in results]
+        assert "document" in levels
+        assert "fact" not in levels
+
+
+def test_is_valid_false_for_expired_tz_aware_valid_until() -> None:
+    # A tz-aware valid_until used to raise TypeError against naive utcnow()
+    # and fail open, keeping superseded facts alive forever.
+    unit = _unit("x", valid_until="2020-01-01T00:00:00+00:00")
+    assert _is_valid(unit) is False
+
+
+def test_is_valid_mixed_naive_aware_as_of() -> None:
+    unit = _unit("x", valid_until="2026-02-01T00:00:00+00:00")
+    assert _is_valid(unit, "2026-01-31T00:00:00") is True
+    assert _is_valid(unit, "2026-02-01T00:00:00") is False
