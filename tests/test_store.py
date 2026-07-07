@@ -239,3 +239,64 @@ def test_fetch_recent_facts_bounded_and_newest_first(tmp_path) -> None:
             "Fact number 3.",
             "Fact number 2.",
         ]
+
+
+def test_fetch_lineage_chain_linear(tmp_path) -> None:
+    from akashik.ingest import commit_fact
+
+    with Store(tmp_path / "store.db") as store:
+        first = commit_fact(store, "Living in Chicago right now", session_date="2021-01-01")
+        second = commit_fact(
+            store, "Moved to New York City", supersedes=first.id, session_date="2023-01-01"
+        )
+        third = commit_fact(
+            store, "Moved again to Boston", supersedes=second.id, session_date="2025-01-01"
+        )
+
+        for member in (first.id, second.id, third.id):
+            chain = store.fetch_lineage_chain(member)
+            assert [unit.id for unit in chain] == [first.id, second.id, third.id]
+
+
+def test_fetch_lineage_chain_branching(tmp_path) -> None:
+    from akashik.ingest import commit_fact
+
+    with Store(tmp_path / "store.db") as store:
+        root = commit_fact(store, "Original plan is option A", session_date="2026-01-01")
+        branch_one = commit_fact(
+            store, "Revised plan is option B", supersedes=root.id, session_date="2026-02-01"
+        )
+        branch_two = commit_fact(
+            store, "Competing revision is option C", supersedes=root.id, session_date="2026-02-02"
+        )
+
+        chain_ids = {unit.id for unit in store.fetch_lineage_chain(branch_one.id)}
+        assert chain_ids == {root.id, branch_one.id, branch_two.id}
+
+
+def test_fetch_lineage_chain_unknown_id(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        assert store.fetch_lineage_chain("missing") == []
+
+
+def test_session_items_roundtrip(tmp_path) -> None:
+    with Store(tmp_path / "store.db") as store:
+        items = [
+            {"role": "user", "content": "hello"},
+            {"role": "assistant", "content": "hi"},
+            {"role": "user", "content": "bye"},
+        ]
+        store.append_session_items("s1", items)
+        store.append_session_items("s2", [{"role": "user", "content": "other session"}])
+
+        assert store.get_session_items("s1") == items
+        assert store.get_session_items("s1", limit=2) == items[1:]
+
+        popped = store.pop_session_item("s1")
+        assert popped == items[2]
+        assert store.get_session_items("s1") == items[:2]
+
+        store.clear_session_items("s1")
+        assert store.get_session_items("s1") == []
+        assert store.pop_session_item("s1") is None
+        assert store.get_session_items("s2") == [{"role": "user", "content": "other session"}]

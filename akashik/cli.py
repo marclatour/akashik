@@ -7,7 +7,7 @@ from pathlib import Path
 import click
 
 from akashik.executor import execute
-from akashik.ingest import ingest_file
+from akashik.ingest import FACT_TYPES, commit_fact, ingest_file
 from akashik.retrieve import retrieve
 from akashik.schema import LEVELS
 from akashik.store import Store
@@ -137,6 +137,82 @@ def show_command(ctx: click.Context, unit_id: str) -> None:
     click.echo(f"source: {unit.source}")
     click.echo(f"content: {unit.content}")
     click.echo(f"chain: {_format_unit_chain(unit, chain)}")
+
+
+@cli.command("commit")
+@click.argument("content")
+@click.option("--type", "fact_type", default="claim", show_default=True, type=click.Choice(FACT_TYPES))
+@click.option("--project", default="general", show_default=True)
+@click.option("--supersedes", default=None, help="Fact id this commit replaces.")
+@click.option("--source", default="user", show_default=True)
+@click.option("--session-date", default=None, help="Override the commit date (YYYY-MM-DD).")
+@click.pass_context
+def commit_command(
+    ctx: click.Context,
+    content: str,
+    fact_type: str,
+    project: str,
+    supersedes: str | None,
+    source: str,
+    session_date: str | None,
+) -> None:
+    with _open_store(ctx) as store:
+        try:
+            unit = commit_fact(
+                store,
+                content,
+                fact_type=fact_type,
+                project=project,
+                supersedes=supersedes,
+                source=source,
+                session_date=session_date,
+            )
+        except ValueError as error:
+            raise click.ClickException(str(error))
+    click.echo(f"Committed {fact_type} id={unit.id} project={project}")
+    if supersedes:
+        click.echo(f"Supersedes {supersedes}")
+
+
+@cli.command("state")
+@click.argument("project")
+@click.pass_context
+def state_command(ctx: click.Context, project: str) -> None:
+    """Show all current committed facts for a project, grouped by type."""
+    with _open_store(ctx) as store:
+        units = store.fetch_by_metadata_filters(level="fact", filters={"project": project})
+
+    current = [unit for unit in units if unit.valid_until is None]
+    if not current:
+        click.echo(f"No current facts for project={project}")
+        return
+
+    grouped: dict[str, list] = {}
+    for unit in current:
+        grouped.setdefault(str(unit.metadata.get("fact_type", "fact")), []).append(unit)
+
+    click.echo(f"project: {project}")
+    for fact_type in sorted(grouped):
+        click.echo(f"\n{fact_type}:")
+        for unit in grouped[fact_type]:
+            date = unit.valid_from or "undated"
+            click.echo(f"  [{unit.id}] ({date}) {unit.content}")
+
+
+@cli.command("log")
+@click.argument("fact_id")
+@click.pass_context
+def log_command(ctx: click.Context, fact_id: str) -> None:
+    """Show the full supersession history for one fact, oldest first."""
+    with _open_store(ctx) as store:
+        chain = store.fetch_lineage_chain(fact_id)
+    if not chain:
+        raise click.ClickException(f"No memory unit found for id={fact_id}")
+    for unit in chain:
+        status = "current" if unit.valid_until is None else f"superseded (until {unit.valid_until})"
+        marker = "*" if unit.id == fact_id else " "
+        click.echo(f"{marker} [{unit.id}] {status}")
+        click.echo(f"    {unit.content}")
 
 
 @cli.command("stats")

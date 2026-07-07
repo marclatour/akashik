@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from datetime import datetime, timezone
 import json
 import logging
 from pathlib import Path
@@ -14,7 +15,7 @@ import uuid
 from akashik.schema import Commitment, LEVELS, LEVEL_INDEX, MemoryUnit, StoreStats, validate_level
 
 # FTS5 row addressing must stay integer-based. UUID ids remain the only public identifiers.
-AKASHIK_SCHEMA_VERSION = 9
+AKASHIK_SCHEMA_VERSION = 10
 BACKFILL_BATCH_SIZE = 100
 
 _SCHEMA_SQL = """
@@ -100,6 +101,14 @@ CREATE TABLE IF NOT EXISTS commitments (
 CREATE INDEX IF NOT EXISTS idx_commitments_status ON commitments(status);
 CREATE INDEX IF NOT EXISTS idx_commitments_session ON commitments(session_id);
 
+CREATE TABLE IF NOT EXISTS agent_session_items (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    item_json TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_agent_session_items ON agent_session_items(session_id, seq);
+
 CREATE VIRTUAL TABLE IF NOT EXISTS memory_units_fts USING fts5(
     content,
     content='memory_units',
@@ -118,6 +127,10 @@ FROM memory_units
 
 _FTS_TOKEN_RE = re.compile(r"\w+", re.UNICODE)
 LOGGER = logging.getLogger(__name__)
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 class Store:
@@ -278,6 +291,19 @@ class Store:
         )
         self._conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_commitments_session ON commitments(session_id)"
+        )
+        self._conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS agent_session_items (
+                seq INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL,
+                item_json TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+        self._conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_agent_session_items ON agent_session_items(session_id, seq)"
         )
         self._conn.execute(
             """
@@ -624,6 +650,93 @@ class Store:
             chain.append(parent)
             current = parent
         return chain
+
+    def fetch_lineage_children(self, unit_id: str) -> list[MemoryUnit]:
+        rows = self._conn.execute(
+            f"{_SELECT_COLUMNS} WHERE lineage_parent_id = ? ORDER BY fts_rowid",
+            (unit_id,),
+        ).fetchall()
+        return [self._row_to_unit(row) for row in rows]
+
+    def fetch_lineage_chain(self, unit_id: str) -> list[MemoryUnit]:
+        """Return the full lineage evolution chain through any member, root first.
+
+        Walks lineage_parent_id backward to the root, then forward through all
+        descendants. Branching chains (two facts superseding the same parent)
+        are included in full, in insertion order within each generation.
+        """
+        start = self.fetch_by_id(unit_id)
+        if start is None:
+            return []
+
+        seen: set[str] = {start.id}
+        root = start
+        while root.lineage_parent_id:
+            parent = self.fetch_by_id(root.lineage_parent_id)
+            if parent is None or parent.id in seen:
+                break
+            seen.add(parent.id)
+            root = parent
+
+        chain: list[MemoryUnit] = []
+        seen.clear()
+        queue: list[MemoryUnit] = [root]
+        while queue:
+            unit = queue.pop(0)
+            if unit.id in seen:
+                continue
+            seen.add(unit.id)
+            chain.append(unit)
+            queue.extend(self.fetch_lineage_children(unit.id))
+        return chain
+
+    def append_session_items(self, session_id: str, items: list[dict]) -> None:
+        if not items:
+            return
+        now = _utc_now_iso()
+        self.executemany(
+            """
+            INSERT INTO agent_session_items (session_id, item_json, created_at)
+            VALUES (?, ?, ?)
+            """,
+            [(session_id, json.dumps(item, default=str), now) for item in items],
+        )
+
+    def get_session_items(self, session_id: str, limit: int | None = None) -> list[dict]:
+        if limit is None:
+            rows = self._conn.execute(
+                "SELECT item_json FROM agent_session_items WHERE session_id = ? ORDER BY seq",
+                (session_id,),
+            ).fetchall()
+        else:
+            rows = self._conn.execute(
+                """
+                SELECT item_json FROM agent_session_items
+                WHERE session_id = ? ORDER BY seq DESC LIMIT ?
+                """,
+                (session_id, limit),
+            ).fetchall()
+            rows = list(reversed(rows))
+        return [json.loads(row["item_json"]) for row in rows]
+
+    def pop_session_item(self, session_id: str) -> dict | None:
+        row = self._conn.execute(
+            """
+            SELECT seq, item_json FROM agent_session_items
+            WHERE session_id = ? ORDER BY seq DESC LIMIT 1
+            """,
+            (session_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        self.execute("DELETE FROM agent_session_items WHERE seq = ?", (int(row["seq"]),))
+        return json.loads(row["item_json"])
+
+    def clear_session_items(self, session_id: str) -> None:
+        self.execute(
+            "DELETE FROM agent_session_items WHERE session_id = ?",
+            (session_id,),
+        )
 
     def fetch_descendants_at_level(self, unit_id: str, level: str) -> list[MemoryUnit]:
         validate_level(level)

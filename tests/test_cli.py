@@ -91,3 +91,66 @@ def test_cli_show_unknown_id_errors(tmp_path) -> None:
 
     assert result.exit_code != 0
     assert "No memory unit found" in result.output
+
+
+def test_cli_commit_state_and_log(tmp_path) -> None:
+    runner = CliRunner()
+    db_path = tmp_path / "cli.db"
+
+    first = runner.invoke(
+        cli,
+        [
+            "--db", str(db_path),
+            "commit", "Ship episode one Friday",
+            "--type", "action_item",
+            "--project", "show",
+            "--session-date", "2026-07-01",
+        ],
+    )
+    assert first.exit_code == 0
+    first_id = first.output.split("id=")[1].split()[0]
+
+    second = runner.invoke(
+        cli,
+        [
+            "--db", str(db_path),
+            "commit", "Episode one shipped Saturday",
+            "--type", "outcome",
+            "--project", "show",
+            "--supersedes", first_id,
+            "--session-date", "2026-07-05",
+        ],
+    )
+    assert second.exit_code == 0
+    assert f"Supersedes {first_id}" in second.output
+
+    state = runner.invoke(cli, ["--db", str(db_path), "state", "show"])
+    assert state.exit_code == 0
+    assert "outcome:" in state.output
+    assert "Episode one shipped Saturday" in state.output
+    assert "Ship episode one Friday" not in state.output
+
+    log = runner.invoke(cli, ["--db", str(db_path), "log", first_id])
+    assert log.exit_code == 0
+    assert "superseded (until 2026-07-05)" in log.output
+    assert "current" in log.output
+
+
+def test_cli_commit_rejects_invalid_type(tmp_path) -> None:
+    runner = CliRunner()
+    db_path = tmp_path / "cli.db"
+
+    result = runner.invoke(
+        cli, ["--db", str(db_path), "commit", "something", "--type", "musing"]
+    )
+    assert result.exit_code != 0
+
+
+def test_cli_state_empty_project(tmp_path) -> None:
+    runner = CliRunner()
+    db_path = tmp_path / "cli.db"
+    Store(db_path).close()
+
+    result = runner.invoke(cli, ["--db", str(db_path), "state", "nothing"])
+    assert result.exit_code == 0
+    assert "No current facts" in result.output

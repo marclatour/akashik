@@ -61,6 +61,9 @@ akashik query --text "your query" --level fact
 akashik execute "your question" --query-date 2026-06-10
 akashik show --id <uuid>
 akashik stats
+akashik commit "fact text" --type decision --project <slug> [--supersedes <uuid>]
+akashik state <project>
+akashik log <uuid>
 ```
 
 Default database path is `./akashik.db`.

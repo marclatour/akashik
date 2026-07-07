@@ -311,6 +311,75 @@ This means: tell one agent you moved to Denver, every agent knows.
 Agent-specific facts stay scoped. Personal facts are always available.
 Akashik is the single source of truth for the user — not per-agent silos.
 
+### OpenAI Agents SDK integration
+
+`akashik.integrations.openai_agents` wires Akashik into the
+[OpenAI Agents SDK](https://openai.github.io/openai-agents-python/) as the
+long-term memory layer. The division of labor:
+
+- **Evidence**: `AkashikEvidenceSession` implements the SDK `Session`
+  protocol and stores raw conversation items verbatim (short-term memory).
+- **Memory**: facts enter the store only through deliberate
+  `commit_fact()` calls — yours, or the agent's via the `akashik_commit`
+  tool. Raw chat is evidence; committed facts are memory.
+
+Install the extra:
+
+```bash
+./.venv/bin/python -m pip install -e ".[agents]"
+```
+
+Use it in an agent:
+
+```python
+from agents import Agent, Runner
+from agents.run import RunConfig
+from akashik.integrations.openai_agents import (
+    AkashikEvidenceSession,
+    build_tools,
+    make_memory_callback,
+)
+from akashik.store import Store
+
+store = Store("memory.db")
+agent = Agent(name="assistant", instructions="...", tools=build_tools(store))
+
+result = await Runner.run(
+    agent,
+    "what did we decide about the launch?",
+    session=AkashikEvidenceSession("user_123", store),
+    run_config=RunConfig(session_input_callback=make_memory_callback(store)),
+)
+```
+
+Two read surfaces, use either or both:
+
+1. **Deterministic injection** (`make_memory_callback`): before every model
+   call, facts relevant to the new turn are recalled and injected as a single
+   `<AKASHIK_MEMORY>` block. Stale blocks from earlier turns are stripped
+   first, so at most one fresh block reaches the model. The model never has
+   to *decide* to remember.
+2. **Explicit tools** (`build_tools`): `akashik_recall` for on-demand search,
+   `akashik_commit` for deliberate writes (tagged `source='agent'`), and
+   `akashik_answer` for deterministic typed answers with citations that
+   abstain rather than guess.
+
+Explicit commits use `commit_fact()` with a typed vocabulary
+(`idea · claim · recommendation · decision · experiment · action_item ·
+outcome · preference · constraint · artifact`) and a `project` scope.
+Supersession is how state changes: the old fact's validity window closes and
+the new fact records it as `lineage_parent_id` — nothing is ever deleted.
+
+Do not combine SDK sessions with `conversation_id` / `previous_response_id`
+in the same run — pick one memory path.
+
+Demo (Part 1 runs with no API key; Part 2 runs a live agent when
+`OPENAI_API_KEY` is set):
+
+```bash
+./.venv/bin/python examples/openai_agents_memory.py
+```
+
 Default behavior excludes superseded facts. Historical queries include only facts valid at the requested date.
 
 The Navigator remains additive-only. In `0.9.1` it can also add a small confidence-decay boost based on:
@@ -396,7 +465,14 @@ akashik query --text "local first memory" --level fact
 akashik execute "Where do I live?"
 akashik show --id <uuid>
 akashik stats
+akashik commit "Episode 1 is the memory demo" --type decision --project human_in_the_loop
+akashik state human_in_the_loop
+akashik log <uuid>
 ```
+
+`commit` writes one deliberate typed fact (`--supersedes <uuid>` closes the
+old fact and links lineage). `state` shows all current facts for a project,
+grouped by type. `log` walks a fact's full supersession history.
 
 ## Tests
 
