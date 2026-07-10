@@ -97,7 +97,7 @@ invisible to the user, always current, never blocking.
 | Distractor Penalty | 0.554 | 0.675 | 0.588 | 0.675 | **0.433** | 0.588 | 0.593 |
 | Latency p50 | 3.75ms | 20.95ms | **0.72ms** | 20.86ms | 1.34ms | 0.71ms | 0.90ms |
 
-All numbers are blind post-audit (v0.25.4+). Oracle fields removed from all adapters. Hybrid adapters (`bm25_akashik`, `rag_akashik`) now run on equal footing with baselines. `full_context` leads belief revision (0.340) — it sees the full history; at decade-scale this becomes architecturally infeasible. `rag_akashik` leads recall (0.752) and temporal (0.702). Akashik leads on latency among structured systems (3.75ms) and is the only adapter with real temporal filtering, provenance, and lineage.
+All numbers are blind post-audit (v0.25.4+). Oracle fields removed from all adapters. Hybrid adapters (`bm25_akashik`, `rag_akashik`) now run on equal footing with baselines. Re-verified July 2026: all 35 quality numbers across all seven adapters reproduce exactly; latency varies with machine load (Akashik p50 measured 4.19ms on a loaded machine, sub-5ms holds). `full_context` leads belief revision (0.340) — it sees the full history; at decade-scale this becomes architecturally infeasible. `rag_akashik` leads recall (0.752) and temporal (0.702). Akashik leads on latency among structured systems (3.75ms) and is the only adapter with real temporal filtering, provenance, and lineage.
 
 Akashik stores content as a fixed hierarchy:
 
@@ -607,16 +607,23 @@ Run Mode A:
 ./.venv/bin/python benchmark/run_cuad.py
 ```
 
-Current blind baseline (4-way, no oracle hints):
+Current blind baseline (no oracle hints, re-verified July 2026 on a
+freshly re-ingested store):
 
 | System | P@1 | Context Efficiency | Composite |
 |---|---|---|---|
-| RAG | 0.08 | 0.029 | 0.065 |
-| GraphRAG | 0.14 | 0.109 | 0.135 |
-| Akashik | 0.06 | **0.230** | 0.111 |
-| RAG-Embedding | 0.06 | 0.029 | 0.063 |
+| RAG | 0.08 | 0.03 | 0.06 |
+| GraphRAG | 0.14 | 0.11 | 0.13 |
+| Akashik | 0.10 | **0.57** | **0.25** |
 
-Note: query set is keyword-only stems with no entity mentions. Akashik's context efficiency (0.230) is structural and holds blind — retrieved spans are 2–8× tighter than baselines. P@1 leadership requires natural queries with entity mentions (open work).
+Note: query set is keyword-only stems with no entity mentions. Akashik's
+context efficiency is structural and holds blind — retrieved spans are far
+tighter than baselines — and the composite now leads GraphRAG. P@1
+leadership still requires natural queries with entity mentions (open work).
+Earlier published numbers (Akashik 0.06 / 0.230 / 0.111) predate months of
+retrieval improvements; the baselines reproduce unchanged. The optional
+RAG-Embedding baseline requires `--with-embeddings` and was not part of the
+July 2026 rerun.
 
 Run Mode B:
 
@@ -624,7 +631,16 @@ Run Mode B:
 ./.venv/bin/python benchmark/run_cuad_b.py
 ```
 
-Mode B numbers pending blind rerun.
+Mode B (natural-language legal paraphrases, same store, July 2026):
+
+| System | P@1 | Context Efficiency | Composite |
+|---|---|---|---|
+| RAG | 0.00 | 0.03 | 0.02 |
+| GraphRAG | 0.00 | 0.00 | 0.00 |
+| Akashik | 0.05 | 0.15 | **0.23** |
+
+Akashik's Mode B provenance is 0.80 — it almost always finds the right
+contract under paraphrase; pinning the exact clause is the remaining gap.
 
 Interpretation:
 
@@ -687,6 +703,9 @@ Oracle:
 
 Session Recall @10: **0.97** Oracle / **0.92** S split (diverse retrieval)
 
+Re-verified July 2026 on freshly rebuilt stores (schema v10): both recall
+numbers reproduce exactly.
+
 ### QA Accuracy with diverse retrieval (pool=100, top_sessions=8, facts_per_session=5)
 
 | Category | Oracle qwen | Oracle GPT-5.4-mini | S qwen | S GPT-5.4-mini |
@@ -700,8 +719,14 @@ Session Recall @10: **0.97** Oracle / **0.92** S split (diverse retrieval)
 | **Overall** | **0.54** | **0.64** | **0.51** | **0.59** |
 | Deterministic path | 1.00 | 1.00 | 1.00 | 1.00 |
 
+July 2026 re-verification (Oracle qwen column, 3-vote local judge):
+single-session-user 0.81 and preference 0.90 reproduce exactly; assistant
+0.86, knowledge-update 0.68, temporal 0.32 are within ±0.03; multi-session
+improved to **0.36** (retrieval improvements since April); overall **0.56**
+vs 0.54 claimed. GPT-5.4-mini and S-split QA columns not re-run.
+
 Multi-session QA baseline (standard retrieval, any model): **0.06**
-Multi-session QA with diverse retrieval + qwen2.5:1.5b: **0.29** (+4.8x)
+Multi-session QA with diverse retrieval + qwen2.5:1.5b: **0.29** (April) / **0.36** (July rerun)
 Multi-session QA with diverse retrieval + GPT-5.4-mini: **0.45** (+7.5x)
 
 Diverse retrieval is the primary architectural lever. The retrieval architecture moves
