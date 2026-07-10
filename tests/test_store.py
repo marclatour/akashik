@@ -333,3 +333,41 @@ def test_store_uses_default_db_path(tmp_path, monkeypatch) -> None:
     with Store() as store:
         assert store.db_path == str(target)
     assert target.exists()
+
+
+def test_concurrent_process_open_and_write(tmp_path) -> None:
+    """Multiple agent processes share one store on a device; simultaneous
+    first-opens must not crash on the WAL/schema-creation race."""
+    import subprocess
+    import sys
+
+    db_path = tmp_path / "shared.db"
+    script = (
+        "import sys\n"
+        "from akashik.ingest import commit_fact\n"
+        "from akashik.store import Store\n"
+        "with Store(sys.argv[1]) as store:\n"
+        "    commit_fact(store, f'fact from agent {sys.argv[2]}', project=sys.argv[2])\n"
+    )
+    procs = [
+        subprocess.Popen(
+            [sys.executable, "-c", script, str(db_path), f"agent{i}"],
+            stderr=subprocess.PIPE,
+        )
+        for i in range(4)
+    ]
+    failures = []
+    for proc in procs:
+        _out, err = proc.communicate(timeout=60)
+        if proc.returncode != 0:
+            failures.append(err.decode())
+    assert not failures, failures
+
+    with Store(db_path) as store:
+        facts = store.execute(
+            "SELECT COUNT(*) FROM memory_units WHERE level='fact'"
+        ).fetchone()[0]
+        total = store.execute("SELECT COUNT(*) FROM memory_units").fetchone()[0]
+        fts = store.execute("SELECT COUNT(*) FROM memory_units_fts_docsize").fetchone()[0]
+        assert facts == 4
+        assert total == fts

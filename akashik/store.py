@@ -7,6 +7,7 @@ import logging
 import os
 import re
 import sqlite3
+import time
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -25,6 +26,8 @@ from akashik.schema import (
 # FTS5 row addressing must stay integer-based. UUID ids remain the only public identifiers.
 AKASHIK_SCHEMA_VERSION = 10
 BACKFILL_BATCH_SIZE = 100
+OPEN_BUSY_TIMEOUT_SECONDS = 10.0
+OPEN_RETRY_DEADLINE_SECONDS = 10.0
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS memory_units (
@@ -158,15 +161,36 @@ class Store:
         self.db_path = str(Path(db_path) if db_path is not None else default_db_path())
         db_file = Path(self.db_path)
         self._db_preexisting = db_file.exists() and db_file.stat().st_size > 0
-        self._conn = sqlite3.connect(self.db_path)
+        self._conn = sqlite3.connect(self.db_path, timeout=OPEN_BUSY_TIMEOUT_SECONDS)
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA foreign_keys = ON")
-        self._conn.execute("PRAGMA journal_mode = WAL")
         self._bulk_ingest_mode = False
         self._bulk_ingest_batch_open = False
         self._bulk_ingest_fact_count = 0
-        self._opened_user_version = int(self._conn.execute("PRAGMA user_version").fetchone()[0])
-        self.initialize()
+        # One store is shared by multiple agent processes on a device. The WAL
+        # conversion and first-open schema creation race concurrent openers
+        # and can return SQLITE_BUSY without consulting the busy handler, so
+        # the open sequence retries under a deadline instead of crashing.
+        self._open_with_retry()
+
+    def _open_with_retry(self) -> None:
+        deadline = time.monotonic() + OPEN_RETRY_DEADLINE_SECONDS
+        delay = 0.05
+        while True:
+            try:
+                self._conn.execute("PRAGMA journal_mode = WAL")
+                self._opened_user_version = int(
+                    self._conn.execute("PRAGMA user_version").fetchone()[0]
+                )
+                self.initialize()
+                return
+            except sqlite3.OperationalError as error:
+                if "locked" not in str(error) or time.monotonic() >= deadline:
+                    raise
+                if self._conn.in_transaction:
+                    self._conn.rollback()
+                time.sleep(delay)
+                delay = min(delay * 2, 0.5)
 
     def initialize(self) -> None:
         with self._conn:
