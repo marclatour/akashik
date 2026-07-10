@@ -5,10 +5,10 @@ Wires real Akashik ingest and retrieval into the ACMB benchmark interface.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 import os
-from pathlib import Path
 import uuid
+from datetime import UTC, datetime
+from pathlib import Path
 
 from akashik.commitment_detector import detect_commitment, is_closure
 from akashik.identity import content_hash, normalized_hash

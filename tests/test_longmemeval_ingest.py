@@ -3,8 +3,8 @@ from __future__ import annotations
 import copy
 import json
 
-from benchmark.longmemeval.ingest_adapter import ingest_instance
 from akashik.store import Store
+from benchmark.longmemeval.ingest_adapter import ingest_instance
 
 SYNTHETIC_INSTANCE = {
     "question_id": "test_q_001",

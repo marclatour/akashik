@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-
 PERSONAS_DIR = Path.home() / ".akashik" / "data" / "benchmarks" / "acmb" / "personas"
 QUERIES_DIR = Path.home() / ".akashik" / "data" / "benchmarks" / "acmb" / "queries"
 

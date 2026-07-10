@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-import math
 import logging
+import math
 import os
-from typing import Optional
+from datetime import UTC, datetime
 
 from akashik.ingest import MIN_TOKEN_LENGTH
 from akashik.query_normalize import normalize_query
@@ -187,7 +186,7 @@ def extract_context(query: str, metadata: dict | None = None) -> dict:
     }
 
 
-def express(store, query: str, context: Optional[dict] = None) -> list[MemoryUnit]:
+def express(store, query: str, context: dict | None = None) -> list[MemoryUnit]:
     """
     Context-driven fact expression — Addressed Cognition v0.20.2.
     """
@@ -277,13 +276,4 @@ def _set_expression_stats(
     expressed: int,
     bypassed: bool,
 ) -> None:
-    setattr(
-        store,
-        "_last_expression_stats",
-        {
-            "candidate_pool": candidate_pool,
-            "above_threshold": above_threshold,
-            "expressed": expressed,
-            "bypassed_retrieval": bypassed,
-        },
-    )
+    store._last_expression_stats = {"candidate_pool": candidate_pool, "above_threshold": above_threshold, "expressed": expressed, "bypassed_retrieval": bypassed}

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import re
 import sqlite3
+from dataclasses import dataclass
 
 from benchmark.corpus import CorpusDocument
 from benchmark.systems import RetrievedItem

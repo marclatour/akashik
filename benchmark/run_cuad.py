@@ -9,16 +9,16 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import argparse
+import json
+import os
+import re
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
-import json
-import os
 from pathlib import Path
-import re
 
-from akashik.query_normalize import normalize_query
 from akashik import Store
+from akashik.query_normalize import normalize_query
 from benchmark import DEFAULT_RESULTS_DIR
 from benchmark.corpus import CorpusDocument, split_sections
 from benchmark.evaluate import tokenize

@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from datetime import date
 import logging
+from datetime import date
 
 from akashik.parse_temporal_scope import parse_temporal_scope
-
 
 QUESTION_DATE = "2024-03-15"
 

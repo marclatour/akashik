@@ -2,20 +2,26 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 import json
 import logging
 import re
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+from akashik.commitment_detector import COMMITMENT_META_QUERIES
 from akashik.expression import express, extract_context
 from akashik.identity import content_hash, normalized_hash
 from akashik.navigator import rank_facts
 from akashik.parse_temporal_scope import _parse_question_date
-from akashik.commitment_detector import COMMITMENT_META_QUERIES
 from akashik.query_normalize import normalize_query
+from akashik.schema import (
+    LEVEL_INDEX,
+    MemoryUnit,
+    RetrievalResponse,
+    RetrievalResult,
+    validate_level,
+)
 from akashik.semantic import SemanticRanker
-from akashik.schema import LEVEL_INDEX, MemoryUnit, RetrievalResponse, RetrievalResult, validate_level
 from akashik.temporal_resolver import resolve_two_event_temporal
 
 if TYPE_CHECKING:
@@ -143,16 +149,7 @@ def retrieve(
             return _finalize_response(store, response, as_of=valid_at)
         LOGGER.debug("Expression engine: fell through to retrieval stack")
     else:
-        setattr(
-            store,
-            "_last_expression_stats",
-            {
-                "candidate_pool": 0,
-                "above_threshold": 0,
-                "expressed": 0,
-                "bypassed_retrieval": False,
-            },
-        )
+        store._last_expression_stats = {"candidate_pool": 0, "above_threshold": 0, "expressed": 0, "bypassed_retrieval": False}
 
     temporal_answer = None
     if (
@@ -701,7 +698,7 @@ def _split_entity_filters(
 
 def _fact_filter_sql(filters: dict[str, str | list[str]]) -> str:
     clauses: list[str] = []
-    for key, value in filters.items():
+    for _key, value in filters.items():
         if value is None:
             continue
         if isinstance(value, list):

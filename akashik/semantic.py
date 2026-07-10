@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import logging
 import math
+from dataclasses import dataclass
 from typing import Any
 
 from akashik.schema import MemoryUnit
@@ -93,7 +93,7 @@ def _instantiate_model(model_class: Any, model_name: str) -> Any:
 
 
 def _cosine_similarity(left: list[float], right: list[float]) -> float:
-    dot = sum(a * b for a, b in zip(left, right))
+    dot = sum(a * b for a, b in zip(left, right, strict=False))
     left_norm = math.sqrt(sum(value * value for value in left))
     right_norm = math.sqrt(sum(value * value for value in right))
     if left_norm == 0.0 or right_norm == 0.0:
