@@ -136,6 +136,47 @@ Benchmark results below still reflect the cold path unless noted otherwise. Expr
 
 ## Install
 
+### Quick install (Linux/macOS)
+
+The deterministic core has one dependency (`click`) — no torch, no
+embeddings, no model downloads. Python 3.11+.
+
+CLI as a standalone tool (recommended — [uv](https://docs.astral.sh/uv/) fetches a compatible Python automatically):
+
+```bash
+uv tool install "akashik @ git+https://github.com/marclatour/akashik.git"
+```
+
+or with pipx:
+
+```bash
+pipx install "git+https://github.com/marclatour/akashik.git"
+```
+
+Then:
+
+```bash
+akashik commit "Episode 1 is the memory demo" --type decision --project show
+akashik state show
+```
+
+As a library in your own project's venv:
+
+```bash
+pip install "akashik @ git+https://github.com/marclatour/akashik.git"
+```
+
+With the OpenAI Agents SDK integration:
+
+```bash
+pip install "akashik[agents] @ git+https://github.com/marclatour/akashik.git"
+```
+
+While the repository is private, use the SSH form of the URL instead:
+`git+ssh://git@github.com/marclatour/akashik.git`.
+
+### Development install
+
 ```bash
 ./.venv/bin/python -m pip install -e ".[dev]"
 ```
