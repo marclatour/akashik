@@ -4,8 +4,9 @@
 
 Akashik is a deterministic memory substrate for AI agents and assistants.
 It sits beneath any LLM or agent system — OpenClaw, Claude, GPT, Codex —
-and gives it structured, versioned, provenance-preserving memory that
-persists correctly across years of interactions.
+and gives it structured, versioned, provenance-preserving memory designed
+to persist across years of interactions (longest measured horizon so far:
+multi-session benchmark corpora, not literal years).
 
 The hard boundary:
 
@@ -15,7 +16,7 @@ The hard boundary:
 |---|---|
 | LLM / Agent (OpenClaw, Claude, GPT, Codex) | CPU — reasoning and execution |
 | Akashik fact store | SSD — structured system of record |
-| Akashik retrieval | MMU — right facts, right time, sub-10ms |
+| Akashik retrieval | MMU — right facts, right time (~4ms p50 / ~35ms p95 measured) |
 | LLM context window | CPU cache — small, fast, only what's needed |
 
 ## How other memory systems compare
@@ -52,7 +53,7 @@ SQLite (system of record)
         ↓
 hash → FTS5 → semantic embeddings (fallback)
         ↓
-deterministic retrieval, 3.75ms p50
+deterministic retrieval, ~4ms p50
 ```
 
 | Problem | Flat text memory | Akashik |
@@ -64,40 +65,46 @@ deterministic retrieval, 3.75ms p50
 | Cross-session breadth | Clusters in recent sessions | retrieve_diverse() across all sessions |
 | Primary retrieval | Embedding similarity (always) | Hash → FTS5 (deterministic-first) |
 | Semantic embeddings | Always in hot path | Fallback only when confidence low |
-| Latency p50 | ~20ms | 3.75ms (deterministic path) |
+| Latency p50 | ~20-33ms | 3.77ms (deterministic path, Jul 2026) |
 
 ## Why deterministic
 
-LLM-based memory systems like Mem0 extract facts using an LLM call per
-conversation turn. On consumer hardware this takes 5–15 seconds per turn —
-architecturally incompatible with real-time conversational interception.
+LLM-based memory systems like Mem0 extract facts using one or more LLM
+calls per conversation turn — model-call latency and cost in the write
+path, and nondeterministic memories.
 
 Akashik's deterministic ingest takes milliseconds. It is not a tradeoff.
 It is a requirement for the use case.
 
-| Approach | Ingest per turn | Query latency |
+| Approach | Ingest per turn | Query latency (measured, Jul 2026) |
 |---|---|---|
-| Akashik (deterministic) | <10ms | 3.98ms p50 |
-| RAG (embedding) | <10ms | ~22ms p50 |
-| Mem0 (LLM-assisted) | 5–15 seconds | — |
+| Akashik (deterministic) | <10ms | 3.77ms p50 / 34.5ms p95 |
+| RAG (embedding) | <10ms | 33.4ms p50 |
+| LLM-assisted extraction | one or more model calls | — |
 
-Mem0's LLM extraction produces richer semantic consolidation but is
-unsuitable for real-time conversational interception. Akashik's
-deterministic approach is designed for the 87ms intercept window —
-invisible to the user, always current, never blocking.
+LLM extraction produces richer semantic consolidation but puts model
+calls in the memory write path. Akashik's deterministic approach targets
+a sub-100ms intercept budget (a design target — see ARCHITECTURE.md);
+writes queue briefly under concurrent access rather than blocking
+indefinitely (10s busy-timeout ceiling).
 
 ## ACMB benchmark — 7-way blind, 25 personas
 
+<!-- BEGIN GENERATED: acmb-7way -->
 | Metric | Akashik | rag_akashik | bm25_akashik | RAG | full_ctx | BM25 | TF-IDF |
 |---|---|---|---|---|---|---|---|
-| Fact Recall | 0.648 | **0.752** | 0.679 | 0.614 | 0.560 | 0.541 | 0.533 |
-| Belief Revision | 0.281 | 0.249 | 0.251 | 0.111 | **0.340** | 0.113 | 0.068 |
-| Fact Precision | 0.219 | 0.214 | **0.257** | 0.183 | 0.255 | 0.171 | 0.158 |
-| Temporal Correct | 0.598 | **0.702** | 0.629 | 0.614 | 0.520 | 0.541 | 0.533 |
-| Distractor Penalty | 0.554 | 0.675 | 0.588 | 0.675 | **0.433** | 0.588 | 0.593 |
-| Latency p50 | 3.75ms | 20.95ms | **0.72ms** | 20.86ms | 1.34ms | 0.71ms | 0.90ms |
+| Fact Recall | 0.648 | 0.752 | 0.679 | 0.614 | 0.560 | 0.541 | 0.533 |
+| Belief Revision | 0.281 | 0.249 | 0.251 | 0.111 | 0.340 | 0.113 | 0.068 |
+| Fact Precision | 0.219 | 0.214 | 0.257 | 0.183 | 0.255 | 0.171 | 0.158 |
+| Temporal Correct | 0.598 | 0.702 | 0.629 | 0.614 | 0.520 | 0.541 | 0.533 |
+| Distractor Penalty | 0.554 | 0.675 | 0.588 | 0.675 | 0.433 | 0.588 | 0.593 |
+| Latency p50 | 3.77ms | 33.44ms | 0.76ms | 33.44ms | 1.34ms | 0.74ms | 0.92ms |
+| Latency p95 | 34.51ms | 39.07ms | 1.08ms | 37.84ms | 1.50ms | 1.07ms | 1.24ms |
 
-All numbers are blind post-audit (v0.25.4+). Oracle fields removed from all adapters. Hybrid adapters (`bm25_akashik`, `rag_akashik`) now run on equal footing with baselines. Re-verified July 2026: all 35 quality numbers across all seven adapters reproduce exactly; latency varies with machine load (Akashik p50 measured 4.19ms on a loaded machine, sub-5ms holds). `full_context` leads belief revision (0.340) — it sees the full history; at decade-scale this becomes architecturally infeasible. `rag_akashik` leads recall (0.752) and temporal (0.702). Akashik leads on latency among structured systems (3.75ms) and is the only adapter with real temporal filtering, provenance, and lineage.
+*Generated from `benchmarks/evidence/2026-07-10/acmb/` by `benchmark.evidence tables` — do not edit by hand.*
+<!-- END GENERATED: acmb-7way -->
+
+All numbers are blind post-audit (v0.25.4+). Oracle fields removed from all adapters. Hybrid adapters (`bm25_akashik`, `rag_akashik`) run on equal footing with baselines. The July 2026 rerun reproduced all 35 April quality numbers exactly (deterministic retrieval; latency varies with machine load). `full_context` leads belief revision — it sees the full history; at decade-scale this becomes architecturally infeasible. `rag_akashik` leads recall and temporal. Akashik leads on latency among structured systems and is the only adapter with real temporal filtering, provenance, and lineage.
 
 Akashik stores content as a fixed hierarchy:
 
@@ -607,14 +614,18 @@ Run Mode A:
 ./.venv/bin/python benchmark/run_cuad.py
 ```
 
-Current blind baseline (no oracle hints, re-verified July 2026 on a
-freshly re-ingested store):
+Current blind baseline (no oracle hints, July 2026 on a freshly
+re-ingested store):
 
+<!-- BEGIN GENERATED: cuad-mode-a -->
 | System | P@1 | Context Efficiency | Composite |
 |---|---|---|---|
 | RAG | 0.08 | 0.03 | 0.06 |
 | GraphRAG | 0.14 | 0.11 | 0.13 |
 | Akashik | 0.10 | **0.57** | **0.25** |
+
+*Generated from `benchmarks/evidence/2026-07-10/cuad/results_cuad_50.json` by `benchmark.evidence tables` — do not edit by hand.*
+<!-- END GENERATED: cuad-mode-a -->
 
 Note: query set is keyword-only stems with no entity mentions. Akashik's
 context efficiency is structural and holds blind — retrieved spans are far
@@ -633,11 +644,15 @@ Run Mode B:
 
 Mode B (natural-language legal paraphrases, same store, July 2026):
 
+<!-- BEGIN GENERATED: cuad-mode-b -->
 | System | P@1 | Context Efficiency | Composite |
 |---|---|---|---|
 | RAG | 0.00 | 0.03 | 0.02 |
 | GraphRAG | 0.00 | 0.00 | 0.00 |
-| Akashik | 0.05 | 0.15 | **0.23** |
+| Akashik | 0.05 | **0.15** | **0.23** |
+
+*Generated from `benchmarks/evidence/2026-07-10/cuad/results_cuad_b_50.json` by `benchmark.evidence tables` — do not edit by hand.*
+<!-- END GENERATED: cuad-mode-b -->
 
 Akashik's Mode B provenance is 0.80 — it almost always finds the right
 contract under paraphrase; pinning the exact clause is the remaining gap.
@@ -701,37 +716,47 @@ Oracle:
   --abstention-threshold 0.3
 ```
 
-Session Recall @10: **0.97** Oracle / **0.92** S split (diverse retrieval)
+Session Recall @10 (diverse retrieval):
 
-Re-verified July 2026 on freshly rebuilt stores (schema v10): both recall
-numbers reproduce exactly.
+<!-- BEGIN GENERATED: longmemeval-recall -->
+| Split | Session Recall @10 | Scored instances |
+|---|---|---|
+| Oracle | 0.97 | 470 |
+| S (noisy haystack) | 0.92 | 470 |
+
+*Generated from `benchmarks/evidence/2026-07-10/longmemeval/` by `benchmark.evidence tables` — do not edit by hand.*
+<!-- END GENERATED: longmemeval-recall -->
 
 ### QA Accuracy with diverse retrieval (pool=100, top_sessions=8, facts_per_session=5)
 
-| Category | Oracle qwen | Oracle GPT-5.4-mini | S qwen | S GPT-5.4-mini |
-|---|---|---|---|---|
-| single-session-user | 0.81 | 0.84 | 0.86 | 0.84 |
-| single-session-assistant | 0.84 | 0.88 | 0.79 | 0.86 |
-| single-session-preference | 0.90 | 0.93 | 0.57 | 0.87 |
-| knowledge-update | 0.67 | 0.86 | 0.61 | 0.75 |
-| temporal-reasoning | 0.35 | 0.41 | 0.31 | 0.39 |
-| multi-session | 0.29 | 0.45 | 0.32 | 0.36 |
-| **Overall** | **0.54** | **0.64** | **0.51** | **0.59** |
-| Deterministic path | 1.00 | 1.00 | 1.00 | 1.00 |
+<!-- BEGIN GENERATED: longmemeval-qa -->
+| Category | Apr 2026 Oracle qwen | Apr 2026 Oracle GPT-5.4-mini | Apr 2026 S qwen | Apr 2026 S GPT-5.4-mini | Jul 2026 verified Oracle qwen |
+|---|---|---|---|---|---|
+| single-session-user | 0.81 | 0.84 | 0.86 | 0.84 | 0.81 |
+| single-session-assistant | 0.84 | 0.88 | 0.79 | 0.86 | 0.86 |
+| single-session-preference | 0.90 | 0.93 | 0.57 | 0.87 | 0.90 |
+| knowledge-update | 0.67 | 0.86 | 0.61 | 0.75 | 0.68 |
+| temporal-reasoning | 0.35 | 0.41 | 0.31 | 0.39 | 0.32 |
+| multi-session | 0.29 | 0.45 | 0.32 | 0.36 | 0.36 |
+| **Overall** | **0.54** | **0.64** | **0.51** | **0.59** | **0.56** |
 
-July 2026 re-verification (Oracle qwen column, 3-vote local judge):
-single-session-user 0.81 and preference 0.90 reproduce exactly; assistant
-0.86, knowledge-update 0.68, temporal 0.32 are within ±0.03; multi-session
-improved to **0.36** (retrieval improvements since April); overall **0.56**
-vs 0.54 claimed. GPT-5.4-mini and S-split QA columns not re-run.
+*Jul 2026 column computed from 470 judged answers (qwen2.5:1.5b, 3 votes) in `qa_oracle/verdicts/`; Apr 2026 columns are historical (pre-evidence-system).*
+
+*Generated from `benchmarks/evidence/2026-07-10/qa_oracle/verdicts/` by `benchmark.evidence tables` — do not edit by hand.*
+<!-- END GENERATED: longmemeval-qa -->
+
+GPT-5.4-mini and S-split QA columns have not been re-run under the
+evidence system.
 
 Multi-session QA baseline (standard retrieval, any model): **0.06**
-Multi-session QA with diverse retrieval + qwen2.5:1.5b: **0.29** (April) / **0.36** (July rerun)
-Multi-session QA with diverse retrieval + GPT-5.4-mini: **0.45** (+7.5x)
+Multi-session QA with diverse retrieval + qwen2.5:1.5b: **0.29** (Apr) / **0.36** (Jul, verified)
+Multi-session QA with diverse retrieval + GPT-5.4-mini: **0.45** (Apr, +7.5x)
 
 Diverse retrieval is the primary architectural lever. The retrieval architecture moves
 multi-session QA regardless of model. Frontier model adds synthesis quality on top.
-Deterministic executor path is 100% correct across all configurations.
+In the April runs, answers taken from the deterministic executor path were judged
+correct in every case where the executor answered (denominator: executor-answered
+questions, not all questions; not re-measured in July).
 
 Run with diverse retrieval:
 

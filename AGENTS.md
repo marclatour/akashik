@@ -76,6 +76,7 @@ Default database path is `~/.akashik/memory.db`, overridable with the `AKASHIK_D
 
 ## Documentation Rules
 
+- Published benchmark numbers in `README.md` live between `<!-- BEGIN/END GENERATED: ... -->` markers and are produced by `./.venv/bin/python -m benchmark.evidence tables` from raw artifacts in `benchmarks/evidence/<date>/` — never edit those numbers by hand. CI runs `benchmark.evidence check` and fails on drift. New benchmark runs must keep raw outputs (`--results-output` / `--keep-output` / `--verdicts-output`) and refresh the manifest.
 - Keep `README.md` current as features, CLI behavior, benchmarks, and workflows change.
 - If a change adds or alters a runnable script, benchmark, or command flow, update the matching `README.md` example in the same change.
 - Use `./.venv/bin/python ...` in documentation and command examples instead of bare `python ...`.

@@ -60,6 +60,16 @@ def main() -> int:
     )
     parser.add_argument("--votes", type=int, default=3)
     parser.add_argument("--no-cache", action="store_true")
+    parser.add_argument(
+        "--verdicts-output",
+        default=None,
+        help="Write one JSON line per judged answer (durable evidence).",
+    )
+    parser.add_argument(
+        "--summary-output",
+        default=None,
+        help="Write aggregate metrics as JSON (durable evidence).",
+    )
     args = parser.parse_args()
     judge_model = args.judge_model or (
         _DEFAULT_OLLAMA_JUDGE_MODEL if args.judge_backend == "ollama" else _DEFAULT_OPENAI_JUDGE_MODEL
@@ -92,6 +102,7 @@ def main() -> int:
     correct = 0
     by_type: dict[str, list[tuple[dict, object]]] = defaultdict(list)
     by_confidence: dict[str, list[bool | None]] = defaultdict(list)
+    verdict_rows: list[dict] = []
     started_at = time.monotonic()
     judge_latency_ms = 0.0
     judge_calls = 0
@@ -125,6 +136,23 @@ def main() -> int:
         question_type = str(row.get("question_type") or _dataset_question_type(item))
         by_type[question_type].append((row, result))
         by_confidence[result.confidence].append(result.judgment)
+        verdict_rows.append(
+            {
+                "question_id": str(row["question_id"]),
+                "question_type": question_type,
+                "question": result.question,
+                "gold_answer": result.expected,
+                "hypothesis": result.answer,
+                "judgment": result.judgment,
+                "abstained": result.abstained,
+                "confidence": result.confidence,
+                "raw_responses": list(result.raw_responses),
+                "from_cache": result.from_cache,
+                "judge_backend": args.judge_backend,
+                "judge_model": judge_model,
+                "votes": args.votes,
+            }
+        )
         if result.abstained:
             abstained += 1
         else:
@@ -166,7 +194,83 @@ def main() -> int:
         judge_latency_ms=judge_latency_ms,
         judge_calls=judge_calls,
     )
+
+    if args.verdicts_output:
+        verdicts_path = Path(args.verdicts_output)
+        verdicts_path.parent.mkdir(parents=True, exist_ok=True)
+        with verdicts_path.open("w", encoding="utf-8") as handle:
+            for verdict in verdict_rows:
+                handle.write(json.dumps(verdict, sort_keys=True) + "\n")
+        print(f"Verdicts saved to: {verdicts_path}")
+    if args.summary_output:
+        summary_path = Path(args.summary_output)
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        summary = _build_summary(
+            dataset_name=Path(args.data).name,
+            results_glob=args.results,
+            total=len(non_abs),
+            judged=judged,
+            abstained=abstained,
+            unparseable=unparseable,
+            correct=correct,
+            by_type=by_type,
+            by_confidence=by_confidence,
+            model=judge_model,
+            votes=args.votes,
+            judge_backend=args.judge_backend,
+        )
+        summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print(f"Summary saved to: {summary_path}")
     return 0
+
+
+def _build_summary(
+    *,
+    dataset_name: str,
+    results_glob: str,
+    total: int,
+    judged: int,
+    abstained: int,
+    unparseable: int,
+    correct: int,
+    by_type: dict[str, list[tuple[dict, object]]],
+    by_confidence: dict[str, list[bool | None]],
+    judge_backend: str,
+    model: str,
+    votes: int,
+) -> dict:
+    per_type = {}
+    for question_type, subset in sorted(by_type.items()):
+        answered = [result for _row, result in subset if not result.abstained]
+        correct_subset = sum(1 for _row, result in subset if result.judgment is True)
+        per_type[question_type] = {
+            "n_answered": len(answered),
+            "n_abstained": sum(1 for _row, result in subset if result.abstained),
+            "correct": correct_subset,
+            "accuracy": round(correct_subset / len(answered), 4) if answered else 0.0,
+        }
+    per_tier = {
+        tier: {
+            "correct": sum(1 for value in judgments if value is True),
+            "total": len(judgments),
+        }
+        for tier, judgments in sorted(by_confidence.items())
+    }
+    return {
+        "dataset": dataset_name,
+        "results_glob": results_glob,
+        "judge_backend": judge_backend,
+        "judge_model": model,
+        "votes": votes,
+        "total": total,
+        "judged": judged,
+        "abstained": abstained,
+        "unparseable": unparseable,
+        "correct": correct,
+        "overall_accuracy": round(correct / judged, 4) if judged else 0.0,
+        "per_type": per_type,
+        "per_tier": per_tier,
+    }
 
 
 def _print_report(
