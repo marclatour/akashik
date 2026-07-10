@@ -23,6 +23,7 @@ import asyncio
 import os
 from pathlib import Path
 
+from akashik.env import load_env
 from akashik.ingest import commit_fact
 from akashik.integrations.openai_agents import (
     AkashikEvidenceSession,
@@ -118,12 +119,7 @@ async def part_two(store: Store) -> None:
 
 
 def main() -> None:
-    try:
-        from dotenv import load_dotenv
-
-        load_dotenv()  # picks up OPENAI_API_KEY from ./.env if present
-    except ImportError:
-        pass
+    load_env()  # picks up OPENAI_API_KEY from ./.env or ~/.akashik/.env
     if DB_PATH.exists():
         DB_PATH.unlink()
     with Store(DB_PATH) as store:
