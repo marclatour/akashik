@@ -519,7 +519,11 @@ grouped by type. `log` walks a fact's full supersession history.
 
 ```bash
 ./.venv/bin/python -m pytest
+./.venv/bin/ruff check .
 ```
+
+CI runs both on every push to `main` and on pull requests
+(`.github/workflows/ci.yml`).
 
 ## Synthetic Benchmark
 
