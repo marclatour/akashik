@@ -1246,6 +1246,10 @@ def _finalize_response(store, response: RetrievalResponse, *, as_of: str | None 
     fact_ids = _returned_fact_ids(response)
     if not fact_ids:
         return response
+    # Retrieval is not read-only: this bookkeeping makes every successful
+    # retrieve() a (brief) serialized writer under BEGIN IMMEDIATE. Fine at
+    # personal-agent scale; if contention ever matters, activation updates
+    # are the thing to make best-effort or batched.
     with store.transaction():
         update_activation_on_retrieval(store, fact_ids)
         if len(fact_ids) > 1:

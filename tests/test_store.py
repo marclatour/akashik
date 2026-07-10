@@ -373,7 +373,7 @@ def test_concurrent_process_open_and_write(tmp_path) -> None:
         assert total == fts
 
 
-def _barrier_commit_worker(db_path: str, barrier, agent: str, errors) -> None:
+def _barrier_commit_worker(db_path: str, barrier, agent: str, status) -> None:
     from akashik.ingest import commit_fact
     from akashik.store import Store
 
@@ -382,11 +382,16 @@ def _barrier_commit_worker(db_path: str, barrier, agent: str, errors) -> None:
             barrier.wait(timeout=30)
             for index in range(10):
                 commit_fact(store, f"{agent} distinct fact {index}", project=agent)
-    except Exception as exc:  # noqa: BLE001 - reported to the parent process
-        errors.put(f"{agent}: {exc!r}")
+    except Exception as exc:
+        status.put(f"{agent}: {exc!r}")
+        raise
+    status.put(f"{agent}: ok")
 
 
-def _barrier_reader_worker(db_path: str, barrier, errors) -> None:
+def _barrier_retrieval_worker(db_path: str, barrier, status) -> None:
+    # Not a pure reader: retrieve() commits activation bookkeeping, so this
+    # exercises retrieval availability under write contention — not
+    # concurrent WAL readership (raw SELECTs are the concurrent-read path).
     from akashik.retrieve import retrieve
     from akashik.store import Store
 
@@ -395,11 +400,13 @@ def _barrier_reader_worker(db_path: str, barrier, errors) -> None:
             barrier.wait(timeout=30)
             for _ in range(30):
                 retrieve("distinct fact", store, level="fact", limit=5)
-    except Exception as exc:  # noqa: BLE001
-        errors.put(f"reader: {exc!r}")
+    except Exception as exc:
+        status.put(f"retrieval: {exc!r}")
+        raise
+    status.put("retrieval: ok")
 
 
-def _barrier_reinforce_worker(db_path: str, barrier, errors) -> None:
+def _barrier_reinforce_worker(db_path: str, barrier, status) -> None:
     from akashik.ingest import commit_fact
     from akashik.store import Store
 
@@ -407,15 +414,16 @@ def _barrier_reinforce_worker(db_path: str, barrier, errors) -> None:
         with Store(db_path) as store:
             barrier.wait(timeout=30)
             commit_fact(store, "the same shared fact", project="shared")
-    except Exception as exc:  # noqa: BLE001
-        errors.put(f"reinforce: {exc!r}")
+    except Exception as exc:
+        status.put(f"reinforce: {exc!r}")
+        raise
+    status.put("reinforce: ok")
 
 
-def _drain(queue) -> list[str]:
-    items = []
-    while not queue.empty():
-        items.append(queue.get())
-    return items
+def _collect_statuses(queue, count: int) -> list[str]:
+    # Queue.empty() is unreliable across processes; every worker reports
+    # exactly one status, so consume that many with blocking gets.
+    return [queue.get(timeout=60) for _ in range(count)]
 
 
 def test_barrier_synchronized_concurrent_writers(tmp_path) -> None:
@@ -428,20 +436,20 @@ def test_barrier_synchronized_concurrent_writers(tmp_path) -> None:
 
     ctx = multiprocessing.get_context("spawn")
     db_path = str(tmp_path / "shared.db")
-    errors = ctx.Queue()
+    status = ctx.Queue()
     barrier = ctx.Barrier(4)
     workers = [
-        ctx.Process(target=_barrier_commit_worker, args=(db_path, barrier, f"agent{i}", errors))
+        ctx.Process(target=_barrier_commit_worker, args=(db_path, barrier, f"agent{i}", status))
         for i in range(3)
     ]
-    workers.append(ctx.Process(target=_barrier_reader_worker, args=(db_path, barrier, errors)))
+    workers.append(ctx.Process(target=_barrier_retrieval_worker, args=(db_path, barrier, status)))
     for proc in workers:
         proc.start()
+    statuses = _collect_statuses(status, len(workers))
     for proc in workers:
         proc.join(timeout=60)
         assert proc.exitcode == 0
-
-    assert _drain(errors) == []
+    assert all(entry.endswith("ok") for entry in statuses), statuses
     with Store(db_path) as store:
         facts = store.execute(
             "SELECT COUNT(*) FROM memory_units WHERE level='fact'"
@@ -459,19 +467,19 @@ def test_concurrent_identical_commits_reinforce_once(tmp_path) -> None:
 
     ctx = multiprocessing.get_context("spawn")
     db_path = str(tmp_path / "shared.db")
-    errors = ctx.Queue()
+    status = ctx.Queue()
     barrier = ctx.Barrier(4)
     workers = [
-        ctx.Process(target=_barrier_reinforce_worker, args=(db_path, barrier, errors))
+        ctx.Process(target=_barrier_reinforce_worker, args=(db_path, barrier, status))
         for _ in range(4)
     ]
     for proc in workers:
         proc.start()
+    statuses = _collect_statuses(status, len(workers))
     for proc in workers:
         proc.join(timeout=60)
         assert proc.exitcode == 0
-
-    assert _drain(errors) == []
+    assert all(entry.endswith("ok") for entry in statuses), statuses
     with Store(db_path) as store:
         rows = store.execute(
             "SELECT confirmation_count FROM memory_units"
