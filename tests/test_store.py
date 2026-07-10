@@ -487,3 +487,29 @@ def test_concurrent_identical_commits_reinforce_once(tmp_path) -> None:
         ).fetchall()
         assert len(rows) == 1
         assert int(rows[0][0]) == 4
+
+
+def test_store_connection_rejects_cross_thread_use(tmp_path) -> None:
+    """The same-thread guard is load-bearing: transaction() decides ownership
+    via the connection-global in_transaction flag, so sharing the connection
+    across threads lets one thread silently join (then commit or roll back)
+    another thread's transaction. Cross-process is the supported concurrency
+    model; cross-thread sharing must fail loudly."""
+    import sqlite3
+    import threading
+
+    with Store(tmp_path / "store.db") as store:
+        outcome: list[object] = []
+
+        def worker() -> None:
+            try:
+                store.execute("SELECT 1")
+                outcome.append("allowed")
+            except sqlite3.ProgrammingError as error:
+                outcome.append(error)
+
+        thread = threading.Thread(target=worker)
+        thread.start()
+        thread.join(timeout=10)
+        assert len(outcome) == 1
+        assert isinstance(outcome[0], sqlite3.ProgrammingError)

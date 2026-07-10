@@ -28,10 +28,8 @@ Do not combine SDK sessions with ``conversation_id`` /
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
-import sqlite3
 from typing import Any
 
 from akashik.executor import execute
@@ -67,8 +65,13 @@ class AkashikEvidenceSession:
 
     Implements the SDK's structural ``Session`` protocol (the SDK marks
     ``SessionABC`` internal and directs third parties to the protocol), so
-    it needs no SDK import at all. Blocking SQLite work runs in a thread,
-    matching the SDK's own SQLite session.
+    it needs no SDK import at all.
+
+    The store methods run inline: the Store owns one connection on one
+    thread, and its transaction ownership is connection-global, so
+    offloading to worker threads would let concurrent transactions
+    silently merge. The operations are single brief statements; a moment
+    of event-loop blocking is preferable to transaction corruption.
 
     Verbatim transcript only — facts never enter through this path.
     ``clear_session`` clears the transcript; committed facts survive.
@@ -86,27 +89,18 @@ class AkashikEvidenceSession:
         settings_limit = getattr(self.session_settings, "limit", None)
         return settings_limit if isinstance(settings_limit, int) else None
 
-    async def _run(self, func, /, *args, **kwargs):
-        # Offload blocking SQLite to a thread when the sqlite3 build allows
-        # cross-thread connection use; otherwise run inline (brief block).
-        if sqlite3.threadsafety == 3:
-            return await asyncio.to_thread(func, *args, **kwargs)
-        return func(*args, **kwargs)
-
     async def get_items(self, limit: int | None = None) -> list[Any]:
-        return await self._run(
-            self.store.get_session_items, self.session_id, limit=self._limit(limit)
-        )
+        return self.store.get_session_items(self.session_id, limit=self._limit(limit))
 
     async def add_items(self, items: list[Any]) -> None:
         if items:
-            await self._run(self.store.append_session_items, self.session_id, list(items))
+            self.store.append_session_items(self.session_id, list(items))
 
     async def pop_item(self) -> Any | None:
-        return await self._run(self.store.pop_session_item, self.session_id)
+        return self.store.pop_session_item(self.session_id)
 
     async def clear_session(self) -> None:
-        await self._run(self.store.clear_session_items, self.session_id)
+        self.store.clear_session_items(self.session_id)
 
 
 def make_memory_callback(

@@ -99,7 +99,8 @@ def test_full_runner_turn_roundtrips_real_item_shapes(tmp_path) -> None:
         )
         session = AkashikEvidenceSession("turn_1", store)
         run_config = RunConfig(
-            session_input_callback=make_memory_callback(store, project="show")
+            session_input_callback=make_memory_callback(store, project="show"),
+            tracing_disabled=True,
         )
 
         result = asyncio.run(
