@@ -371,3 +371,111 @@ def test_concurrent_process_open_and_write(tmp_path) -> None:
         fts = store.execute("SELECT COUNT(*) FROM memory_units_fts_docsize").fetchone()[0]
         assert facts == 4
         assert total == fts
+
+
+def _barrier_commit_worker(db_path: str, barrier, agent: str, errors) -> None:
+    from akashik.ingest import commit_fact
+    from akashik.store import Store
+
+    try:
+        with Store(db_path) as store:
+            barrier.wait(timeout=30)
+            for index in range(10):
+                commit_fact(store, f"{agent} distinct fact {index}", project=agent)
+    except Exception as exc:  # noqa: BLE001 - reported to the parent process
+        errors.put(f"{agent}: {exc!r}")
+
+
+def _barrier_reader_worker(db_path: str, barrier, errors) -> None:
+    from akashik.retrieve import retrieve
+    from akashik.store import Store
+
+    try:
+        with Store(db_path) as store:
+            barrier.wait(timeout=30)
+            for _ in range(30):
+                retrieve("distinct fact", store, level="fact", limit=5)
+    except Exception as exc:  # noqa: BLE001
+        errors.put(f"reader: {exc!r}")
+
+
+def _barrier_reinforce_worker(db_path: str, barrier, errors) -> None:
+    from akashik.ingest import commit_fact
+    from akashik.store import Store
+
+    try:
+        with Store(db_path) as store:
+            barrier.wait(timeout=30)
+            commit_fact(store, "the same shared fact", project="shared")
+    except Exception as exc:  # noqa: BLE001
+        errors.put(f"reinforce: {exc!r}")
+
+
+def _drain(queue) -> list[str]:
+    items = []
+    while not queue.empty():
+        items.append(queue.get())
+    return items
+
+
+def test_barrier_synchronized_concurrent_writers(tmp_path) -> None:
+    """Writers must queue, not fail, when their transactions overlap.
+
+    All processes open the store first, then release together on a barrier so
+    the write transactions genuinely contend (a deferred BEGIN fails the
+    second writer instantly on snapshot upgrade; BEGIN IMMEDIATE queues it)."""
+    import multiprocessing
+
+    ctx = multiprocessing.get_context("spawn")
+    db_path = str(tmp_path / "shared.db")
+    errors = ctx.Queue()
+    barrier = ctx.Barrier(4)
+    workers = [
+        ctx.Process(target=_barrier_commit_worker, args=(db_path, barrier, f"agent{i}", errors))
+        for i in range(3)
+    ]
+    workers.append(ctx.Process(target=_barrier_reader_worker, args=(db_path, barrier, errors)))
+    for proc in workers:
+        proc.start()
+    for proc in workers:
+        proc.join(timeout=60)
+        assert proc.exitcode == 0
+
+    assert _drain(errors) == []
+    with Store(db_path) as store:
+        facts = store.execute(
+            "SELECT COUNT(*) FROM memory_units WHERE level='fact'"
+        ).fetchone()[0]
+        total = store.execute("SELECT COUNT(*) FROM memory_units").fetchone()[0]
+        fts = store.execute("SELECT COUNT(*) FROM memory_units_fts_docsize").fetchone()[0]
+        assert facts == 30
+        assert total == fts
+
+
+def test_concurrent_identical_commits_reinforce_once(tmp_path) -> None:
+    """Reinforcement decisions serialize: N processes committing the same
+    fact converge to one unit with N confirmations, never duplicates."""
+    import multiprocessing
+
+    ctx = multiprocessing.get_context("spawn")
+    db_path = str(tmp_path / "shared.db")
+    errors = ctx.Queue()
+    barrier = ctx.Barrier(4)
+    workers = [
+        ctx.Process(target=_barrier_reinforce_worker, args=(db_path, barrier, errors))
+        for _ in range(4)
+    ]
+    for proc in workers:
+        proc.start()
+    for proc in workers:
+        proc.join(timeout=60)
+        assert proc.exitcode == 0
+
+    assert _drain(errors) == []
+    with Store(db_path) as store:
+        rows = store.execute(
+            "SELECT confirmation_count FROM memory_units"
+            " WHERE level='fact' AND content = 'the same shared fact'"
+        ).fetchall()
+        assert len(rows) == 1
+        assert int(rows[0][0]) == 4
