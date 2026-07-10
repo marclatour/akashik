@@ -381,6 +381,17 @@ Install the extra:
 ./.venv/bin/python -m pip install -e ".[agents]"
 ```
 
+Put your API key in a `.env` file next to your agent (never in git):
+
+```bash
+echo 'OPENAI_API_KEY=sk-...' > .env
+echo '.env' >> .gitignore
+```
+
+The `agents` extra includes `python-dotenv`; call `load_dotenv()` at app
+startup (the demo does this automatically) and the SDK picks the key up
+from the environment. Akashik itself never reads your key.
+
 Use it in an agent:
 
 ```python

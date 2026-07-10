@@ -118,6 +118,12 @@ async def part_two(store: Store) -> None:
 
 
 def main() -> None:
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv()  # picks up OPENAI_API_KEY from ./.env if present
+    except ImportError:
+        pass
     if DB_PATH.exists():
         DB_PATH.unlink()
     with Store(DB_PATH) as store:
