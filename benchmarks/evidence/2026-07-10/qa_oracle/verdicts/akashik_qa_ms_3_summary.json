@@ -1,0 +1,31 @@
+{
+  "abstained": 0,
+  "correct": 12,
+  "dataset": "longmemeval_oracle.json",
+  "judge_backend": "ollama",
+  "judge_model": "qwen2.5:1.5b",
+  "judged": 25,
+  "overall_accuracy": 0.48,
+  "per_tier": {
+    "cached": {
+      "correct": 3,
+      "total": 16
+    },
+    "deterministic": {
+      "correct": 9,
+      "total": 9
+    }
+  },
+  "per_type": {
+    "multi-session": {
+      "accuracy": 0.48,
+      "correct": 12,
+      "n_abstained": 0,
+      "n_answered": 25
+    }
+  },
+  "results_glob": "benchmarks/evidence/2026-07-10/qa_oracle/akashik_qa_ms_3.jsonl",
+  "total": 25,
+  "unparseable": 0,
+  "votes": 3
+}
