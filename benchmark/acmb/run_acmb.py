@@ -142,6 +142,11 @@ def main() -> int:
     parser.add_argument("--match-threshold", type=float, default=0.5)
     parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--keep-output", action="store_true")
+    parser.add_argument(
+        "--results-output",
+        default=None,
+        help="Write per-persona results, summary, and latency data as JSON (durable evidence).",
+    )
     args = parser.parse_args()
 
     ensure_acmb_data(args.personas_dir, args.queries_dir)
@@ -262,6 +267,26 @@ def main() -> int:
     print(f"Distractor Penalty:    {summary['distractor_penalty']:.3f}")
     print(f"Query Latency p50:     {_percentile(latency_ms, 0.50):.2f}ms")
     print(f"Query Latency p95:     {_percentile(latency_ms, 0.95):.2f}ms")
+
+    if args.results_output:
+        results_path = Path(args.results_output)
+        results_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "adapter": args.adapter,
+            "k": args.k,
+            "match_threshold": args.match_threshold,
+            "n_personas": summary["n_personas"],
+            "summary": summary,
+            "latency_ms": {
+                "p50": round(_percentile(latency_ms, 0.50), 3),
+                "p95": round(_percentile(latency_ms, 0.95), 3),
+                "n_queries": len(latency_ms),
+                "all": [round(value, 3) for value in latency_ms],
+            },
+            "per_persona": all_results,
+        }
+        results_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print(f"Results saved to: {results_path}")
     return 0
 
 

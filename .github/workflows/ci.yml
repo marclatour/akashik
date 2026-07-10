@@ -18,6 +18,13 @@ jobs:
       - uses: astral-sh/setup-uv@v7
       - name: ruff check
         run: uvx ruff@0.15.21 check .
+      - name: benchmark evidence drift check
+        run: |
+          if [ -d benchmarks/evidence ]; then
+            python3 -m benchmark.evidence check
+          else
+            echo "no evidence directory; skipping"
+          fi
 
   test:
     runs-on: ubuntu-latest

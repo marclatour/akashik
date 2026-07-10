@@ -1,0 +1,1833 @@
+{
+  "adapter": "rag_akashik",
+  "k": 10,
+  "latency_ms": {
+    "all": [
+      32.209,
+      31.208,
+      34.179,
+      30.728,
+      34.496,
+      32.613,
+      33.774,
+      31.924,
+      32.722,
+      33.44,
+      31.2,
+      33.125,
+      32.434,
+      33.136,
+      31.3,
+      32.492,
+      32.178,
+      30.742,
+      30.75,
+      30.819,
+      33.558,
+      33.096,
+      35.397,
+      31.865,
+      33.169,
+      36.635,
+      33.629,
+      35.623,
+      32.199,
+      31.48,
+      34.498,
+      34.55,
+      34.907,
+      32.655,
+      36.318,
+      32.499,
+      31.679,
+      34.093,
+      33.022,
+      33.718,
+      33.012,
+      34.995,
+      32.64,
+      32.741,
+      33.393,
+      33.792,
+      33.869,
+      30.204,
+      29.47,
+      34.993,
+      34.227,
+      36.147,
+      32.061,
+      30.43,
+      29.779,
+      34.128,
+      37.628,
+      32.291,
+      35.984,
+      30.221,
+      33.065,
+      31.528,
+      34.642,
+      31.402,
+      33.01,
+      33.588,
+      30.039,
+      31.431,
+      33.678,
+      32.984,
+      35.496,
+      31.476,
+      29.6,
+      33.451,
+      33.147,
+      32.808,
+      34.985,
+      33.952,
+      32.163,
+      33.371,
+      36.153,
+      44.391,
+      39.713,
+      33.327,
+      32.784,
+      49.171,
+      38.491,
+      35.625,
+      39.43,
+      43.537,
+      34.223,
+      34.237,
+      35.728,
+      33.425,
+      32.053,
+      35.226,
+      39.021,
+      35.03,
+      35.823,
+      34.678,
+      37.305,
+      36.338,
+      39.359,
+      37.271,
+      36.095,
+      39.07,
+      36.769,
+      36.766,
+      37.583,
+      34.323,
+      33.378,
+      36.934,
+      32.777,
+      30.542,
+      36.34,
+      34.461,
+      32.057,
+      32.036,
+      30.746,
+      35.357,
+      34.095,
+      33.823,
+      34.426,
+      30.181,
+      32.532,
+      34.668,
+      32.049,
+      32.062,
+      32.861,
+      33.539
+    ],
+    "n_queries": 130,
+    "p50": 33.44,
+    "p95": 39.07
+  },
+  "match_threshold": 0.5,
+  "n_personas": 25,
+  "per_persona": [
+    {
+      "belief_revision_score": 0.75,
+      "distractor_penalty": 0.25,
+      "fact_precision": 0.5416666666666666,
+      "fact_recall": 1.0,
+      "per_query": [
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.5,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.5,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.6666666666666666,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.5,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        }
+      ],
+      "persona_id": "persona_001",
+      "temporal_correctness": 0.75
+    },
+    {
+      "belief_revision_score": 0.5,
+      "distractor_penalty": 0.5,
+      "fact_precision": 0.3958333333333333,
+      "fact_recall": 1.0,
+      "per_query": [
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.3333333333333333,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.6666666666666666,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.3333333333333333,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.25,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        }
+      ],
+      "persona_id": "persona_002",
+      "temporal_correctness": 0.75
+    },
+    {
+      "belief_revision_score": 0.25,
+      "distractor_penalty": 0.75,
+      "fact_precision": 0.32916666666666666,
+      "fact_recall": 1.0,
+      "per_query": [
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.3333333333333333,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.25,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.4,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.3333333333333333,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        }
+      ],
+      "persona_id": "persona_003",
+      "temporal_correctness": 0.75
+    },
+    {
+      "belief_revision_score": 0.5,
+      "distractor_penalty": 0.5,
+      "fact_precision": 0.7083333333333333,
+      "fact_recall": 1.0,
+      "per_query": [
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.6666666666666666,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 1.0,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.5,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.6666666666666666,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        }
+      ],
+      "persona_id": "persona_004",
+      "temporal_correctness": 0.75
+    },
+    {
+      "belief_revision_score": 0.75,
+      "distractor_penalty": 0.5,
+      "fact_precision": 0.4583333333333333,
+      "fact_recall": 1.0,
+      "per_query": [
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.5,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.3333333333333333,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.6666666666666666,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.3333333333333333,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        }
+      ],
+      "persona_id": "persona_005",
+      "temporal_correctness": 0.75
+    },
+    {
+      "belief_revision_score": 0.16666666666666666,
+      "distractor_penalty": 0.5,
+      "fact_precision": 0.05555555555555555,
+      "fact_recall": 0.3333333333333333,
+      "per_query": [
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.16666666666666666,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": false,
+          "must_include_hit": false,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": true,
+          "must_include_hit": false,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.16666666666666666,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": false,
+          "must_include_hit": false,
+          "query_id": "q005",
+          "query_type": "multi_hop"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": true,
+          "must_include_hit": false,
+          "query_id": "q006",
+          "query_type": "temporal"
+        }
+      ],
+      "persona_id": "persona_006",
+      "temporal_correctness": 0.3333333333333333
+    },
+    {
+      "belief_revision_score": 0.0,
+      "distractor_penalty": 0.6666666666666666,
+      "fact_precision": 0.10277777777777779,
+      "fact_recall": 0.5,
+      "per_query": [
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.25,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": true,
+          "must_include_hit": false,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.16666666666666666,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": false,
+          "must_include_hit": false,
+          "query_id": "q005",
+          "query_type": "multi_hop"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": true,
+          "must_include_hit": false,
+          "query_id": "q006",
+          "query_type": "temporal"
+        }
+      ],
+      "persona_id": "persona_007",
+      "temporal_correctness": 0.5
+    },
+    {
+      "belief_revision_score": 0.3333333333333333,
+      "distractor_penalty": 0.6666666666666666,
+      "fact_precision": 0.16111111111111112,
+      "fact_recall": 0.8333333333333334,
+      "per_query": [
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.16666666666666666,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q005",
+          "query_type": "multi_hop"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": false,
+          "must_include_hit": false,
+          "query_id": "q006",
+          "query_type": "temporal"
+        }
+      ],
+      "persona_id": "persona_008",
+      "temporal_correctness": 0.8333333333333334
+    },
+    {
+      "belief_revision_score": 0.3333333333333333,
+      "distractor_penalty": 0.6666666666666666,
+      "fact_precision": 0.17500000000000002,
+      "fact_recall": 0.8333333333333334,
+      "per_query": [
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": false,
+          "must_include_hit": false,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q005",
+          "query_type": "multi_hop"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.25,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q006",
+          "query_type": "temporal"
+        }
+      ],
+      "persona_id": "persona_009",
+      "temporal_correctness": 0.8333333333333334
+    },
+    {
+      "belief_revision_score": 0.16666666666666666,
+      "distractor_penalty": 0.8333333333333334,
+      "fact_precision": 0.15833333333333333,
+      "fact_recall": 0.6666666666666666,
+      "per_query": [
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": false,
+          "must_include_hit": false,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.25,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.25,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.25,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q005",
+          "query_type": "multi_hop"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": false,
+          "must_include_hit": false,
+          "query_id": "q006",
+          "query_type": "temporal"
+        }
+      ],
+      "persona_id": "persona_010",
+      "temporal_correctness": 0.6666666666666666
+    },
+    {
+      "belief_revision_score": 0.16666666666666666,
+      "distractor_penalty": 0.8333333333333334,
+      "fact_precision": 0.1361111111111111,
+      "fact_recall": 0.6666666666666666,
+      "per_query": [
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.16666666666666666,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.25,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": false,
+          "must_include_hit": false,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q005",
+          "query_type": "multi_hop"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": false,
+          "must_include_hit": false,
+          "query_id": "q006",
+          "query_type": "temporal"
+        }
+      ],
+      "persona_id": "persona_011",
+      "temporal_correctness": 0.6666666666666666
+    },
+    {
+      "belief_revision_score": 0.0,
+      "distractor_penalty": 0.8333333333333334,
+      "fact_precision": 0.18214285714285713,
+      "fact_recall": 0.8333333333333334,
+      "per_query": [
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.14285714285714285,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.16666666666666666,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": true,
+          "must_include_hit": false,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.25,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q005",
+          "query_type": "multi_hop"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.3333333333333333,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q006",
+          "query_type": "temporal"
+        }
+      ],
+      "persona_id": "persona_012",
+      "temporal_correctness": 0.8333333333333334
+    },
+    {
+      "belief_revision_score": 0.16666666666666666,
+      "distractor_penalty": 0.6666666666666666,
+      "fact_precision": 0.03333333333333333,
+      "fact_recall": 0.16666666666666666,
+      "per_query": [
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": false,
+          "must_include_hit": false,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": false,
+          "must_include_hit": false,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": false,
+          "must_include_hit": false,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": false,
+          "must_include_hit": false,
+          "query_id": "q005",
+          "query_type": "multi_hop"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": true,
+          "must_include_hit": false,
+          "query_id": "q006",
+          "query_type": "temporal"
+        }
+      ],
+      "persona_id": "persona_013",
+      "temporal_correctness": 0.16666666666666666
+    },
+    {
+      "belief_revision_score": 0.16666666666666666,
+      "distractor_penalty": 0.8333333333333334,
+      "fact_precision": 0.1638888888888889,
+      "fact_recall": 0.8333333333333334,
+      "per_query": [
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.16666666666666666,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.25,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.16666666666666666,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q005",
+          "query_type": "multi_hop"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": false,
+          "must_include_hit": false,
+          "query_id": "q006",
+          "query_type": "temporal"
+        }
+      ],
+      "persona_id": "persona_014",
+      "temporal_correctness": 0.8333333333333334
+    },
+    {
+      "belief_revision_score": 0.16666666666666666,
+      "distractor_penalty": 0.6666666666666666,
+      "fact_precision": 0.061111111111111116,
+      "fact_recall": 0.3333333333333333,
+      "per_query": [
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": false,
+          "must_include_hit": false,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.16666666666666666,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": true,
+          "must_include_hit": false,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": false,
+          "must_include_hit": false,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": false,
+          "must_include_hit": false,
+          "query_id": "q005",
+          "query_type": "multi_hop"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q006",
+          "query_type": "temporal"
+        }
+      ],
+      "persona_id": "persona_015",
+      "temporal_correctness": 0.3333333333333333
+    },
+    {
+      "belief_revision_score": 0.0,
+      "distractor_penalty": 0.8,
+      "fact_precision": 0.12333333333333334,
+      "fact_recall": 0.6,
+      "per_query": [
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": false,
+          "must_include_hit": false,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.16666666666666666,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": true,
+          "must_include_hit": false,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.25,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q005",
+          "query_type": "multi_hop"
+        }
+      ],
+      "persona_id": "persona_016",
+      "temporal_correctness": 0.6
+    },
+    {
+      "belief_revision_score": 0.0,
+      "distractor_penalty": 0.8,
+      "fact_precision": 0.12857142857142856,
+      "fact_recall": 0.8,
+      "per_query": [
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.16666666666666666,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.16666666666666666,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": true,
+          "must_include_hit": false,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.14285714285714285,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.16666666666666666,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q005",
+          "query_type": "multi_hop"
+        }
+      ],
+      "persona_id": "persona_017",
+      "temporal_correctness": 0.8
+    },
+    {
+      "belief_revision_score": 0.4,
+      "distractor_penalty": 0.6,
+      "fact_precision": 0.13999999999999999,
+      "fact_recall": 0.6,
+      "per_query": [
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": false,
+          "must_include_hit": false,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": false,
+          "must_include_hit": false,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.25,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.25,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q005",
+          "query_type": "multi_hop"
+        }
+      ],
+      "persona_id": "persona_018",
+      "temporal_correctness": 0.6
+    },
+    {
+      "belief_revision_score": 0.4,
+      "distractor_penalty": 0.6,
+      "fact_precision": 0.18333333333333332,
+      "fact_recall": 0.6,
+      "per_query": [
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": false,
+          "must_include_hit": false,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.3333333333333333,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.3333333333333333,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.25,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": false,
+          "must_include_hit": false,
+          "query_id": "q005",
+          "query_type": "multi_hop"
+        }
+      ],
+      "persona_id": "persona_019",
+      "temporal_correctness": 0.6
+    },
+    {
+      "belief_revision_score": 0.2,
+      "distractor_penalty": 0.6,
+      "fact_precision": 0.16333333333333333,
+      "fact_recall": 0.8,
+      "per_query": [
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.25,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": true,
+          "must_include_hit": false,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.16666666666666666,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q005",
+          "query_type": "multi_hop"
+        }
+      ],
+      "persona_id": "persona_020",
+      "temporal_correctness": 0.8
+    },
+    {
+      "belief_revision_score": 0.4,
+      "distractor_penalty": 0.6,
+      "fact_precision": 0.2019047619047619,
+      "fact_recall": 1.0,
+      "per_query": [
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.14285714285714285,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.25,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.16666666666666666,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.25,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q005",
+          "query_type": "multi_hop"
+        }
+      ],
+      "persona_id": "persona_021",
+      "temporal_correctness": 1.0
+    },
+    {
+      "belief_revision_score": 0.2,
+      "distractor_penalty": 0.8,
+      "fact_precision": 0.20666666666666664,
+      "fact_recall": 0.8,
+      "per_query": [
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": false,
+          "must_include_hit": false,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.3333333333333333,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.25,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.25,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q005",
+          "query_type": "multi_hop"
+        }
+      ],
+      "persona_id": "persona_022",
+      "temporal_correctness": 0.8
+    },
+    {
+      "belief_revision_score": 0.0,
+      "distractor_penalty": 0.8,
+      "fact_precision": 0.18333333333333332,
+      "fact_recall": 0.8,
+      "per_query": [
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.25,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.25,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": true,
+          "must_include_hit": false,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.25,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.16666666666666666,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q005",
+          "query_type": "multi_hop"
+        }
+      ],
+      "persona_id": "persona_023",
+      "temporal_correctness": 0.8
+    },
+    {
+      "belief_revision_score": 0.0,
+      "distractor_penalty": 0.8,
+      "fact_precision": 0.14666666666666667,
+      "fact_recall": 0.8,
+      "per_query": [
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.16666666666666666,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.16666666666666666,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 0.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.0,
+          "fact_recall": 0.0,
+          "must_exclude_clean": true,
+          "must_include_hit": false,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q005",
+          "query_type": "multi_hop"
+        }
+      ],
+      "persona_id": "persona_024",
+      "temporal_correctness": 0.8
+    },
+    {
+      "belief_revision_score": 0.2,
+      "distractor_penalty": 0.8,
+      "fact_precision": 0.21000000000000002,
+      "fact_recall": 1.0,
+      "per_query": [
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q001",
+          "query_type": "current_state"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q002",
+          "query_type": "paraphrase"
+        },
+        {
+          "belief_revision_score": 1.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 0.0,
+          "fact_precision": 0.25,
+          "fact_recall": 1.0,
+          "must_exclude_clean": true,
+          "must_include_hit": true,
+          "query_id": "q003",
+          "query_type": "commitment"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q004",
+          "query_type": "noise_robustness"
+        },
+        {
+          "belief_revision_score": 0.0,
+          "current_state_correct": 1.0,
+          "distractor_penalty": 1.0,
+          "fact_precision": 0.2,
+          "fact_recall": 1.0,
+          "must_exclude_clean": false,
+          "must_include_hit": true,
+          "query_id": "q005",
+          "query_type": "multi_hop"
+        }
+      ],
+      "persona_id": "persona_025",
+      "temporal_correctness": 1.0
+    }
+  ],
+  "summary": {
+    "belief_revision_score": 0.24866666666666667,
+    "distractor_penalty": 0.6746666666666666,
+    "fact_precision": 0.2139936507936508,
+    "fact_recall": 0.752,
+    "n_personas": 25,
+    "temporal_correctness": 0.7020000000000001
+  }
+}
