@@ -353,9 +353,15 @@ retrieve("where do I live", store)
 Adapters implement richer policies on top. The OpenAI Agents SDK integration
 uses **tagged-or-untagged**: a scoped agent sees facts carrying its tags plus
 universal facts that carry none — so tell one agent you moved to Denver,
-every agent knows — while `instance_id` (user isolation) is always strict.
-Agent-specific facts stay tagged. Personal facts are shared. Akashik is the
-single source of truth for the user — not per-agent silos.
+every agent knows — while `instance_id` is always strict (a profile
+dimension that never matches by absence). Agent-specific facts stay tagged.
+Personal facts are shared. Akashik is the single source of truth for the
+user — not per-agent silos.
+
+The trust boundary is the database file itself: one database per local user.
+Metadata tags organize memories *within* that boundary; they are filtering,
+not security. Separate humans get separate database files, never shared
+storage partitioned by tags.
 
 ### OpenAI Agents SDK integration
 

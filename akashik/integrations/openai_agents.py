@@ -53,7 +53,9 @@ _SDK_INSTALL_HINT = "requires the OpenAI Agents SDK: pip install 'akashik[agents
 
 # Visibility policy lives here, not in the store: provenance tags (agent,
 # project, ...) admit untagged "universal" facts, so a scoped agent still
-# sees shared personal memory. instance_id is user isolation — always strict.
+# sees shared personal memory. instance_id is a strict profile dimension —
+# it never matches by absence. The security boundary is the database file
+# (one per local user), not any metadata tag.
 _STRICT_FILTER_KEYS = ("instance_id",)
 
 
