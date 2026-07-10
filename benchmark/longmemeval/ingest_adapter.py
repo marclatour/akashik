@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import json
 import logging
 import re
+from datetime import UTC, datetime
 
 from akashik.identity import content_hash, normalized_hash
 from akashik.ingest import _merge_child_metadata, ingest_turn_fact
@@ -147,7 +147,7 @@ def _session_content(session: list[dict]) -> str:
 def _metadata(source: str, **values: object) -> dict:
     metadata = {
         "source": source,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "tags": [],
     }
     metadata.update(values)

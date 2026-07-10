@@ -2,17 +2,19 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
-from datetime import date
 import logging
 import math
 import re
+from collections import defaultdict
 
 from akashik.parse_temporal_scope import _parse_question_date
 from akashik.query_normalize import normalize_query
 from akashik.retrieve import retrieve
 from akashik.schema import ExecutorResult, RetrievalResult, SourceCitation
-from akashik.temporal_resolver import classify_temporal_query, resolve_two_event_temporal
+from akashik.temporal_resolver import (
+    classify_temporal_query,
+    resolve_two_event_temporal,
+)
 
 LOGGER = logging.getLogger(__name__)
 

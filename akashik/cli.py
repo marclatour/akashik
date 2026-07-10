@@ -168,7 +168,7 @@ def commit_command(
                 session_date=session_date,
             )
         except ValueError as error:
-            raise click.ClickException(str(error))
+            raise click.ClickException(str(error)) from error
     click.echo(f"Committed {fact_type} id={unit.id} project={project}")
     if supersedes:
         click.echo(f"Supersedes {supersedes}")

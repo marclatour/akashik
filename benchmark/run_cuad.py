@@ -9,16 +9,16 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import argparse
+import json
+import os
+import re
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
-import json
-import os
 from pathlib import Path
-import re
 
-from akashik.query_normalize import normalize_query
 from akashik import Store
+from akashik.query_normalize import normalize_query
 from benchmark import DEFAULT_RESULTS_DIR
 from benchmark.corpus import CorpusDocument, split_sections
 from benchmark.evaluate import tokenize
@@ -189,7 +189,6 @@ def run_cuad(
         clause_breakdown = build_clause_breakdown(named_scores)
         failures = collect_akashik_failures(named_scores["Akashik"])
         disagreements = collect_embedding_akashik_disagreements(per_query_results) if with_embeddings else []
-        synthetic_metrics = load_synthetic_metrics(DEFAULT_RESULTS_DIR / "results.json")
 
         output_dir = Path(results_dir or DEFAULT_RESULTS_DIR).resolve()
         output_dir.mkdir(parents=True, exist_ok=True)

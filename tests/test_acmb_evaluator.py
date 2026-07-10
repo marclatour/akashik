@@ -4,8 +4,18 @@ import json
 
 from benchmark.acmb.adapters.akashik_adapter import AkashikAdapter
 from benchmark.acmb.adapters.base import ACMBAdapter
-from benchmark.acmb.evaluate_acmb import evaluate_benchmark, evaluate_persona, evaluate_query
-from benchmark.acmb.run_acmb import DEFAULT_PERSONAS_DIR, DEFAULT_QUERIES_DIR, load_personas, load_queries, main
+from benchmark.acmb.evaluate_acmb import (
+    evaluate_benchmark,
+    evaluate_persona,
+    evaluate_query,
+)
+from benchmark.acmb.run_acmb import (
+    DEFAULT_PERSONAS_DIR,
+    DEFAULT_QUERIES_DIR,
+    load_personas,
+    load_queries,
+    main,
+)
 
 
 def test_evaluate_query_fact_recall_all_hits() -> None:

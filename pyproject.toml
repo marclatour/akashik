@@ -11,6 +11,9 @@ license = {text = "Apache-2.0"}
 requires-python = ">=3.11"
 dependencies = ["click>=8.1"]
 
+[project.urls]
+Repository = "https://github.com/marclatour/akashik"
+
 [project.optional-dependencies]
 llm = ["ollama>=0.1.0"]
 agents = ["openai-agents>=0.17"]
@@ -21,11 +24,22 @@ dev = [
     "anthropic>=0.40",
     "openai>=1.0",
     "ollama>=0.1.0",
+    "ruff>=0.15",
 ]
 benchmark = ["rank-bm25>=0.2"]
 
 [project.scripts]
 akashik = "akashik.cli:cli"
+
+[tool.ruff]
+target-version = "py311"
+
+[tool.ruff.lint]
+extend-select = ["I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+# sys.path bootstrap must run before benchmark package imports
+"benchmark/acmb/run_acmb.py" = ["E402"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

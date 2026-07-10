@@ -1,9 +1,9 @@
-from __future__ import annotations
-
 """
 ACMB evaluator — system-agnostic.
 Given returned fact_ids and a query spec, computes all ACMB metrics.
 """
+
+from __future__ import annotations
 
 from akashik.query_normalize import normalize_query
 

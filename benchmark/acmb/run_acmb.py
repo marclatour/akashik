@@ -19,7 +19,11 @@ import os
 import time
 from pathlib import Path
 
-from benchmark.acmb.evaluate_acmb import evaluate_benchmark, evaluate_persona, resolve_fact_ids
+from benchmark.acmb.evaluate_acmb import (
+    evaluate_benchmark,
+    evaluate_persona,
+    resolve_fact_ids,
+)
 from benchmark.acmb.generate_personas import main as generate_personas_main
 
 DEFAULT_PERSONAS_DIR = os.path.expanduser("~/.akashik/data/benchmarks/acmb/personas")

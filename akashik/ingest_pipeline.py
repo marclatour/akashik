@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import date
 import json
 import logging
+from datetime import date
 from typing import Any
 from urllib import error, request
 

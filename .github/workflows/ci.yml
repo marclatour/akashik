@@ -1,0 +1,38 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: ruff check
+        run: uvx ruff@0.15.21 check .
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.13"
+          enable-cache: true
+      - name: Create venv
+        run: uv venv .venv
+      - name: Install CPU-only torch (avoids the CUDA stack)
+        run: uv pip install -p .venv torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Install package with dev extras
+        run: uv pip install -p .venv -e ".[dev]"
+      - name: Run tests
+        run: ./.venv/bin/python -m pytest -q

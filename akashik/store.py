@@ -2,17 +2,24 @@
 
 from __future__ import annotations
 
-from contextlib import contextmanager
-from datetime import datetime, timezone
 import json
 import logging
-from pathlib import Path
 import re
 import sqlite3
-from typing import Iterator
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
+from datetime import UTC, datetime
+from pathlib import Path
 
-from akashik.schema import Commitment, LEVELS, LEVEL_INDEX, MemoryUnit, StoreStats, validate_level
+from akashik.schema import (
+    LEVEL_INDEX,
+    LEVELS,
+    Commitment,
+    MemoryUnit,
+    StoreStats,
+    validate_level,
+)
 
 # FTS5 row addressing must stay integer-based. UUID ids remain the only public identifiers.
 AKASHIK_SCHEMA_VERSION = 10
@@ -130,7 +137,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 class Store:
@@ -361,7 +368,7 @@ class Store:
             self._warn_schema_mismatch(stored)
         return mismatch
 
-    def __enter__(self) -> "Store":
+    def __enter__(self) -> Store:
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:

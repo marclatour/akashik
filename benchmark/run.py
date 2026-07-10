@@ -9,14 +9,19 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import argparse
-from pathlib import Path
 import re
+from pathlib import Path
 
 from benchmark import DEFAULT_CORPUS_DIR, DEFAULT_QUERIES_PATH, DEFAULT_RESULTS_DIR
 from benchmark.corpus import load_corpus
 from benchmark.evaluate import aggregate_system_scores, evaluate_gate, evaluate_query
 from benchmark.queries import load_queries
-from benchmark.report import build_results_payload, render_report, write_json, write_markdown
+from benchmark.report import (
+    build_results_payload,
+    render_report,
+    write_json,
+    write_markdown,
+)
 from benchmark.systems.akashik import AkashikSystem
 from benchmark.systems.graphrag import GraphRagSystem
 from benchmark.systems.rag import RagSystem

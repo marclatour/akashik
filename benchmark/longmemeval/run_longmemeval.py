@@ -10,15 +10,15 @@ if __package__ in (None, ""):
 
 import argparse
 import concurrent.futures
-from collections import defaultdict
-from datetime import datetime, timedelta
 import json
 import logging
 import os
-from pathlib import Path
 import sqlite3
 import sys
 import time
+from collections import defaultdict
+from datetime import datetime, timedelta
+from pathlib import Path
 from urllib import error, request
 
 from akashik.answer_contract import (
@@ -30,8 +30,7 @@ from akashik.answer_contract import (
 from akashik.backends.base import BackendResponse
 from akashik.executor import execute as execute_query
 from akashik.memory_block import format_memory_block
-from akashik.parse_temporal_scope import parse_temporal_scope
-from akashik.parse_temporal_scope import _parse_question_date
+from akashik.parse_temporal_scope import _parse_question_date, parse_temporal_scope
 from akashik.reader import read_context
 from akashik.retrieve import retrieve, score_documents
 from akashik.schema import RetrievalResponse, RetrievalResult

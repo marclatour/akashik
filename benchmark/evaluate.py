@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from dataclasses import dataclass
-import re
 
-from benchmark.queries import BenchmarkQuery, DIFFICULTIES
+from benchmark.queries import DIFFICULTIES, BenchmarkQuery
 from benchmark.systems import RetrievedItem
 
 _TOKEN_RE = re.compile(r"\b\w+\b")

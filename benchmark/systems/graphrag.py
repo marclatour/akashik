@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from collections import defaultdict
 import re
 import sqlite3
+from collections import defaultdict
+from dataclasses import dataclass
 
 from benchmark.corpus import CorpusDocument
 from benchmark.systems import RetrievedItem

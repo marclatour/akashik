@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from pathlib import Path
 import re
 import uuid
+from datetime import UTC, datetime
+from pathlib import Path
 
 from akashik.commitment_detector import detect_commitment, is_closure
 from akashik.contradiction import close_fact, extract_triple, find_contradicting_fact
@@ -183,7 +183,7 @@ def ingest_text(
     raw_text = str(text)
     base_metadata = {
         "source": "inline",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "tags": [],
     }
     if metadata:
@@ -247,7 +247,7 @@ def ingest_turn_fact(
 
     base_metadata: dict = {
         "source": "turn",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "tags": [],
         "speaker": role,
     }
@@ -316,7 +316,7 @@ def commit_fact(
     if fact_type not in FACT_TYPES:
         raise ValueError(f"fact_type must be one of {FACT_TYPES}, got {fact_type!r}")
 
-    commit_date = str(session_date).strip() if session_date else datetime.now(timezone.utc).date().isoformat()
+    commit_date = str(session_date).strip() if session_date else datetime.now(UTC).date().isoformat()
 
     superseded: MemoryUnit | None = None
     if supersedes is not None:
@@ -326,7 +326,7 @@ def commit_fact(
 
     base_metadata: dict = {
         "source": source or "user",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "tags": [],
         "fact_type": fact_type,
         "project": project,
@@ -376,7 +376,7 @@ def _ensure_commit_section(store, project: str) -> MemoryUnit:
 
     scaffold_metadata = {
         "source": "commit",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "tags": [],
         "project": project,
     }
@@ -526,7 +526,7 @@ def _clean_anchor_token(token: str) -> str:
 def _base_metadata(path: Path, metadata: dict | None) -> dict:
     merged = {
         "source": str(path),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "tags": [],
     }
     if metadata:
@@ -534,7 +534,7 @@ def _base_metadata(path: Path, metadata: dict | None) -> dict:
     merged["source"] = str(merged.get("source", path))
     merged["tags"] = list(merged.get("tags", []))
     if "timestamp" not in merged or not merged["timestamp"]:
-        merged["timestamp"] = datetime.now(timezone.utc).isoformat()
+        merged["timestamp"] = datetime.now(UTC).isoformat()
     return merged
 
 

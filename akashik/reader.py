@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
 from typing import Any
 
 
@@ -214,11 +214,11 @@ def _render_context(facts: list[EvidenceFact], *, max_chars: int) -> str:
         session = fact.session_id or "-"
         timestamp = fact.timestamp or "-"
         blocks.append(
-            (
+            
                 f"[{index}] fact_id={fact.fact_id} score={fact.score:.4f} "
                 f"session={session} time={timestamp}\n"
                 f"{fact.content}"
-            )
+            
         )
     return "\n\n".join(blocks)
 

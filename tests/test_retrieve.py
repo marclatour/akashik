@@ -4,7 +4,12 @@ import importlib
 
 from akashik.identity import content_hash, normalized_hash
 from akashik.ingest import ingest_file
-from akashik.retrieve import _apply_navigator_tiebreak, retrieve, retrieve_diverse, score_documents
+from akashik.retrieve import (
+    _apply_navigator_tiebreak,
+    retrieve,
+    retrieve_diverse,
+    score_documents,
+)
 from akashik.schema import MemoryUnit
 from akashik.store import Store
 

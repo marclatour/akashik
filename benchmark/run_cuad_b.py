@@ -9,15 +9,16 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import argparse
-from dataclasses import dataclass
-from datetime import datetime
 import json
 import os
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
-from akashik.executor import execute as execute_query
 from akashik import Store, retrieve
+from akashik.executor import execute as execute_query
 from benchmark import DEFAULT_RESULTS_DIR
+from benchmark.report import write_json, write_markdown
 from benchmark.run_cuad import (
     CLAUSE_TYPES,
     CUAD_BENCHMARK_DB_PATH,
@@ -28,7 +29,6 @@ from benchmark.run_cuad import (
     evaluate_cuad_query,
     load_cuad_corpus,
 )
-from benchmark.report import write_json, write_markdown
 from benchmark.systems import RetrievedItem
 from benchmark.systems.graphrag import GraphRagSystem
 from benchmark.systems.rag import RagSystem
