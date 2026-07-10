@@ -29,7 +29,7 @@ jobs:
           python-version: "3.13"
           enable-cache: true
       - name: Create venv
-        run: uv venv .venv
+        run: uv venv --clear .venv
       - name: Install CPU-only torch (avoids the CUDA stack)
         run: uv pip install -p .venv torch --index-url https://download.pytorch.org/whl/cpu
       - name: Install package with dev extras
