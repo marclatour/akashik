@@ -23,7 +23,6 @@ import asyncio
 import os
 from pathlib import Path
 
-from akashik.env import load_env
 from akashik.ingest import commit_fact
 from akashik.integrations.openai_agents import (
     AkashikEvidenceSession,
@@ -119,7 +118,14 @@ async def part_two(store: Store) -> None:
 
 
 def main() -> None:
-    load_env()  # picks up OPENAI_API_KEY from ./.env or ~/.akashik/.env
+    # Credential loading is app-level concern, not Akashik's: use your shell
+    # environment, direnv, or python-dotenv in your own agent app.
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv()
+    except ImportError:
+        pass
     if DB_PATH.exists():
         DB_PATH.unlink()
     with Store(DB_PATH) as store:
