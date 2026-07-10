@@ -416,7 +416,13 @@ class Store:
         if self._conn.in_transaction:
             yield
             return
-        self._conn.execute("BEGIN")
+        # IMMEDIATE takes the write lock before any reads. A deferred BEGIN
+        # lets two writers take read snapshots (e.g. commit_fact's
+        # reinforcement lookup) and then fail instantly on the write upgrade —
+        # SQLite skips the busy handler when waiting cannot resolve it.
+        # Queueing writers up front also serializes contradiction and
+        # reinforcement decisions across concurrent agent processes.
+        self._conn.execute("BEGIN IMMEDIATE")
         try:
             yield
         except Exception:
@@ -436,7 +442,7 @@ class Store:
 
         if self._bulk_ingest_mode:
             if not self._bulk_ingest_batch_open:
-                self._conn.execute("BEGIN")
+                self._conn.execute("BEGIN IMMEDIATE")
                 self._bulk_ingest_batch_open = True
             try:
                 self._insert_unit(unit)
