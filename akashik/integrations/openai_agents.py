@@ -11,10 +11,13 @@ Division of labor:
 Two read surfaces, use either or both:
 
 1. ``make_memory_callback(store)`` -> ``RunConfig.session_input_callback``.
-   Before every model call, facts relevant to the new turn are recalled and
-   injected as a single ``<AKASHIK_MEMORY>`` block. Stale memory blocks from
-   earlier turns are stripped from history first, so at most one fresh block
-   reaches the model regardless of how the session persists callback output.
+   When the SDK prepares a run's input (once per ``Runner.run`` turn — not
+   before each internal model call; that surface is
+   ``RunConfig.call_model_input_filter``), facts relevant to the new turn
+   are recalled and injected as a single ``<AKASHIK_MEMORY>`` block. Stale
+   memory blocks from earlier turns are stripped from history first, so at
+   most one fresh block is present regardless of how the session persists
+   callback output.
 2. ``build_tools(store)`` -> ``[akashik_recall, akashik_commit,
    akashik_answer]`` so the agent can search, commit, and get deterministic
    typed answers on demand. Agent commits are tagged ``source='agent'``.
@@ -25,8 +28,10 @@ Do not combine SDK sessions with ``conversation_id`` /
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import sqlite3
 from typing import Any
 
 from akashik.executor import execute
@@ -38,12 +43,10 @@ from akashik.store import Store
 
 try:  # pragma: no cover - exercised via fake modules in tests
     from agents import function_tool
-    from agents.memory.session import SessionABC
 
     _SDK_AVAILABLE = True
 except ImportError:  # pragma: no cover
     function_tool = None
-    SessionABC = object
     _SDK_AVAILABLE = False
 
 LOGGER = logging.getLogger(__name__)
@@ -59,31 +62,51 @@ _SDK_INSTALL_HINT = "requires the OpenAI Agents SDK: pip install 'akashik[agents
 _STRICT_FILTER_KEYS = ("instance_id",)
 
 
-class AkashikEvidenceSession(SessionABC):
+class AkashikEvidenceSession:
     """SDK Session backed by the store's append-only evidence log.
+
+    Implements the SDK's structural ``Session`` protocol (the SDK marks
+    ``SessionABC`` internal and directs third parties to the protocol), so
+    it needs no SDK import at all. Blocking SQLite work runs in a thread,
+    matching the SDK's own SQLite session.
 
     Verbatim transcript only — facts never enter through this path.
     ``clear_session`` clears the transcript; committed facts survive.
     """
 
+    session_settings: Any | None = None
+
     def __init__(self, session_id: str, store: Store):
-        if not _SDK_AVAILABLE:
-            raise ImportError(f"AkashikEvidenceSession {_SDK_INSTALL_HINT}")
         self.session_id = session_id
         self.store = store
 
+    def _limit(self, limit: int | None) -> int | None:
+        if limit is not None:
+            return limit
+        settings_limit = getattr(self.session_settings, "limit", None)
+        return settings_limit if isinstance(settings_limit, int) else None
+
+    async def _run(self, func, /, *args, **kwargs):
+        # Offload blocking SQLite to a thread when the sqlite3 build allows
+        # cross-thread connection use; otherwise run inline (brief block).
+        if sqlite3.threadsafety == 3:
+            return await asyncio.to_thread(func, *args, **kwargs)
+        return func(*args, **kwargs)
+
     async def get_items(self, limit: int | None = None) -> list[Any]:
-        return self.store.get_session_items(self.session_id, limit=limit)
+        return await self._run(
+            self.store.get_session_items, self.session_id, limit=self._limit(limit)
+        )
 
     async def add_items(self, items: list[Any]) -> None:
         if items:
-            self.store.append_session_items(self.session_id, list(items))
+            await self._run(self.store.append_session_items, self.session_id, list(items))
 
     async def pop_item(self) -> Any | None:
-        return self.store.pop_session_item(self.session_id)
+        return await self._run(self.store.pop_session_item, self.session_id)
 
     async def clear_session(self) -> None:
-        self.store.clear_session_items(self.session_id)
+        await self._run(self.store.clear_session_items, self.session_id)
 
 
 def make_memory_callback(
@@ -96,6 +119,10 @@ def make_memory_callback(
     query_date: str | None = None,
 ):
     """Build a ``RunConfig.session_input_callback`` that injects Akashik memory.
+
+    Runs once per ``Runner.run`` turn, when the SDK combines session history
+    with the new input (per-model-call shaping inside a turn is
+    ``RunConfig.call_model_input_filter``, a different surface).
 
     With ``project`` / ``entity_filters`` set, recall follows the
     tagged-or-untagged policy: facts carrying the matching tags plus

@@ -411,11 +411,12 @@ result = await Runner.run(
 
 Two read surfaces, use either or both:
 
-1. **Deterministic injection** (`make_memory_callback`): before every model
-   call, facts relevant to the new turn are recalled and injected as a single
+1. **Deterministic injection** (`make_memory_callback`): once per
+   `Runner.run` turn, when the SDK combines session history with the new
+   input, facts relevant to that turn are recalled and injected as a single
    `<AKASHIK_MEMORY>` block. Stale blocks from earlier turns are stripped
-   first, so at most one fresh block reaches the model. The model never has
-   to *decide* to remember.
+   first, so at most one fresh block is present. The model never has to
+   *decide* to remember.
 2. **Explicit tools** (`build_tools`): `akashik_recall` for on-demand search,
    `akashik_commit` for deliberate writes (tagged `source='agent'`), and
    `akashik_answer` for deterministic typed answers with citations that
