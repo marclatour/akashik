@@ -161,7 +161,15 @@ class Store:
         self.db_path = str(Path(db_path) if db_path is not None else default_db_path())
         db_file = Path(self.db_path)
         self._db_preexisting = db_file.exists() and db_file.stat().st_size > 0
-        self._conn = sqlite3.connect(self.db_path, timeout=OPEN_BUSY_TIMEOUT_SECONDS)
+        # threadsafety 3 means the sqlite3 module serializes connection
+        # access itself, so async wrappers may run store calls in worker
+        # threads (e.g. the Agents SDK session). On lesser builds the
+        # same-thread guard stays on and callers must stay single-threaded.
+        self._conn = sqlite3.connect(
+            self.db_path,
+            timeout=OPEN_BUSY_TIMEOUT_SECONDS,
+            check_same_thread=sqlite3.threadsafety != 3,
+        )
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA foreign_keys = ON")
         self._bulk_ingest_mode = False

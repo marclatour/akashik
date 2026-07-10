@@ -191,8 +191,11 @@ def test_build_tools_requires_sdk(tmp_path) -> None:
     with _store(tmp_path) as store:
         with pytest.raises(ImportError):
             module.build_tools(store)
-        with pytest.raises(ImportError):
-            module.AkashikEvidenceSession("s1", store)
+        # The session implements the structural Session protocol and needs
+        # no SDK at all.
+        session = module.AkashikEvidenceSession("s1", store)
+        asyncio.run(session.add_items([{"role": "user", "content": "hi"}]))
+        assert asyncio.run(session.get_items()) == [{"role": "user", "content": "hi"}]
 
 
 def test_memory_callback_exact_match_does_not_leak_across_scope(tmp_path, integration) -> None:
