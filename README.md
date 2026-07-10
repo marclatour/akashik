@@ -428,6 +428,15 @@ Demo (Part 1 runs with no API key; Part 2 runs a live agent when
 
 Default behavior excludes superseded facts. Historical queries include only facts valid at the requested date.
 
+Concurrency note: multiple agent processes can share one store (WAL mode,
+write transactions open `BEGIN IMMEDIATE` and queue under a 10s busy
+timeout). `retrieve()` is not purely read-only — it commits activation and
+association bookkeeping — so under concurrent multi-process use retrievals
+serialize briefly with commits and with each other. Raw store reads
+(`search_fts`, `fetch_*`) remain concurrent WAL readers. This is
+beta-ready concurrency with serialized retrieval bookkeeping, not
+unrestricted concurrent readers and writers.
+
 The Navigator remains additive-only. In `0.9.1` it can also add a small confidence-decay boost based on:
 
 - recent confirmation recency relative to `query_date`
