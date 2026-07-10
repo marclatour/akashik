@@ -10,21 +10,22 @@ from akashik.executor import execute
 from akashik.ingest import FACT_TYPES, commit_fact, ingest_file
 from akashik.retrieve import retrieve
 from akashik.schema import LEVELS
-from akashik.store import Store
+from akashik.store import Store, default_db_path
 
 
 @click.group()
 @click.option(
     "--db",
     "db_path",
-    default="./akashik.db",
-    show_default=True,
+    default=None,
+    envvar="AKASHIK_DB",
+    show_default="~/.akashik/memory.db (or $AKASHIK_DB)",
     type=click.Path(dir_okay=False, path_type=Path),
 )
 @click.pass_context
-def cli(ctx: click.Context, db_path: Path) -> None:
+def cli(ctx: click.Context, db_path: Path | None) -> None:
     ctx.ensure_object(dict)
-    ctx.obj["db_path"] = db_path
+    ctx.obj["db_path"] = db_path if db_path is not None else default_db_path()
 
 
 def _open_store(ctx: click.Context) -> Store:

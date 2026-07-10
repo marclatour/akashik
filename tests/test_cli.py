@@ -154,3 +154,17 @@ def test_cli_state_empty_project(tmp_path) -> None:
     result = runner.invoke(cli, ["--db", str(db_path), "state", "nothing"])
     assert result.exit_code == 0
     assert "No current facts" in result.output
+
+
+def test_cli_honors_akashik_db_env(tmp_path, monkeypatch) -> None:
+    runner = CliRunner()
+    db_path = tmp_path / "env.db"
+    monkeypatch.setenv("AKASHIK_DB", str(db_path))
+
+    result = runner.invoke(cli, ["commit", "env default works", "--type", "claim"])
+    assert result.exit_code == 0
+    assert db_path.exists()
+
+    stats = runner.invoke(cli, ["stats"])
+    assert stats.exit_code == 0
+    assert str(db_path) in stats.output

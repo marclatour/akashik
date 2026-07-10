@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import sqlite3
 import uuid
@@ -140,9 +141,21 @@ def _utc_now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
 
+def default_db_path() -> Path:
+    """Resolve the user's default store path.
+
+    ``AKASHIK_DB`` overrides; otherwise ``~/.akashik/memory.db``. The parent
+    directory is created so a first run works on a fresh machine.
+    """
+    override = os.environ.get("AKASHIK_DB", "").strip()
+    path = Path(override).expanduser() if override else Path.home() / ".akashik" / "memory.db"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 class Store:
-    def __init__(self, db_path: str | Path = "./akashik.db") -> None:
-        self.db_path = str(Path(db_path))
+    def __init__(self, db_path: str | Path | None = None) -> None:
+        self.db_path = str(Path(db_path) if db_path is not None else default_db_path())
         db_file = Path(self.db_path)
         self._db_preexisting = db_file.exists() and db_file.stat().st_size > 0
         self._conn = sqlite3.connect(self.db_path)

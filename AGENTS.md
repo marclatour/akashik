@@ -66,7 +66,7 @@ akashik state <project>
 akashik log <uuid>
 ```
 
-Default database path is `./akashik.db`.
+Default database path is `~/.akashik/memory.db`, overridable with the `AKASHIK_DB` environment variable or `--db`.
 
 ## Versioning
 

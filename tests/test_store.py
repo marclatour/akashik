@@ -300,3 +300,36 @@ def test_session_items_roundtrip(tmp_path) -> None:
         assert store.get_session_items("s1") == []
         assert store.pop_session_item("s1") is None
         assert store.get_session_items("s2") == [{"role": "user", "content": "other session"}]
+
+
+def test_default_db_path_env_override(tmp_path, monkeypatch) -> None:
+    from akashik.store import default_db_path
+
+    target = tmp_path / "custom" / "mem.db"
+    monkeypatch.setenv("AKASHIK_DB", str(target))
+
+    resolved = default_db_path()
+    assert resolved == target
+    assert resolved.parent.is_dir()
+
+
+def test_default_db_path_falls_back_to_home(tmp_path, monkeypatch) -> None:
+    from pathlib import Path
+
+    from akashik.store import default_db_path
+
+    monkeypatch.delenv("AKASHIK_DB", raising=False)
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+
+    resolved = default_db_path()
+    assert resolved == tmp_path / ".akashik" / "memory.db"
+    assert resolved.parent.is_dir()
+
+
+def test_store_uses_default_db_path(tmp_path, monkeypatch) -> None:
+    target = tmp_path / "default.db"
+    monkeypatch.setenv("AKASHIK_DB", str(target))
+
+    with Store() as store:
+        assert store.db_path == str(target)
+    assert target.exists()
