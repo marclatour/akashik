@@ -381,20 +381,17 @@ Install the extra:
 ./.venv/bin/python -m pip install -e ".[agents]"
 ```
 
-Put your API key in `~/.akashik/.env` — one canonical secrets file next to
-the store, shared by every agent app on the machine:
+Credentials are your app's concern, not Akashik's — the SDK reads
+`OPENAI_API_KEY` from the process environment, and Akashik never touches
+it. Use whatever your app already uses: shell environment, direnv, a
+secret manager, or `python-dotenv` with a `.env` file next to your agent
+(create it with an editor rather than `echo` so the key stays out of
+shell history, `chmod 600` it, and keep it in `.gitignore`).
 
-```bash
-echo 'OPENAI_API_KEY=sk-...' > ~/.akashik/.env
-chmod 600 ~/.akashik/.env
-```
-
-Call `akashik.env.load_env()` at app startup (the demo does this
-automatically). It loads `./.env` first, then `~/.akashik/.env`, and never
-overrides variables already set in the environment — so a per-project
-`.env` beats the global file, and the real environment beats both. Stdlib
-only, no python-dotenv dependency; Akashik itself never reads your key,
-the SDK picks it up from the environment.
+Keep secrets out of `~/.akashik/` — that directory holds durable memory
+data people back up, and API keys should be rotatable and excluded from
+data backups. Different agents may also need different keys, projects,
+or budgets, which is another reason keys stay per-app.
 
 Use it in an agent:
 
