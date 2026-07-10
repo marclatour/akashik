@@ -381,17 +381,10 @@ Install the extra:
 ./.venv/bin/python -m pip install -e ".[agents]"
 ```
 
-Credentials are your app's concern, not Akashik's — the SDK reads
-`OPENAI_API_KEY` from the process environment, and Akashik never touches
-it. Use whatever your app already uses: shell environment, direnv, a
-secret manager, or `python-dotenv` with a `.env` file next to your agent
-(create it with an editor rather than `echo` so the key stays out of
-shell history, `chmod 600` it, and keep it in `.gitignore`).
-
-Keep secrets out of `~/.akashik/` — that directory holds durable memory
-data people back up, and API keys should be rotatable and excluded from
-data backups. Different agents may also need different keys, projects,
-or budgets, which is another reason keys stay per-app.
+Akashik itself needs no credentials — no API key, no account, no network.
+Model calls are the SDK's concern: it reads `OPENAI_API_KEY` from your
+process environment per its own quickstart. Keep secrets out of
+`~/.akashik/` — that directory holds durable memory data people back up.
 
 Use it in an agent:
 

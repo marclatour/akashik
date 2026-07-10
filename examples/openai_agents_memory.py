@@ -118,14 +118,6 @@ async def part_two(store: Store) -> None:
 
 
 def main() -> None:
-    # Credential loading is app-level concern, not Akashik's: use your shell
-    # environment, direnv, or python-dotenv in your own agent app.
-    try:
-        from dotenv import load_dotenv
-
-        load_dotenv()
-    except ImportError:
-        pass
     if DB_PATH.exists():
         DB_PATH.unlink()
     with Store(DB_PATH) as store:
