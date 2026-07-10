@@ -321,11 +321,13 @@ Preference extraction is additive and deterministic:
 
 `retrieve_diverse(store, query, ...)` is also available as a thin helper over `retrieve()` when callers want a session-diversified fact list from a broader candidate pool without changing the core retrieval stack.
 
-### Multi-agent scoping with entity_filters
+### Multi-agent tagging with entity_filters
 
 One Akashik store serves all agents and LLM conversations for a single user.
-Facts are tagged at ingest with the agent or conversation that created them.
-Retrieval scopes by tag — or returns universal personal facts to any caller.
+Tags are just metadata — facts record which agent or conversation wrote them
+(`agent`, `project`, `session_id`), and callers choose a visibility policy at
+query time. The store itself stays dumb: `entity_filters` on `retrieve()` is
+strict tag equality, nothing more.
 
 ```python
 # OpenClaw writes a code preference
@@ -340,17 +342,20 @@ ingest_text(store, "I live in Denver", metadata={
     "session_date": "2026-04-27",
 })
 
-# OpenClaw retrieves code preferences (scoped) + universal personal facts
+# Strict tag filter: only facts tagged agent=openclaw
 retrieve("what language do I prefer", store,
     entity_filters={"agent": "openclaw"})
 
-# Any agent retrieves universal personal facts
+# No filter: everything, including universal personal facts
 retrieve("where do I live", store)
 ```
 
-This means: tell one agent you moved to Denver, every agent knows.
-Agent-specific facts stay scoped. Personal facts are always available.
-Akashik is the single source of truth for the user — not per-agent silos.
+Adapters implement richer policies on top. The OpenAI Agents SDK integration
+uses **tagged-or-untagged**: a scoped agent sees facts carrying its tags plus
+universal facts that carry none — so tell one agent you moved to Denver,
+every agent knows — while `instance_id` (user isolation) is always strict.
+Agent-specific facts stay tagged. Personal facts are shared. Akashik is the
+single source of truth for the user — not per-agent silos.
 
 ### OpenAI Agents SDK integration
 

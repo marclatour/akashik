@@ -51,6 +51,11 @@ LOGGER = logging.getLogger(__name__)
 MEMORY_BLOCK_PREFIX = "<AKASHIK_MEMORY>"
 _SDK_INSTALL_HINT = "requires the OpenAI Agents SDK: pip install 'akashik[agents]'"
 
+# Visibility policy lives here, not in the store: provenance tags (agent,
+# project, ...) admit untagged "universal" facts, so a scoped agent still
+# sees shared personal memory. instance_id is user isolation — always strict.
+_STRICT_FILTER_KEYS = ("instance_id",)
+
 
 class AkashikEvidenceSession(SessionABC):
     """SDK Session backed by the store's append-only evidence log.
@@ -90,10 +95,12 @@ def make_memory_callback(
 ):
     """Build a ``RunConfig.session_input_callback`` that injects Akashik memory.
 
-    Scoped retrieval (``project`` / ``entity_filters``) uses the standard
-    retrieval stack; unscoped retrieval uses ``retrieve_diverse`` for
-    cross-session breadth. Recall failures never break the conversation:
-    on error the items pass through unmodified.
+    With ``project`` / ``entity_filters`` set, recall follows the
+    tagged-or-untagged policy: facts carrying the matching tags plus
+    universal facts that carry none, with ``instance_id`` always strict.
+    Unscoped recall uses ``retrieve_diverse`` for cross-session breadth.
+    Recall failures never break the conversation: on error the items pass
+    through unmodified.
     """
     filters = dict(entity_filters or {})
     if project is not None:
@@ -107,21 +114,9 @@ def make_memory_callback(
             return passthrough
         try:
             if filters:
-                # retrieve()'s exact/normalized-hash stages run before entity
-                # scoping, so post-filter to keep out-of-scope facts from
-                # leaking into the injected block.
-                results: list[Any] = [
-                    result
-                    for result in retrieve(
-                        query,
-                        store,
-                        level="fact",
-                        limit=k,
-                        entity_filters=filters,
-                        query_date=query_date,
-                    ).results
-                    if _matches_filters(result.unit, filters)
-                ]
+                results: list[Any] = _retrieve_with_policy(
+                    store, query, filters=filters, k=k, query_date=query_date
+                )
             else:
                 results = retrieve_diverse(store, query, limit=k)
             packet = read_context(query, results, max_facts=max_facts)
@@ -164,18 +159,10 @@ def build_tools(
         filters = dict(base_filters)
         if project is not None:
             filters["project"] = project
-        response = retrieve(
-            query,
-            store,
-            level="fact",
-            limit=k,
-            entity_filters=filters or None,
-        )
-        results = [
-            result
-            for result in response.results
-            if not filters or _matches_filters(result.unit, filters)
-        ]
+        if filters:
+            results = _retrieve_with_policy(store, query, filters=filters, k=k)
+        else:
+            results = retrieve(query, store, level="fact", limit=k).results
         if not results:
             return "No committed facts match that query."
         return "\n".join(_fact_line(result.unit) for result in results)
@@ -225,7 +212,10 @@ def build_tools(
         Args:
             question: The question to answer from committed facts.
         """
-        result = execute(store, question, entity_filters=base_filters or None)
+        # Execute unscoped so universal facts stay answerable, then enforce
+        # the visibility policy on every cited source; mixed or out-of-scope
+        # evidence abstains rather than leaking.
+        result = execute(store, question)
         if result.abstained or not result.answer:
             return "No evidence found in memory; abstaining."
         if base_filters and not _sources_match_filters(store, result.sources, base_filters):
@@ -252,19 +242,76 @@ def _fact_line(unit: Any) -> str:
     return f"[{unit.id}] ({fact_type}/{fact_project}, {date}) {unit.content}"
 
 
-def _matches_filters(unit: Any, filters: dict) -> bool:
-    """Mirror the store's metadata-equality filter semantics on a unit."""
+def _matches_filters(unit: Any, filters: dict, *, allow_untagged: bool = False) -> bool:
+    """Apply the caller's visibility policy to one unit.
+
+    Strict mode mirrors the store's metadata-equality semantics. With
+    ``allow_untagged`` a unit whose metadata lacks a filter key still matches
+    (a universal fact), except for keys in ``_STRICT_FILTER_KEYS``.
+    """
     metadata = getattr(unit, "metadata", None) or {}
     for key, expected in filters.items():
         if expected is None:
             continue
         value = metadata.get(key)
+        if value is None and allow_untagged and key not in _STRICT_FILTER_KEYS:
+            continue
         if isinstance(expected, list):
             if value not in expected:
                 return False
         elif value != expected:
             return False
     return True
+
+
+def _retrieve_with_policy(
+    store: Store,
+    query: str,
+    *,
+    filters: dict,
+    k: int,
+    query_date: str | None = None,
+) -> list[Any]:
+    """Retrieve tagged facts plus universal (untagged) facts under one policy.
+
+    Two passes: the tag-scoped retrieval stack (post-filtered, since its
+    exact/normalized-hash stages run before entity scoping), then an unscoped
+    pool filtered to tagged-or-untagged. Merged by descending confidence,
+    deduplicated by fact id.
+    """
+    tagged = [
+        result
+        for result in retrieve(
+            query,
+            store,
+            level="fact",
+            limit=k,
+            entity_filters=filters,
+            query_date=query_date,
+        ).results
+        if _matches_filters(result.unit, filters)
+    ]
+    pool = retrieve(
+        query,
+        store,
+        level="fact",
+        limit=max(k * 3, 15),
+        query_date=query_date,
+    ).results
+    universal = [
+        result for result in pool if _matches_filters(result.unit, filters, allow_untagged=True)
+    ]
+
+    merged: list[Any] = []
+    seen: set[str] = set()
+    for result in [*tagged, *universal]:
+        unit_id = str(result.unit.id)
+        if unit_id in seen:
+            continue
+        seen.add(unit_id)
+        merged.append(result)
+    merged.sort(key=lambda result: -float(getattr(result, "confidence", 0.0)))
+    return merged[:k]
 
 
 def _sources_match_filters(store: Store, sources: list[Any], filters: dict) -> bool:
@@ -275,7 +322,7 @@ def _sources_match_filters(store: Store, sources: list[Any], filters: dict) -> b
         if not fact_id:
             return False
         unit = store.fetch_by_id(str(fact_id))
-        if unit is None or not _matches_filters(unit, filters):
+        if unit is None or not _matches_filters(unit, filters, allow_untagged=True):
             return False
     return True
 

@@ -224,3 +224,68 @@ def test_answer_tool_exact_match_does_not_leak_across_scope(tmp_path, integratio
 
         assert "abstaining" in output
         assert "Denver" not in output
+
+
+def test_memory_callback_includes_universal_facts_in_scoped_recall(tmp_path, integration) -> None:
+    with _store(tmp_path) as store:
+        commit_fact(store, "Thumbnail uses the red variant", project="show")
+        # universal personal fact: no project tag
+        from akashik.ingest import ingest_text
+
+        ingest_text(store, "I moved to Denver", metadata={"session_date": "2026-07-01"})
+        callback = integration.make_memory_callback(store, project="show")
+
+        combined = callback([], [{"role": "user", "content": "where did I move? which thumbnail variant?"}])
+
+        block = next(
+            item["content"]
+            for item in combined
+            if isinstance(item, dict)
+            and str(item.get("content", "")).startswith(integration.MEMORY_BLOCK_PREFIX)
+        )
+        assert "red variant" in block
+        assert "Denver" in block
+
+
+def test_recall_tool_includes_universal_facts(tmp_path, integration) -> None:
+    with _store(tmp_path) as store:
+        from akashik.ingest import ingest_text
+
+        ingest_text(store, "I moved to Denver", metadata={"session_date": "2026-07-01"})
+        commit_fact(store, "Blue variant chosen", project="other")
+        recall, _commit, _answer = integration.build_tools(store, project="show")
+
+        output = recall("moved Denver variant")
+        assert "Denver" in output
+        assert "Blue variant" not in output
+
+
+def test_instance_id_stays_strict_under_policy(tmp_path, integration) -> None:
+    with _store(tmp_path) as store:
+        from akashik.ingest import ingest_text
+
+        ingest_text(store, "I moved to Denver", metadata={"session_date": "2026-07-01"})
+        callback = integration.make_memory_callback(
+            store, entity_filters={"instance_id": "user_a"}
+        )
+
+        combined = callback([], [{"role": "user", "content": "where did I move?"}])
+
+        blocks = [
+            item
+            for item in combined
+            if isinstance(item, dict)
+            and str(item.get("content", "")).startswith(integration.MEMORY_BLOCK_PREFIX)
+        ]
+        assert blocks == []
+
+
+def test_answer_tool_answers_from_universal_facts(tmp_path, integration) -> None:
+    with _store(tmp_path) as store:
+        from akashik.ingest import ingest_text
+
+        ingest_text(store, "I live in Denver", metadata={"session_date": "2026-07-01"})
+        _recall, _commit, answer = integration.build_tools(store, project="show")
+
+        output = answer("Where do I live?")
+        assert "Denver" in output
