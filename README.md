@@ -208,7 +208,7 @@ from akashik.ingest import ingest_text
 from akashik.retrieve import retrieve
 from akashik.store import Store
 
-store = Store("akashik.db")
+store = Store()  # ~/.akashik/memory.db by default; Store(path) or AKASHIK_DB to override
 
 ingest_text(
     store,
@@ -498,7 +498,9 @@ The first deterministic Executor now exists inside Akashik itself; future work i
 
 ## CLI
 
-Default database path: `./akashik.db`
+Default database path: `~/.akashik/memory.db` — one durable store per user,
+shared by every agent and conversation. Override with `--db <path>` or the
+`AKASHIK_DB` environment variable.
 
 ```bash
 akashik ingest --file README.md --level document
