@@ -7,7 +7,6 @@ from akashik.ingest import build_fact_context_entries
 from akashik.retrieve import _is_valid, retrieve
 from akashik.schema import MemoryUnit
 from akashik.store import Store
-from benchmark.acmb.adapters.akashik_adapter import AkashikAdapter
 from benchmark.longmemeval.run_longmemeval import _reset_store_contents
 
 
@@ -63,7 +62,7 @@ def test_is_valid_fails_open_on_malformed_date() -> None:
 
 def test_retrieve_excludes_facts_with_expired_valid_until(tmp_path) -> None:
     with Store(tmp_path / "store.db") as store:
-        unit = store.insert(_unit("I live in Chicago.", valid_until="2026-01-01T00:00:00"))
+        store.insert(_unit("I live in Chicago.", valid_until="2026-01-01T00:00:00"))
         response = retrieve("I live in Chicago.", store, level="fact", as_of="2026-02-01T00:00:00")
         assert response.results == []
 

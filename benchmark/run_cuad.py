@@ -189,7 +189,6 @@ def run_cuad(
         clause_breakdown = build_clause_breakdown(named_scores)
         failures = collect_akashik_failures(named_scores["Akashik"])
         disagreements = collect_embedding_akashik_disagreements(per_query_results) if with_embeddings else []
-        synthetic_metrics = load_synthetic_metrics(DEFAULT_RESULTS_DIR / "results.json")
 
         output_dir = Path(results_dir or DEFAULT_RESULTS_DIR).resolve()
         output_dir.mkdir(parents=True, exist_ok=True)

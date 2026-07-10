@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib
-from pathlib import Path
 
 from akashik.schema import MemoryUnit, RetrievalResponse, RetrievalResult
 from benchmark.acmb.adapters.akashik_adapter import AkashikAdapter

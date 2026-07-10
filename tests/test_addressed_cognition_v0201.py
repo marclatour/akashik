@@ -4,7 +4,6 @@ from datetime import UTC, datetime, timedelta
 import sqlite3
 
 from akashik.expression import (
-    MAX_RAW_CANDIDATES,
     apply_decay,
     decay_rate_for_tier,
     get_candidate_pool,

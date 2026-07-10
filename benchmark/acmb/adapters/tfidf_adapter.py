@@ -9,7 +9,6 @@ Direct comparison to BM25 and Akashik's lexical retrieval path.
 
 from __future__ import annotations
 
-import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 

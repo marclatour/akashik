@@ -30,7 +30,7 @@ import logging
 from typing import Any
 
 from akashik.executor import execute
-from akashik.ingest import FACT_TYPES, commit_fact
+from akashik.ingest import commit_fact
 from akashik.memory_block import format_memory_block
 from akashik.reader import read_context
 from akashik.retrieve import retrieve, retrieve_diverse

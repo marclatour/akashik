@@ -6,7 +6,6 @@ Aggregation queries and broader temporal reasoning remain out of scope here.
 
 from __future__ import annotations
 
-from datetime import date
 import logging
 import re
 
