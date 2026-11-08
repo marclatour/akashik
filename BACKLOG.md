@@ -13,6 +13,26 @@ Full business plan in `LUNCHBOX.md`. This is non-negotiable.
 
 ---
 
+## Next Up (from 2026-11-07 session)
+
+Principle adopted: **no model in Akashik's core or default retrieval path.** Embeddings stay optional, for comparative experiments only. Models live in the agent layer above Akashik.
+
+1. **Review and push `associative_expression`** (`f5ac910`, `d64be3d`). Decide `PLAN.md`; add `.claude/` to `.gitignore`.
+2. **Default-path decision.** `retrieve()` defaults to `use_semantic=True`; published ACMB numbers depend on the optional MiniLM fallback (recall 0.648 with it, 0.407 without; temporal 0.598 vs 0.357). Either default it off and publish deterministic numbers as the headline (recommended), or label every headline "with optional semantic fallback." Rerun ACMB + LongMemEval deterministic-only.
+3. **Atomic change sets (Git-style change model, step 1).** A `commits` table: id = hash(parent id, author, timestamp, operations, rationale); every write goes through one; existing facts get a genesis change set. Hash-chained from day one (tamper-evident). Builds on `commit_fact()`.
+4. **Stale-write detection (step 2).** A supersession succeeds only if the superseded fact is still current; otherwise return a conflict. Explicit fact IDs first; structured slots (e.g. `(service-A, config-version)`) are a deliberate schema decision.
+5. **Agent-records-changes experiment.** A small local model *in the agent layer* reads raw turns and commits facts / `--supersedes` links; Akashik stays deterministic. No oracle fields. Measure ACMB belief revision + distractor penalty against 0.28 (inference) and 0.735 (pre-audit oracle = perfect supersession knowledge), plus model calls/turn, latency, and wrong supersessions.
+6. **Scope-correct association.** `_search_fts_with_entity_scope` returns selected document IDs (incl. gate); association pool = most recent facts within them, filtered before the limit. Tests for legacy `entity_filter`, document-level filters, crowded stores, document gate.
+7. **Association comparison.** Off vs deterministic SimHash (NFKC, explicit tokenization, `hashlib.blake2b`, stable tie-breaks — never built-in `hash()`) vs optional MiniLM, identical scopes and candidate budgets. Measure added recall vs distractor penalty, latency, storage/fact. SimHash is a hypothesis.
+8. **Later in the change-model sequence:** revision diffs + replay (bitemporal: valid time vs recorded time) → optional Git export (SQLite stays authoritative; readable event files via a transactional export queue; never commit the DB) → branches only if a real workflow needs them (a `proposed`/`accepted` status covers quarantine first).
+9. **Evidence runs** only for what survives, under `benchmarks/evidence/`, then regenerate README tables.
+
+Parked: fix or retire the old Expression layer (activation 1.0 vs threshold 2.0; 150-candidate cap); slot-level revision; Qwen3-Embedding-0.6B as an optional comparison; analog-modulo cost question for device researchers.
+
+Ops note: the Claude sandbox needs 17 GB free; LongMemEval stores take ~13 GB. Keep ~30 GB free.
+
+---
+
 ## Ideas
 
 ### Rust Core For Bulk Ingest Throughput
