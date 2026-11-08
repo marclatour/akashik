@@ -44,6 +44,9 @@ Data lives under `~/.akashik/data/benchmarks/acmb/`.
 # adjust match threshold for text-to-fact resolution
 ./.venv/bin/python benchmark/acmb/run_acmb.py --adapter akashik --match-threshold 0.4
 
+# experimental: associative activation stage (akashik/association.py), off by default
+AKASHIK_ACMB_ASSOCIATION=1 ./.venv/bin/python benchmark/acmb/run_acmb.py --adapter akashik
+
 # pre-flight validation
 bash scripts/check_acmb.sh
 ```

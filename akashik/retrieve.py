@@ -119,6 +119,7 @@ def retrieve(
     use_navigator: bool = True,
     use_semantic: bool = True,
     use_expression: bool = False,
+    use_association: bool = False,
     document_gate_n: int = 0,
     as_of: str | None = None,
     query_date: str | None = None,
@@ -219,7 +220,17 @@ def retrieve(
             current_only=valid_at is None,
             as_of=valid_at,
         )
-        if _should_trigger_semantic(raw_fts_matches):
+        if use_association and level == "fact":
+            from akashik.association import associative_rerank, default_encoder
+
+            fts_matches = associative_rerank(
+                store,
+                text,
+                _rerank_fts_matches(raw_fts_matches),
+                default_encoder(),
+                as_of=valid_at,
+            )
+        elif _should_trigger_semantic(raw_fts_matches):
             semantic_candidates = _semantic_candidate_search(
                 store,
                 text,

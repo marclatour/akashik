@@ -168,6 +168,7 @@ class AkashikAdapter(ACMBAdapter):
             level="fact",
             limit=k,
             use_expression=False,
+            use_association=os.getenv("AKASHIK_ACMB_ASSOCIATION") == "1",
             as_of=as_of,
         )
         texts = [result.unit.content for result in response.results if result.unit.content]
@@ -194,6 +195,7 @@ class AkashikAdapter(ACMBAdapter):
             level="fact",
             limit=k,
             use_expression=False,
+            use_association=os.getenv("AKASHIK_ACMB_ASSOCIATION") == "1",
             as_of=as_of,
         )
         results: list[tuple[str, float]] = []
