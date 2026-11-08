@@ -941,6 +941,7 @@ def _retrieve_response(
             document_gate_n=document_gate_n,
             query_date=question_date,
             use_expression=use_expression,
+            use_association=os.getenv("AKASHIK_USE_ASSOCIATION") == "1",
         )
 
     from akashik import retrieve_diverse

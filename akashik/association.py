@@ -88,8 +88,10 @@ def associate(
     *,
     as_of: str | None,
     k: int = ASSOC_K,
+    pool: Sequence[MemoryUnit] | None = None,
 ) -> list[tuple[MemoryUnit, float]]:
-    pool = store.fetch_recent_facts(POOL_LIMIT, current_only=as_of is None, as_of=as_of)
+    if pool is None:
+        pool = store.fetch_recent_facts(POOL_LIMIT, current_only=as_of is None, as_of=as_of)
     if not pool:
         return []
     codes = code_cache(store).codes_for(pool, encoder)
@@ -156,12 +158,21 @@ def associative_rerank(
     encoder: Encoder | None,
     *,
     as_of: str | None,
+    expand: bool = True,
 ) -> list[MemoryUnit]:
-    """Entry point used by retrieve(). Falls back to FTS order on any failure."""
+    """Entry point used by retrieve(). Falls back to FTS order on any failure.
+
+    ``expand=True`` (unscoped retrieval) associates over the bounded recent
+    pool and may add facts FTS missed. ``expand=False`` (scoped retrieval)
+    only re-ranks the candidates scoped search already returned, so entity
+    filters, document gating and scope semantics are inherited unchanged and
+    no out-of-scope fact can enter.
+    """
     if encoder is None:
         return list(fts_ranked)
     try:
-        assoc = associate(store, query, encoder, as_of=as_of)
+        pool = None if expand else list(fts_ranked)
+        assoc = associate(store, query, encoder, as_of=as_of, pool=pool)
         merged = fuse(fts_ranked, [unit for unit, _sim in assoc])
         withheld: list[tuple[str, str]] = []
         if as_of is None:

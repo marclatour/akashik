@@ -213,6 +213,17 @@ def retrieve(
             as_of=valid_at,
             query_date=parsed_query_date,
         )
+        if use_association and level == "fact":
+            from akashik.association import associative_rerank, default_encoder
+
+            fts_matches = associative_rerank(
+                store,
+                text,
+                fts_matches,
+                default_encoder(),
+                as_of=valid_at,
+                expand=False,
+            )
     else:
         raw_fts_matches = store.search_fts(
             fts_query,

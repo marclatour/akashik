@@ -102,3 +102,20 @@ def test_retrieve_with_association_reaches_non_lexical_match(tmp_path, monkeypat
     response = retrieve("corolla class", store, level="fact", use_association=True)
     assert any("Corolla" in r.unit.content for r in response.results)
     assert store._last_association_stats["associated"] >= 1
+
+
+def test_scoped_association_never_leaves_scope(tmp_path, monkeypatch):
+    """Scoped retrieval only re-ranks scoped candidates: no out-of-scope facts."""
+    store = Store(tmp_path / "m.db")
+    ingest_text(store, "The Corolla gets me to class", metadata={"instance_id": "a", "session_date": "2022-01-01"})
+    ingest_text(store, "The Corolla is parked downtown", metadata={"instance_id": "b", "session_date": "2022-01-02"})
+    for n in range(30):  # newer out-of-scope facts that would dominate a global pool
+        ingest_text(store, f"Corolla note {n} for someone else", metadata={"instance_id": "b", "session_date": "2022-02-01"})
+    monkeypatch.setattr(A, "default_encoder", lambda: fake_encoder)
+
+    for kwargs in ({"entity_filters": {"instance_id": "a"}}, {"entity_filters": {"instance_id": "a"}, "document_gate_n": 1}):
+        plain = retrieve("corolla class", store, level="fact", use_semantic=False, **kwargs)
+        assoc = retrieve("corolla class", store, level="fact", use_association=True, **kwargs)
+        allowed = {r.unit.id for r in plain.results}
+        assert assoc.results, kwargs
+        assert {r.unit.id for r in assoc.results} <= allowed, kwargs
